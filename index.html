@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+
+  <title>Terrain</title>
+
+  <meta name="description" content="A demo of the THREE.Terrain library.">
+
+  <link rel="icon" href="favicon.ico"/>
+
+  <style>
+::-moz-selection { background: #39f; }
+::selection { background: #39f; }
+html, body {
+  font-size: 1em;
+  line-height: 1.4;
+  margin: 0;
+  overflow: hidden;
+  padding: 0;
+}
+canvas {
+  -khtml-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: rgba(0,0,0,0);
+  -webkit-touch-callout: none;
+  background-color: black;
+  display: block;
+  margin: 0 auto;
+  user-select: none;
+}
+#fpscontrols {
+  background-color: rgba(16, 16, 16, 0.75);
+  border: 1px solid #AAAAAA;
+  border-bottom-width: 0;
+  bottom: 0;
+  color: #AAAAAA;
+  font-family: Arial, sans-serif;
+  font-size: 18px;
+  height: 25px;
+  letter-spacing: 0.03em;
+  opacity: 0;
+  padding: 2px 10px;
+  position: absolute;
+  right: 20px;
+  transition: opacity 0.5s;
+  z-index: 3;
+}
+#fpscontrols.visible {
+  opacity: 1;
+  transition: opacity 0.5s;
+}
+  </style>
+</head>
+<body>
+  <script src="libs/dat.gui.min.js"></script>
+  <script src="libs/three.min.js"></script>
+  <script src="libs/BufferGeometryUtils.js"></script>
+  <script src="libs/FirstPersonControls.js"></script>
+  <script src="noise.js"></script>
+  <script src="THREE.Terrain.js"></script>
+  <script src="index.js"></script>
+  <script>setup();</script>
+  <div id="fpscontrols">W = Forward, S = Back, A = Left, D = Right, R = Up, F = Down, Q = Freeze, Mouse = Look</div>
+</body>
+</html>

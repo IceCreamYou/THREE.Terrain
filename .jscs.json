@@ -1,0 +1,19 @@
+{
+    "requireCurlyBraces": ["for", "while", "do", "try", "catch"],
+    "requireSpaceAfterKeywords": ["if", "else", "for", "while", "do", "switch", "return", "try"],
+    "disallowLeftStickedOperators": ["?", "=", "==", "===", "!=", "!==", ">", ">=", "<", "<="],
+    "disallowRightStickedOperators": ["?", ":", "=", "==", "===", "!=", "!==", ">", ">=", "<", "<="],
+    "requireRightStickedOperators": ["!", "++", "--"],
+    "requireLeftStickedOperators": [",", "++", "--"],
+    "disallowImplicitTypeConversion": [],
+    "disallowKeywords": ["with"],
+    "disallowMultipleLineBreaks": true,
+    "disallowKeywordsOnNewLine": [],
+    "requireKeywordsOnNewLine": ["else"],
+    "requireLineFeedAtFileEnd": true,
+    "requireParenthesesAroundIIFE": true,
+    "disallowSpaceAfterObjectKeys": true,
+    "requireCommaBeforeLineBreak": true,
+    "disallowMixedSpacesAndTabs": true,
+    "disallowTrailingWhitespace": true
+}
