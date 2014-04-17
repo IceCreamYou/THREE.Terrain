@@ -1,25 +1,17 @@
-`THREE.Terrain` is a library that extends the
-[Three.js](https://github.com/mrdoob/three.js) web-based 3D graphics framework
-to support generating random terrains and rendering terrain from predetermined
-heightmaps.
+`THREE.Terrain` generates terrains either randomly or from image-based
+heightmaps for use with the [Three.js](https://github.com/mrdoob/three.js) 3D
+graphics library for the web.
 
-Open `index.html` to try a demo (if you want to load the sample heightmap image
-instead of generating random terrains, you will need to run it on a local
-server).
+[Try the demo](https://icecreamyou.github.io/THREE.Terrain/)!
+
+![Screenshot](https://raw.githubusercontent.com/IceCreamYou/THREE.Terrain/gh-pages/img/screenshot.jpg)
 
 ## Usage
 
 Include the script on your page (after the `three.js` library):
 
 ```html
-<script src="THREE.Terrain.js"></script>
-```
-
-If you want the Perlin and Simplex noise functions to be available for random
-terrain generation, also include `noise.js`:
-
-```html
-<script src="noise.js"></script>
+<script src="THREE.Terrain.noise.min.js"></script>
 ```
 
 Then, in your own script, generate a terrain and add it to your scene:
@@ -41,5 +33,7 @@ terrainScene = THREE.Terrain({
 scene.add(terrainScene);
 ```
 
-You can play around with the parameters and see what happens in the demo. They
-are all thoroughly documented in the source code. All parameters are optional.
+All parameters are optional and thoroughly documented in the
+[source code](https://github.com/IceCreamYou/THREE.Terrain/blob/gh-pages/THREE.Terrain.js).
+You can play around with some of the parameters and see what happens in the
+[demo](https://icecreamyou.github.io/THREE.Terrain/).

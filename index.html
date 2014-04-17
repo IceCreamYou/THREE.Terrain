@@ -32,6 +32,7 @@ canvas {
   margin: 0 auto;
   user-select: none;
 }
+#code,
 #fpscontrols {
   background-color: rgba(16, 16, 16, 0.75);
   border: 1px solid #AAAAAA;
@@ -53,6 +54,18 @@ canvas {
   opacity: 1;
   transition: opacity 0.5s;
 }
+#code {
+  left: 20px;
+  opacity: 1;
+  right: auto;
+}
+#code a {
+  color: #AAAAAA;
+  text-decoration: none;
+}
+#code a:hover {
+  text-decoration: underline;
+}
   </style>
 </head>
 <body>
@@ -64,6 +77,7 @@ canvas {
   <script src="THREE.Terrain.js"></script>
   <script src="index.js"></script>
   <script>setup();</script>
+  <div id="code"><a href="https://github.com/IceCreamYou/THREE.Terrain" target="_blank">Fork me on Github</a></div>
   <div id="fpscontrols">W = Forward, S = Back, A = Left, D = Right, R = Up, F = Down, Q = Freeze, Mouse = Look</div>
 </body>
 </html>
