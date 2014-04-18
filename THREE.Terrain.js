@@ -3,11 +3,10 @@
  *
  * Usage: `var terrainScene = THREE.Terrain();`
  *
- * TODO: Support segment dimensions other than 2^n-1, and support non-square
- *       terrains
  * TODO: Support multiple materials based on height or a texture map. Resources:
  *       http://stemkoski.github.io/Three.js/Shader-Heightmap-Textures.html
  *       http://www.chandlerprall.com/2011/06/blending-webgl-textures/
+ * TODO: Add a method to convert the terrain's height to a heightmap image
  * TODO: Review https://www.udacity.com/course/viewer#!/c-cs291/l-124106599/m-175393429 and compare
  * TODO: Allow scattering other meshes randomly across the terrain
  * TODO: Implement optimization types
@@ -65,6 +64,7 @@ THREE.Terrain = function(options) {
         maxVariation: 12,
         minHeight: -100,
         optimization: THREE.Terrain.NONE,
+        perlinScale: 0.4,
         useBufferGeometry: true,
         xSegments: 63,
         xSize: 1024,
@@ -229,15 +229,15 @@ THREE.Terrain.Corner = function(g, options) {
         maxVarHalf = maxVar * 0.5;
     for (var i = 0, xl = options.xSegments + 1; i < xl; i++) {
         for (var j = 0; j < options.ySegments + 1; j++) {
-            var k = i*xl + j, // Vertex index
-                s = (i-1)*xl + j, // Bottom vertex index
-                t = i*xl + j-1, // Left vertex index
+            var k = j*xl + i, // Vertex index
+                s = (j-1)*xl + i, // Bottom vertex index
+                t = j*xl + i-1, // Left vertex index
                 l = s < 0 ? g[k].z : g[s].z, // Height of bottom vertex
                 b = t < 0 ? g[k].z : g[t].z, // Height of left vertex
                 r = Math.random(),
                 v = (r < 0.2 ? l : (r < 0.4 ? b : l + b)) * 0.5, // Neighbors
                 m = options.easing(Math.random()) * maxVar - maxVarHalf; // Disturb distance
-            g[k].z = THREE.Math.clamp(
+            g[k].z += THREE.Math.clamp(
                 v + m,
                 options.minHeight,
                 options.maxHeight
@@ -251,18 +251,17 @@ THREE.Terrain.Corner = function(g, options) {
  *
  * Based on https://github.com/srchea/Terrain-Generation/blob/master/js/classes/TerrainGeneration.js
  *
- * @param {THREE.Vector3[]} g
- *   The vertex array for plane geometry to modify with heightmap data. This
- *   method sets the `z` property of each vertex.
- * @param {Object} options
- *    An optional map of settings that control how the terrain is constructed
- *    and displayed. Valid values are the same as those for the `options`
- *    parameter of {@link THREE.Terrain}().
+ * Parameters are the same as those for {@link THREE.Terrain.Corner}.
  */
 THREE.Terrain.DiamondSquare = function(g, options) {
+    // Set the segment length to the smallest power of 2 that is greater than
+    // the number of vertices in either dimension of the plane
+    var segments = Math.max(options.xSegments, options.ySegments) + 1, n;
+    for (n = 1; Math.pow(2, n) < segments; n++) {}
+    segments = Math.pow(2, n);
+
     // Initialize heightmap
-    var segments = Math.max(options.xSegments, options.ySegments) + 1,
-        size = segments + 1,
+    var size = segments + 1,
         heightmap = [],
         smoothing = (options.maxHeight - options.minHeight) * 0.5,
         i,
@@ -313,7 +312,7 @@ THREE.Terrain.DiamondSquare = function(g, options) {
     // Apply heightmap
     for (i = 0; i < xl; i++) {
         for (j = 0; j < yl; j++) {
-            g[i * xl + j].z = THREE.Math.clamp(
+            g[j * xl + i].z += THREE.Math.clamp(
                 heightmap[i][j],
                 options.minHeight,
                 options.maxHeight
@@ -323,14 +322,19 @@ THREE.Terrain.DiamondSquare = function(g, options) {
 };
 
 if (window.noise && window.noise.perlin) {
+    /**
+     * Generate random terrain using the Perlin Noise method.
+     *
+     * Parameters are the same as those for {@link THREE.Terrain.Corner}.
+     */
     THREE.Terrain.Perlin = function(g, options) {
         noise.seed(Math.random());
         var range = options.maxHeight - options.minHeight * 0.5,
-            halfRange = range * 0.5;
+            divisor = (Math.min(options.xSegments, options.ySegments) + 1) * options.perlinScale;
         for (var i = 0, xl = options.xSegments + 1; i < xl; i++) {
             for (var j = 0, yl = options.ySegments + 1; j < yl; j++) {
-                g[i * xl + j].z = THREE.Math.clamp(
-                    options.easing(noise.perlin(i/ xl, j / yl)) * range - halfRange,
+                g[j * xl + i].z += THREE.Math.clamp(
+                    options.easing(noise.perlin(i / divisor, j / divisor)) * range,
                     options.minHeight,
                     options.maxHeight
                 );
@@ -340,14 +344,19 @@ if (window.noise && window.noise.perlin) {
 }
 
 if (window.noise && window.noise.simplex) {
+    /**
+     * Generate random terrain using the Simplex Noise method.
+     *
+     * Parameters are the same as those for {@link THREE.Terrain.Corner}.
+     */
     THREE.Terrain.Simplex = function(g, options) {
         noise.seed(Math.random());
         var range = (options.maxHeight - options.minHeight) * 0.5,
-            halfRange = range * 0.5;
+            divisor = (Math.min(options.xSegments, options.ySegments) + 1) * options.perlinScale * 2;
         for (var i = 0, xl = options.xSegments + 1; i < xl; i++) {
             for (var j = 0, yl = options.ySegments + 1; j < yl; j++) {
-                g[i * xl + j].z = THREE.Math.clamp(
-                    options.easing(noise.simplex(i/ xl, j / yl)) * range - halfRange,
+                g[j * xl + i].z += THREE.Math.clamp(
+                    options.easing(noise.simplex(i / divisor, j / divisor)) * range,
                     options.minHeight,
                     options.maxHeight
                 );
@@ -355,3 +364,63 @@ if (window.noise && window.noise.simplex) {
         }
     };
 }
+
+/**
+ * A utility for generating heightmap functions by composition.
+ *
+ * This modifies `options.maxHeight` and `options.minHeight` while running, so
+ * it is NOT THREAD SAFE for operations that use those values.
+ *
+ * @param {THREE.Vector3[]} g
+ *   The vertex array for plane geometry to modify with heightmap data. This
+ *   method sets the `z` property of each vertex.
+ * @param {Object} options
+ *    An optional map of settings that control how the terrain is constructed
+ *    and displayed. Valid values are the same as those for the `options`
+ *    parameter of {@link THREE.Terrain}().
+ * @param {Object[]} passes
+ *   Determines which heightmap functions to compose to create a new one.
+ *   Consists of an array of objects with a `method` property containing
+ *   something that will be passed around as an `options.heightmap` (a
+ *   heightmap-generating function or a heightmap image).
+ */
+THREE.Terrain.MultiPass = function(g, options, passes) {
+    var GRANULARITY = 0.1,
+        maxHeight = options.maxHeight,
+        minHeight = options.minHeight;
+    for (var i = 0, l = passes.length; i < l; i++) {
+        if (i !== 0) {
+            var gran = typeof passes[i].granularity === 'undefined' ? 1 : passes[i].granularity,
+                move = (options.maxHeight - options.minHeight) * 0.5 * GRANULARITY * gran;
+            options.maxHeight -= move;
+            options.minHeight += move;
+        }
+        passes[i].method(g, options);
+    }
+    options.maxHeight = maxHeight;
+    options.minHeight = minHeight;
+};
+
+/**
+ * Generate random terrain using the Perlin and Diamond-Square methods composed.
+ *
+ * Parameters are the same as those for {@link THREE.Terrain.Corner}.
+ */
+THREE.Terrain.PerlinDiamond = function(g, options) {
+    THREE.Terrain.MultiPass(g, options, [
+        {method: THREE.Terrain.Perlin},
+        {method: THREE.Terrain.DiamondSquare, granularity: -2},
+    ]);
+};
+
+/**
+ * Generate random terrain using the Simplex and Corner methods composed.
+ *
+ * Parameters are the same as those for {@link THREE.Terrain.Corner}.
+ */
+THREE.Terrain.SimplexCorner = function(g, options) {
+    THREE.Terrain.MultiPass(g, options, [
+        {method: THREE.Terrain.Simplex},
+        {method: THREE.Terrain.Corner, granularity: 2},
+    ]);
+};
