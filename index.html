@@ -66,6 +66,15 @@ canvas {
 #code a:hover {
   text-decoration: underline;
 }
+#heightmap {
+  border: 1px solid #AAAAAA;
+  height: 128px;
+  left: 20px;
+  position: absolute;
+  top: 20px;
+  width: 128px;
+  z-index: 3;
+}
   </style>
 </head>
 <body>
@@ -76,6 +85,7 @@ canvas {
   <script src="noise.js"></script>
   <script src="THREE.Terrain.js"></script>
   <script src="index.js"></script>
+  <canvas id="heightmap"></canvas>
   <script>setup();</script>
   <div id="code"><a href="https://github.com/IceCreamYou/THREE.Terrain" target="_blank">Fork me on Github</a></div>
   <div id="fpscontrols">W = Forward, S = Back, A = Left, D = Right, R = Up, F = Down, Q = Freeze, Mouse = Look</div>

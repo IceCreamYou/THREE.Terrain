@@ -6,7 +6,6 @@
  * TODO: Support multiple materials based on height or a texture map. Resources:
  *       http://stemkoski.github.io/Three.js/Shader-Heightmap-Textures.html
  *       http://www.chandlerprall.com/2011/06/blending-webgl-textures/
- * TODO: Add a method to convert the terrain's height to a heightmap image
  * TODO: Review https://www.udacity.com/course/viewer#!/c-cs291/l-124106599/m-175393429 and compare
  * TODO: Allow scattering other meshes randomly across the terrain
  * TODO: Implement optimization types
@@ -211,6 +210,38 @@ THREE.Terrain.fromHeightmap = function(g, options) {
 };
 
 /**
+ * Convert a terrain plane into an image-based heightmap.
+ *
+ * Parameters are the same as for {@link THREE.Terrain.fromHeightmap} except
+ * that if `options.heightmap` is a canvas element then the image will be
+ * painted onto that canvas; otherwise a new canvas will be created.
+ *
+ * @return {HTMLCanvasElement}
+ *   A canvas with the relevant heightmap painted on it.
+ */
+THREE.Terrain.toHeightmap = function(g, options) {
+    var canvas = options.heightmap instanceof HTMLCanvasElement ? options.heightmap : document.createElement('canvas'),
+        context = canvas.getContext('2d'),
+        rows = options.ySegments + 1,
+        cols = options.xSegments + 1,
+        spread = options.maxHeight - options.minHeight;
+    canvas.width = cols;
+    canvas.height = rows;
+    var d = context.createImageData(canvas.width, canvas.height),
+        data = d.data;
+    for (var row = 0; row < rows; row++) {
+        for (var col = 0; col < cols; col++) {
+            var i = row * cols + col,
+            idx = i * 4;
+            data[idx] = data[idx+1] = data[idx+2] = Math.round(((g[i].z - options.minHeight) / spread) * 255);
+            data[idx+3] = 255;
+        }
+    }
+    context.putImageData(d, 0, 0);
+    return canvas;
+};
+
+/**
  * Generate random terrain using the Corner method.
  *
  * This looks much more like random noise than realistic terrain.
@@ -262,7 +293,7 @@ THREE.Terrain.DiamondSquare = function(g, options) {
     // Initialize heightmap
     var size = segments + 1,
         heightmap = [],
-        smoothing = (options.maxHeight - options.minHeight) * 0.5,
+        smoothing = (options.maxHeight - options.minHeight),
         i,
         j,
         xl = options.xSegments + 1,

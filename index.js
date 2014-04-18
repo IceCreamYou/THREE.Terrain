@@ -103,7 +103,7 @@ function setupDatGui() {
     this.Regenerate = function() {
       var s = parseInt(that.segments, 10),
           h = that.heightmap === 'heightmap.png';
-      var t = THREE.Terrain({
+      var o = {
         easing: THREE.Terrain[that.easing],
         heightmap: h ? heightmapImage : THREE.Terrain[that.heightmap],
         material: mat,
@@ -115,10 +115,15 @@ function setupDatGui() {
         ySize: Math.round(512 * that['width:length ratio']),
         xSegments: s,
         ySegments: Math.round(s * that['width:length ratio']),
-      });
+      };
       scene.remove(terrainScene);
-      terrainScene = t;
+      terrainScene = THREE.Terrain(o);
       scene.add(terrainScene);
+      var he = document.getElementById('heightmap');
+      if (he) {
+        o.heightmap = he;
+        THREE.Terrain.toHeightmap(terrainScene.children[0].geometry.vertices, o);
+      }
     };
     this.Regenerate();
   }
