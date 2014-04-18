@@ -2,7 +2,7 @@
 heightmaps for use with the [Three.js](https://github.com/mrdoob/three.js) 3D
 graphics library for the web.
 
-**[Try the demo](https://icecreamyou.github.io/THREE.Terrain/)!**
+#### [Try the demo](https://icecreamyou.github.io/THREE.Terrain/)!
 
 ## Usage
 

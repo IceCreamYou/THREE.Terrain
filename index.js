@@ -96,8 +96,7 @@ function setupDatGui() {
     var that = this;
     this.easing = 'NoEasing';
     this.heightmap = 'DiamondSquare';
-    this.maxHeight = 100;
-    this.minHeight = -100;
+    this.maxHeight = 200;
     this.segments = 31;
     this['width:length ratio'] = 1;
     this['First person view'] = useFPS;
@@ -108,9 +107,9 @@ function setupDatGui() {
         easing: THREE.Terrain[that.easing],
         heightmap: h ? heightmapImage : THREE.Terrain[that.heightmap],
         material: mat,
-        maxHeight: that.maxHeight * (h ? 0.25 : 1),
+        maxHeight: (that.maxHeight - 100) * (h ? 0.25 : 1),
         maxVariation: 12,
-        minHeight: that.minHeight * (h ? 0.25 : 1),
+        minHeight: -100 * (h ? 0.25 : 1),
         useBufferGeometry: false,
         xSize: 512,
         ySize: Math.round(512 * that['width:length ratio']),
@@ -148,8 +147,7 @@ function setupDatGui() {
     }
   });
   var folder = gui.addFolder('Terrain size');
-  folder.add(settings, 'maxHeight', 1, 200).step(1).onFinishChange(settings.Regenerate);
-  folder.add(settings, 'minHeight', -200, -1).step(1).onFinishChange(settings.Regenerate);
+  folder.add(settings, 'maxHeight', 2, 300).step(2).onFinishChange(settings.Regenerate);
   folder.add(settings, 'width:length ratio', 0.2, 2).step(0.05).onFinishChange(settings.Regenerate);
   gui.add(settings, 'Regenerate');
 }

@@ -120,8 +120,7 @@ THREE.Terrain = function(options) {
  *
  * Note that none of these are implemented right now. They should be done as
  * shaders so that they execute on the GPU, and the resulting scene would need
- * to be updated every frame to adjust to the camera's position. Sadly I don't
- * know very much about GLSL at the time of writing, so this will have to wait.
+ * to be updated every frame to adjust to the camera's position.
  *
  * GEOMIPMAP: The terrain plane should be split into sections, each with their
  * own LODs, for screen-space occlusion and detail reduction. Intermediate
