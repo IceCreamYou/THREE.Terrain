@@ -3,7 +3,7 @@ module.exports = function(grunt) {
                ' * THREE.Terrain.js <%= pkg.version %>-<%= grunt.template.today("ddmmyyyy") %>\n' +
                ' *\n' +
                ' * @author <%= pkg.author %>\n' +
-               ' * @license <%= pkg.license %> License\n' +
+               ' * @license <%= pkg.license %>\n' +
                ' */\n';
   grunt.initConfig({
     pkg: grunt.file.readJSON('package.json'),
@@ -14,8 +14,8 @@ module.exports = function(grunt) {
       },
       target: {
         src: [
-              'THREE.Terrain.js',
-              'noise.js'
+              'noise.js',
+              'THREE.Terrain.js'
               ],
         dest: 'THREE.Terrain.noise.js',
         nonull: true
@@ -24,13 +24,17 @@ module.exports = function(grunt) {
     uglify: {
       options: {
         banner: banner,
-        sourceMap: true,
         compress: {
+          dead_code: false,
           side_effects: false,
           unused: false
         },
         mangle: true,
-        report: 'min'
+        preserveComments: function(node, comment) {
+          return (/^!/).test(comment.value);
+        },
+        report: 'min',
+        sourceMap: true
       },
       target: {
         files: {

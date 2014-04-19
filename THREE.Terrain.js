@@ -258,7 +258,7 @@ THREE.Terrain.generateBlendedMaterial = function(textures, scene) {
 };
 
 function textFromComment(fn, vars) {
-    var s = (fn + '').match(/^[\s\S]*?\/\*\s*([\s\S]+?)\s*\*\/$/m)[1];
+    var s = (fn + '').match(/^[\s\S]*?\/\*!?\s*([\s\S]+?)\s*\*\/$/m)[1];
     if (typeof vars !== 'undefined') {
         var keys = Object.keys(vars).sort(function(a, b) { return b.length - a.length; });
         for (var i = 0, l = keys.length; i < l; i++) {
@@ -270,7 +270,7 @@ function textFromComment(fn, vars) {
 }
 
 function vertexShader() {
-    /*
+    /*!
     varying vec2 vUv;
     varying vec3 vPosition;
     void main( void ) {
@@ -279,10 +279,11 @@ function vertexShader() {
         gl_Position = projectionMatrix * modelViewMatrix * vec4(vPosition, 1);
     }
     */
+    var z; // prevent UglifyJS from removing the above comment
 }
 
 function fragmentShader() {
-    /*
+    /*!
     $fog_pars_fragment
     varying vec2 vUv;
     varying vec3 vPosition;
@@ -294,6 +295,7 @@ $assignTextures
         $fog_fragment
     }
     */
+    var z; // prevent UglifyJS from removing the above comment
 }
 
 })();
