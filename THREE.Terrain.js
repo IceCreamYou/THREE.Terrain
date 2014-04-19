@@ -3,12 +3,10 @@
  *
  * Usage: `var terrainScene = THREE.Terrain();`
  *
- * TODO: Support multiple materials based on height or a texture map. Resources:
- *       http://stemkoski.github.io/Three.js/Shader-Heightmap-Textures.html
- *       http://www.chandlerprall.com/2011/06/blending-webgl-textures/
- * TODO: Review https://www.udacity.com/course/viewer#!/c-cs291/l-124106599/m-175393429 and compare
+ * TODO: Make blended materials work with fog, lighting, envMaps, etc.
  * TODO: Allow scattering other meshes randomly across the terrain
- * TODO: Implement optimization types
+ * TODO: Implement optimization types?
+ * TODO: Support infinite terrain?
  *
  * @param {Object} [options]
  *   An optional map of settings that control how the terrain is constructed
@@ -179,6 +177,127 @@ THREE.Terrain.InEaseOut = function(x) {
     return 0.5 * y*y*y + 0.5;
 };
 
+(function() {
+
+/**
+ * Generate a material that blends together textures based on vertex height.
+ *
+ * Inspired by http://www.chandlerprall.com/2011/06/blending-webgl-textures/
+ *
+ * Usage:
+ *
+ *    // Assuming the textures are already loaded
+ *    var material = THREE.Terrain.generateBlendedMaterial([
+ *      {texture: THREE.ImageUtils.loadTexture('img1.jpg')},
+ *      {texture: THREE.ImageUtils.loadTexture('img2.jpg'), levels: [-80, -35, 20, 50]},
+ *      {texture: THREE.ImageUtils.loadTexture('img3.jpg'), levels: [20, 50, 60, 85]},
+ *      {texture: THREE.ImageUtils.loadTexture('img4.jpg'), glsl: '1.0 - smoothstep(65.0 + smoothstep(-256.0, 256.0, vPosition.x) * 10.0, 80.0, vPosition.z)'},
+ *    ]);
+ *
+ * @param {Object[]} textures
+ *   An array of objects specifying textures to blend together and how to blend
+ *   them. Each object should have a `texture` property containing a
+ *   `THREE.Texture` instance. There must be at least one texture and the first
+ *   texture does not need any other properties because it will serve as the
+ *   base, showing up wherever another texture isn't blended in. Other textures
+ *   must have either a `levels` property containing an array of four numbers
+ *   or a `glsl` property containing a single GLSL expression evaluating to a
+ *   float between 0.0 and 1.0. For the `levels` property, the four numbers
+ *   are, in order: the height at which the texture will start blending in, the
+ *   height at which it will be fully blended in, the height at which it will
+ *   start blending out, and the height at which it will be fully blended out.
+ *   The `vec3 vPosition` variable is available to `glsl` expressions; it
+ *   contains the coordinates in Three-space of the texel currently being
+ *   rendered.
+ */
+THREE.Terrain.generateBlendedMaterial = function(textures, scene) {
+    var uniforms = {}, assign = '', declare = '';
+    if (scene && scene.fog) {
+        uniforms = {
+            fogColor:   { type: 'c', value: scene.fog.color },
+            fogDensity: { type: 'c', value: scene.fog.density },
+            fogNear:    { type: 'f', value: scene.fog.near },
+            fogFar:     { type: 'f', value: scene.fog.far }
+        };
+    }
+    for (var i = 0, l = textures.length; i < l; i++) {
+        textures[i].wrapS = textures[i].wrapT = THREE.RepeatWrapping;
+        uniforms['texture_' + i] = {
+            type: 't',
+            value: textures[i].texture,
+        };
+        declare += '    uniform sampler2D texture_' + i + ';\n';
+        if (i !== 0) {
+            var v = textures[i].levels,
+                p = textures[i].glsl,
+                le = typeof v !== 'undefined';
+            if (le) {
+                // Must fade in; can't start and stop at the same point.
+                if (v[1] - v[0] < 1) v[0] -= 1;
+                if (v[3] - v[2] < 1) v[3] += 1;
+                // Convert levels to floating-point numbers as strings
+                for (var j = 0; j < v.length; j++) {
+                    var n = v[j];
+                    v[j] = n|0 === n ? n+'.0' : n+'';
+                }
+            }
+            assign += '        color = mix( texture2D( texture_' + i + ', vUv ), color, max(min(' + (!le ? p : '1.0 - smoothstep(' + v[0] + ', ' + v[1] + ', vPosition.z) + smoothstep(' + v[2] + ', ' + v[3] + ', vPosition.z)') + ', 1.0), 0.0));\n';
+        }
+    }
+    return new THREE.ShaderMaterial({
+        uniforms: uniforms,
+        vertexShader: textFromComment(vertexShader),
+        fragmentShader: textFromComment(fragmentShader, {
+            assignTextures: assign,
+            declareTextures: declare,
+            fog_fragment: scene && scene.fog ? THREE.ShaderChunk.fog_fragment : '',
+            fog_pars_fragment: scene && scene.fog ? THREE.ShaderChunk.fog_pars_fragment : '',
+        }),
+        fog: true,
+    });
+};
+
+function textFromComment(fn, vars) {
+    var s = (fn + '').match(/^[\s\S]*?\/\*\s*([\s\S]+?)\s*\*\/$/m)[1];
+    if (typeof vars !== 'undefined') {
+        var keys = Object.keys(vars).sort(function(a, b) { return b.length - a.length; });
+        for (var i = 0, l = keys.length; i < l; i++) {
+            var key = keys[i], val = vars[key];
+            s = s.split('$' + key).join(val);
+        }
+    }
+    return s;
+}
+
+function vertexShader() {
+    /*
+    varying vec2 vUv;
+    varying vec3 vPosition;
+    void main( void ) {
+        vUv = uv;
+        vPosition = position;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(vPosition, 1);
+    }
+    */
+}
+
+function fragmentShader() {
+    /*
+    $fog_pars_fragment
+    varying vec2 vUv;
+    varying vec3 vPosition;
+$declareTextures
+    void main() {
+        vec4 color = texture2D( texture_0, vUv ); // base
+$assignTextures
+        gl_FragColor = color;
+        $fog_fragment
+    }
+    */
+}
+
+})();
+
 /**
  * Convert an image-based heightmap into vertex-based height data.
  *
@@ -215,6 +334,11 @@ THREE.Terrain.fromHeightmap = function(g, options) {
  * Parameters are the same as for {@link THREE.Terrain.fromHeightmap} except
  * that if `options.heightmap` is a canvas element then the image will be
  * painted onto that canvas; otherwise a new canvas will be created.
+ *
+ * NOTE: this method performs an operation on an array of vertices, which
+ * aren't available when using `BufferGeometry`. So, if you want to use this
+ * method, make sure to set the `useBufferGeometry` option to `false` when
+ * generating your terrain.
  *
  * @return {HTMLCanvasElement}
  *   A canvas with the relevant heightmap painted on it.

@@ -16,7 +16,6 @@ Then, in your own script, generate a terrain and add it to your scene:
 
 ```javascript
 terrainScene = THREE.Terrain({
-    easing: THREE.Terrain.NoEasing,
     heightmap: THREE.Terrain.DiamondSquare,
     material: new THREE.MeshBasicMaterial({color: 0x5566aa}),
     maxHeight: 100,
@@ -36,4 +35,5 @@ All parameters are optional and thoroughly documented in the
 You can play around with some of the parameters and see what happens in the
 [demo](https://icecreamyou.github.io/THREE.Terrain/).
 
-![Screenshot](https://raw.githubusercontent.com/IceCreamYou/THREE.Terrain/gh-pages/img/screenshot.jpg)
+![Screenshot 1](https://raw.githubusercontent.com/IceCreamYou/THREE.Terrain/gh-pages/img/screenshot1.jpg)
+![Screenshot 2](https://raw.githubusercontent.com/IceCreamYou/THREE.Terrain/gh-pages/img/screenshot2.png)

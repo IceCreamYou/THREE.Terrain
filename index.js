@@ -3,7 +3,7 @@ var webglExists = ( function () { try { var canvas = document.createElement( 'ca
 // Workaround: in Chrome, if a page is opened with window.open(), window.innerWidth and window.innerHeight will be zero.
 if ( window.innerWidth === 0 ) { window.innerWidth = parent.innerWidth; window.innerHeight = parent.innerHeight; }
 
-var camera, scene, renderer, clock, player, terrainScene, controls = {}, fpsCamera;
+var camera, scene, renderer, clock, player, terrainScene, controls = {}, fpsCamera, skyDome, fog;
 var INV_MAX_FPS = 1 / 100,
     frameDelta = 0,
     paused = true,
@@ -59,6 +59,14 @@ function setupThreeJS() {
   renderer.domElement.setAttribute('tabindex', -1);
 
   camera = new THREE.PerspectiveCamera(60, renderer.domElement.width / renderer.domElement.height, 1, 10000);
+  scene.add(camera);
+  camera.position.x = 449;
+  camera.position.y = 311;
+  camera.position.z = 376;
+  camera.rotation.x = -52 * Math.PI / 180;
+  camera.rotation.y = 35 * Math.PI / 180;
+  camera.rotation.z = 37 * Math.PI / 180;
+
   clock = new THREE.Clock(false);
 }
 
@@ -72,47 +80,58 @@ function setupControls() {
 }
 
 function setupWorld() {
-  scene.add(camera);
-  camera.position.x = 155;
-  camera.position.y = 190;
-  camera.position.z = 265;
-  camera.rotation.x = -44.5 * Math.PI / 180;
-  camera.rotation.y = 24 * Math.PI / 180;
-  camera.rotation.z = 22 * Math.PI / 180;
-
-  terrainScene = THREE.Terrain({
-    material: new THREE.MeshBasicMaterial({color: 0x5566aa, wireframe: true}),
-    useBufferGeometry: false,
-    xSize: 512, ySize: 512, xSegments: 31, ySegments: 31,
+  THREE.ImageUtils.loadTexture('img/sky1.jpg', undefined, function(t1) {
+    skyDome = new THREE.Mesh(
+      new THREE.SphereGeometry(4096, 64, 64),
+      new THREE.MeshBasicMaterial({map: t1, side: THREE.BackSide, fog: false})
+    );
+    scene.add(skyDome);
   });
-  scene.add(terrainScene);
 }
 
 function setupDatGui() {
   var heightmapImage = new Image();
   heightmapImage.src = 'img/heightmap.png';
   function Settings() {
-    var mat = new THREE.MeshBasicMaterial({color: 0x5566aa, wireframe: true});
     var that = this;
+    var mat = new THREE.MeshBasicMaterial({color: 0x5566aa, wireframe: true});
+    var blend;
+    THREE.ImageUtils.loadTexture('img/sand2.jpg', undefined, function(t1) {
+      THREE.ImageUtils.loadTexture('img/grass2.jpg', undefined, function(t2) {
+        THREE.ImageUtils.loadTexture('img/stone2.jpg', undefined, function(t3) {
+          THREE.ImageUtils.loadTexture('img/snow2.jpg', undefined, function(t4) {
+            blend = THREE.Terrain.generateBlendedMaterial([
+              {texture: t1},
+              {texture: t2, levels: [-80, -35, 20, 50]},
+              {texture: t3, levels: [20, 50, 60, 85]},
+              {texture: t4, glsl: '1.0 - smoothstep(65.0 + smoothstep(-256.0, 256.0, vPosition.x) * 10.0, 80.0, vPosition.z)'},
+            ], scene);
+            that.Regenerate();
+          });
+        });
+      });
+    });
     this.easing = 'NoEasing';
-    this.heightmap = 'DiamondSquare';
+    this.heightmap = 'PerlinDiamond';
     this.maxHeight = 200;
-    this.segments = 31;
+    this.segments = webglExists ? 63 : 31;
+    this.size = 1024;
+    this.sky = true;
+    this.texture = webglExists ? 'Blended' : 'Wireframe';
     this['width:length ratio'] = 1;
-    this['First person view'] = useFPS;
+    this['Flight mode'] = useFPS;
     this.Regenerate = function() {
       var s = parseInt(that.segments, 10),
           h = that.heightmap === 'heightmap.png';
       var o = {
         easing: THREE.Terrain[that.easing],
         heightmap: h ? heightmapImage : THREE.Terrain[that.heightmap],
-        material: mat,
+        material: that.texture == 'Wireframe' ? mat : blend,
         maxHeight: (that.maxHeight - 100) * (h ? 0.25 : 1),
-        maxVariation: 12,
         minHeight: -100 * (h ? 0.25 : 1),
-        useBufferGeometry: false,
-        xSize: 512,
-        ySize: Math.round(512 * that['width:length ratio']),
+        useBufferGeometry: s >= 64,
+        xSize: that.size,
+        ySize: Math.round(that.size * that['width:length ratio']),
         xSegments: s,
         ySegments: Math.round(s * that['width:length ratio']),
       };
@@ -121,24 +140,33 @@ function setupDatGui() {
       scene.add(terrainScene);
       var he = document.getElementById('heightmap');
       if (he) {
-        o.heightmap = he;
-        THREE.Terrain.toHeightmap(terrainScene.children[0].geometry.vertices, o);
+        if (s < 64) {
+          he.style.display = 'block';
+          o.heightmap = he;
+          THREE.Terrain.toHeightmap(terrainScene.children[0].geometry.vertices, o);
+        }
+        else {
+          he.style.display = 'none';
+        }
       }
     };
-    this.Regenerate();
   }
   var gui = new dat.GUI();
   var settings = new Settings();
-  gui.add(settings, 'easing', ['NoEasing', 'EaseInOut', 'InEaseOut']).onFinishChange(settings.Regenerate);
+  //gui.add(settings, 'easing', ['NoEasing', 'EaseInOut', 'InEaseOut']).onFinishChange(settings.Regenerate);
   gui.add(settings, 'heightmap', ['Corner', 'DiamondSquare', 'heightmap.png', 'Perlin', 'Simplex', 'PerlinDiamond', 'SimplexCorner']).onFinishChange(settings.Regenerate);
-  gui.add(settings, 'segments', 7, 95).step(1).onFinishChange(settings.Regenerate);
-  gui.add(settings, 'First person view').onChange(function(val) {
+  gui.add(settings, 'texture', ['Blended', 'Wireframe']).onFinishChange(settings.Regenerate);
+  gui.add(settings, 'segments', 7, 127).step(1).onFinishChange(settings.Regenerate);
+  gui.add(settings, 'sky').onChange(function(val) {
+    skyDome.visible = val;
+  });
+  gui.add(settings, 'Flight mode').onChange(function(val) {
     useFPS = val;
-    fpsCamera.position.x = 155;
-    fpsCamera.position.z = 265;
-    fpsCamera.position.y = 190;
-    controls.lon = -122;
-    controls.lat = -40;
+    fpsCamera.position.x = 449;
+    fpsCamera.position.y = 311;
+    fpsCamera.position.z = 376;
+    controls.lat = -41;
+    controls.lon = -139;
     controls.update(0);
     controls.freeze = true;
     if (useFPS) {
@@ -152,6 +180,7 @@ function setupDatGui() {
     }
   });
   var folder = gui.addFolder('Terrain size');
+  folder.add(settings, 'size', 256, 3072).step(256).onFinishChange(settings.Regenerate);
   folder.add(settings, 'maxHeight', 2, 300).step(2).onFinishChange(settings.Regenerate);
   folder.add(settings, 'width:length ratio', 0.2, 2).step(0.05).onFinishChange(settings.Regenerate);
   gui.add(settings, 'Regenerate');
@@ -171,7 +200,7 @@ function draw() {
 }
 
 function update(delta) {
-  terrainScene.children[0].rotation.z = Date.now() * 0.00001;
+  if (terrainScene) terrainScene.children[0].rotation.z = Date.now() * 0.00001;
   if (controls.update) controls.update(delta);
 }
 
@@ -197,4 +226,17 @@ function watchFocus() {
     _blurred = true;
     controls.freeze = true;
   });
+}
+
+function __printCameraData() {
+  var s = '';
+  s += 'camera.position.x = ' + Math.round(fpsCamera.position.x) + ';\n';
+  s += 'camera.position.y = ' + Math.round(fpsCamera.position.y) + ';\n';
+  s += 'camera.position.z = ' + Math.round(fpsCamera.position.z) + ';\n';
+  s += 'camera.rotation.x = ' + Math.round(fpsCamera.rotation.x * 180 / Math.PI) + ' * Math.PI / 180;\n';
+  s += 'camera.rotation.y = ' + Math.round(fpsCamera.rotation.y * 180 / Math.PI) + ' * Math.PI / 180;\n';
+  s += 'camera.rotation.z = ' + Math.round(fpsCamera.rotation.z * 180 / Math.PI) + ' * Math.PI / 180;\n';
+  s += 'controls.lat = ' + Math.round(controls.lat) + ';\n';
+  s += 'controls.lon = ' + Math.round(controls.lon) + ';\n';
+  console.log(s);
 }
