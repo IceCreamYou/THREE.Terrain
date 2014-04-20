@@ -119,6 +119,10 @@ THREE.Terrain = function(options) {
  * shaders so that they execute on the GPU, and the resulting scene would need
  * to be updated every frame to adjust to the camera's position.
  *
+ * Further reading:
+ * - http://vterrain.org/LOD/Papers/
+ * - http://vterrain.org/LOD/Implementations/
+ *
  * GEOMIPMAP: The terrain plane should be split into sections, each with their
  * own LODs, for screen-space occlusion and detail reduction. Intermediate
  * vertices on higher-detail neighboring sections should be interpolated
@@ -538,7 +542,10 @@ if (window.noise && window.noise.simplex) {
  *   Determines which heightmap functions to compose to create a new one.
  *   Consists of an array of objects with a `method` property containing
  *   something that will be passed around as an `options.heightmap` (a
- *   heightmap-generating function or a heightmap image).
+ *   heightmap-generating function or a heightmap image) and optionally a
+ *   `granularity` property which is a multiplier for the heightmap of that
+ *   pass which will be applied before adding it to the result of previous
+ *   passes.
  */
 THREE.Terrain.MultiPass = function(g, options, passes) {
     var GRANULARITY = 0.1,
@@ -555,6 +562,30 @@ THREE.Terrain.MultiPass = function(g, options, passes) {
     }
     options.maxHeight = maxHeight;
     options.minHeight = minHeight;
+    THREE.Terrain.Clamp(g, options);
+};
+
+/**
+ * Clamp the heightmap of a terrain within the maximum range.
+ *
+ * Parameters are the same as those for {@link THREE.Terrain.Corner}.
+ */
+THREE.Terrain.Clamp = function(g, options) {
+    var min = Infinity,
+        max = -Infinity,
+        l = g.length,
+        i;
+    for (i = 0; i < l; i++) {
+        if (g[i].z < min) min = g[i].z;
+        if (g[i].z > max) max = g[i].z;
+    }
+    var actualRange = max - min,
+        targetMax = max < options.maxHeight ? max : options.maxHeight,
+        targetMin = min > options.minHeight ? min : options.minHeight,
+        range = targetMax - targetMin;
+    for (i = 0; i < l; i++) {
+        g[i].z = ((g[i].z - min) / actualRange) * range + options.minHeight;
+    }
 };
 
 /**
