@@ -57,13 +57,20 @@ module.exports = function(grunt) {
     },
     jscs: {
       options: {
-        config: ".jscs.json"
+        config: '.jscs.json'
       },
       main: [
                'index.js',
                'THREE.Terrain.js',
                'noise.js'
              ]
+    },
+    watch: {
+      files: [
+               'THREE.Terrain.js',
+               'noise.js'
+              ],
+      tasks: ['concat', 'uglify']
     }
   });
 
@@ -71,5 +78,6 @@ module.exports = function(grunt) {
   grunt.loadNpmTasks('grunt-contrib-uglify');
   grunt.loadNpmTasks('grunt-contrib-jshint');
   grunt.loadNpmTasks("grunt-jscs-checker");
+  grunt.loadNpmTasks('grunt-contrib-watch');
   grunt.registerTask('default', ['concat', 'uglify', 'jshint', 'jscs']);
 };

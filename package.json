@@ -13,7 +13,9 @@
     "three.js",
     "terrain",
     "land",
-    "DiamondSquare"
+    "DiamondSquare",
+    "random",
+    "generator"
   ],
   "author": "Isaac Sukin (http://www.isaacsukin.com/)",
   "license": "MIT",
@@ -23,6 +25,7 @@
     "grunt-contrib-concat": "~0.4.0",
     "grunt-contrib-jshint": "~0.10.0",
     "grunt-contrib-uglify": "~0.4.0",
-    "grunt-jscs-checker": "~0.4.1"
+    "grunt-jscs-checker": "~0.4.1",
+    "grunt-contrib-watch": "^0.6.1"
   }
 }

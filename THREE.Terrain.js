@@ -12,14 +12,6 @@
  *   An optional map of settings that control how the terrain is constructed
  *   and displayed. Options include:
  *
- *   - `easing`: If the terrain is being randomly generated, a function that
- *     affects the distribution of slopes by interpolating the randomness used
- *     to disturb terrain vertices along a curve. (If the terrain is being
- *     loaded from a heightmap, this option does nothing.) Valid values include
- *     `THREE.Terrain.NoEasing` (the default), `THREE.Terrain.EaseInOut`,
- *     `THREE.Terrain.InEaseOut`, and any custom function that accepts a number
- *     between 0 and 1 as its only parameter and returns a number between 0 and
- *     1.
  *   - `heightmap`: Either a pre-loaded image (from the same domain as the
  *     webpage or served with a CORS-friendly header) representing terrain
  *     height data (lighter pixels are higher); or a function used to generate
@@ -54,7 +46,6 @@
  */
 THREE.Terrain = function(options) {
     var defaultOptions = {
-        easing: THREE.Terrain.NoEasing,
         heightmap: THREE.Terrain.DiamondSquare,
         material: null,
         maxHeight: 100,
@@ -160,26 +151,6 @@ THREE.Terrain = function(options) {
 THREE.Terrain.NONE = 0;
 THREE.Terrain.GEOMIPMAP = 1;
 THREE.Terrain.GEOCLIPMAP = 2;
-
-/**
- * Randomness interpolation functions.
- */
-THREE.Terrain.NoEasing = function(x) {
-    return x;
-};
-
-// x = [0, 1], x^2(3-2x)
-// Nearly identical alternatives: 0.5+0.5*cos(x*pi-pi), x^a/(x^a+(1-x)^a) (where a=1.6 seems nice)
-// For comparison: http://www.wolframalpha.com/input/?i=x^1.6%2F%28x^1.6%2B%281-x%29^1.6%29%2C+x^2%283-2x%29%2C+0.5%2B0.5*cos%28x*pi-pi%29+from+0+to+1
-THREE.Terrain.EaseInOut = function(x) {
-    return x*x*(3-2*x);
-};
-
-// x = [0, 1], 0.5*(2x-1)^3+0.5
-THREE.Terrain.InEaseOut = function(x) {
-    var y = 2*x-1;
-    return 0.5 * y*y*y + 0.5;
-};
 
 (function() {
 
@@ -396,7 +367,7 @@ THREE.Terrain.Corner = function(g, options) {
                 b = t < 0 ? g[k].z : g[t].z, // Height of left vertex
                 r = Math.random(),
                 v = (r < 0.2 ? l : (r < 0.4 ? b : l + b)) * 0.5, // Neighbors
-                m = options.easing(Math.random()) * maxVar - maxVarHalf; // Disturb distance
+                m = Math.random() * maxVar - maxVarHalf; // Disturb distance
             g[k].z += THREE.Math.clamp(
                 v + m,
                 options.minHeight,
@@ -442,7 +413,7 @@ THREE.Terrain.DiamondSquare = function(g, options) {
         // square
         for (x = 0; x < segments; x += whole) {
             for (y = 0; y < segments; y += whole) {
-                d = options.easing(Math.random()) * smoothing * 2 - smoothing;
+                d = Math.random() * smoothing * 2 - smoothing;
                 avg = heightmap[x][y] +    // top left
                       heightmap[x+whole][y] +  // top right
                       heightmap[x][y+whole] +  // bottom left
@@ -454,7 +425,7 @@ THREE.Terrain.DiamondSquare = function(g, options) {
         // diamond
         for (x = 0; x < segments; x += half) {
             for (y = (x+half) % l; y < segments; y += l) {
-                d = options.easing(Math.random()) * smoothing * 2 - smoothing;
+                d = Math.random() * smoothing * 2 - smoothing;
                 avg = heightmap[(x-half+size)%size][y] + // middle left
                       heightmap[(x+half)%size][y] +      // middle right
                       heightmap[x][(y+half)%size] +      // middle top
@@ -494,7 +465,7 @@ if (window.noise && window.noise.perlin) {
         for (var i = 0, xl = options.xSegments + 1; i < xl; i++) {
             for (var j = 0, yl = options.ySegments + 1; j < yl; j++) {
                 g[j * xl + i].z += THREE.Math.clamp(
-                    options.easing(noise.perlin(i / divisor, j / divisor)) * range,
+                    noise.perlin(i / divisor, j / divisor) * range,
                     options.minHeight,
                     options.maxHeight
                 );
@@ -516,7 +487,7 @@ if (window.noise && window.noise.simplex) {
         for (var i = 0, xl = options.xSegments + 1; i < xl; i++) {
             for (var j = 0, yl = options.ySegments + 1; j < yl; j++) {
                 g[j * xl + i].z += THREE.Math.clamp(
-                    options.easing(noise.simplex(i / divisor, j / divisor)) * range,
+                    noise.simplex(i / divisor, j / divisor) * range,
                     options.minHeight,
                     options.maxHeight
                 );

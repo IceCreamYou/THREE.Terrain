@@ -78,16 +78,17 @@ canvas {
   </style>
 </head>
 <body>
+  <canvas id="heightmap"></canvas>
+  <div id="code"><a href="https://github.com/IceCreamYou/THREE.Terrain" target="_blank">Fork me on Github</a></div>
+  <div id="fpscontrols">W = Forward, S = Back, A = Left, D = Right, R = Up, F = Down, Q = Freeze, Mouse = Look</div>
+
+  <script src="libs/stats.min.js"></script>
   <script src="libs/dat.gui.min.js"></script>
   <script src="libs/three.min.js"></script>
   <script src="libs/BufferGeometryUtils.js"></script>
   <script src="libs/FirstPersonControls.js"></script>
-  <script src="noise.js"></script>
-  <script src="THREE.Terrain.js"></script>
+  <script src="THREE.Terrain.noise.min.js"></script>
   <script src="index.js"></script>
-  <canvas id="heightmap"></canvas>
   <script>setup();</script>
-  <div id="code"><a href="https://github.com/IceCreamYou/THREE.Terrain" target="_blank">Fork me on Github</a></div>
-  <div id="fpscontrols">W = Forward, S = Back, A = Left, D = Right, R = Up, F = Down, Q = Freeze, Mouse = Look</div>
 </body>
 </html>

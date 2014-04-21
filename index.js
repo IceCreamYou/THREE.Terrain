@@ -12,6 +12,7 @@ var INV_MAX_FPS = 1 / 100,
     useFPS = false;
 
 function animate() {
+  stats.begin();
   draw();
 
   frameDelta += clock.getDelta();
@@ -20,6 +21,7 @@ function animate() {
     frameDelta -= INV_MAX_FPS;
   }
 
+  stats.end();
   if (!paused) {
     requestAnimationFrame(animate);
   }
@@ -129,7 +131,7 @@ function setupDatGui() {
         material: that.texture == 'Wireframe' ? mat : blend,
         maxHeight: (that.maxHeight - 100) * (h ? 0.25 : 1),
         minHeight: -100 * (h ? 0.25 : 1),
-        useBufferGeometry: s >= 64,
+        useBufferGeometry: s >= 64 && that.texture != 'Wireframe',
         xSize: that.size,
         ySize: Math.round(that.size * that['width:length ratio']),
         xSegments: s,
@@ -140,7 +142,7 @@ function setupDatGui() {
       scene.add(terrainScene);
       var he = document.getElementById('heightmap');
       if (he) {
-        if (s < 64) {
+        if (s < 64 || that.texture == 'Wireframe') {
           he.style.display = 'block';
           o.heightmap = he;
           THREE.Terrain.toHeightmap(terrainScene.children[0].geometry.vertices, o);
@@ -184,6 +186,19 @@ function setupDatGui() {
   folder.add(settings, 'maxHeight', 2, 300).step(2).onFinishChange(settings.Regenerate);
   folder.add(settings, 'width:length ratio', 0.2, 2).step(0.05).onFinishChange(settings.Regenerate);
   gui.add(settings, 'Regenerate');
+
+  if (typeof window.Stats !== 'undefined' && /[?&]stats=1\b/g.test(location.search)) {
+    stats = new Stats();
+    stats.setMode(0);
+    stats.domElement.style.position = 'absolute';
+    stats.domElement.style.left = '20px';
+    stats.domElement.style.bottom = '0px';
+    document.body.appendChild(stats.domElement);
+    document.getElementById('code').style.left = '120px';
+  }
+  else {
+    stats = {begin:function(){},end:function(){}};
+  }
 }
 
 window.addEventListener('resize', function() {
