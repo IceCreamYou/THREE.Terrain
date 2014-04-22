@@ -519,13 +519,12 @@ if (window.noise && window.noise.simplex) {
  *   passes.
  */
 THREE.Terrain.MultiPass = function(g, options, passes) {
-    var GRANULARITY = 0.1,
-        maxHeight = options.maxHeight,
+    var maxHeight = options.maxHeight,
         minHeight = options.minHeight;
     for (var i = 0, l = passes.length; i < l; i++) {
         if (i !== 0) {
             var gran = typeof passes[i].granularity === 'undefined' ? 1 : passes[i].granularity,
-                move = (options.maxHeight - options.minHeight) * 0.5 * GRANULARITY * gran;
+                move = (options.maxHeight - options.minHeight) * 0.5 * gran;
             options.maxHeight -= move;
             options.minHeight += move;
         }
@@ -567,7 +566,7 @@ THREE.Terrain.Clamp = function(g, options) {
 THREE.Terrain.PerlinDiamond = function(g, options) {
     THREE.Terrain.MultiPass(g, options, [
         {method: THREE.Terrain.Perlin},
-        {method: THREE.Terrain.DiamondSquare, granularity: -2},
+        {method: THREE.Terrain.DiamondSquare, granularity: -0.2},
     ]);
 };
 
@@ -579,6 +578,6 @@ THREE.Terrain.PerlinDiamond = function(g, options) {
 THREE.Terrain.SimplexCorner = function(g, options) {
     THREE.Terrain.MultiPass(g, options, [
         {method: THREE.Terrain.Simplex},
-        {method: THREE.Terrain.Corner, granularity: 2},
+        {method: THREE.Terrain.Corner, granularity: 0.2},
     ]);
 };
