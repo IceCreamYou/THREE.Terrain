@@ -3,8 +3,6 @@
  *
  * Usage: `var terrainScene = THREE.Terrain();`
  *
- * TODO: Make blended materials work with fog, lighting, envMaps, etc.
- *   See https://github.com/mrdoob/three.js/blob/master/src/renderers/shaders/ShaderLib.js
  * TODO: Allow scattering other meshes randomly across the terrain
  * TODO: Implement optimization types?
  * TODO: Implement hill algorithm (feature picking)
@@ -23,8 +21,6 @@
  * TODO: Add dramatic lighting, horizon, and sky (clouds/sun/lens flare) to the
  *   demo
  * TODO: Support the terrain casting shadows onto itself?
- * TODO: Add the ability to pre-blend textures so they're not dependent on
- *   vertex resolution?
  *
  * @param {Object} [options]
  *   An optional map of settings that control how the terrain is constructed
@@ -192,6 +188,12 @@ THREE.Terrain.POLYGONREDUCTION = 3;
  *      {texture: THREE.ImageUtils.loadTexture('img4.jpg'), glsl: '1.0 - smoothstep(65.0 + smoothstep(-256.0, 256.0, vPosition.x) * 10.0, 80.0, vPosition.z)'},
  *    ]);
  *
+ * This material tries to behave exactly like a MeshLambertMaterial other than
+ * the fact that it blends multiple texture maps together, although
+ * ShaderMaterials are treated slightly differently by Three.js so YMMV. Note
+ * that this means the texture will appear black unless there are lights
+ * shining on it.
+ *
  * @param {Object[]} textures
  *   An array of objects specifying textures to blend together and how to blend
  *   them. Each object should have a `texture` property containing a
@@ -209,12 +211,13 @@ THREE.Terrain.POLYGONREDUCTION = 3;
  *   rendered.
  */
 THREE.Terrain.generateBlendedMaterial = function(textures) {
-    var uniforms = {},
+    var uniforms = THREE.UniformsUtils.merge([THREE.ShaderLib.lambert.uniforms]),
         declare = '',
         assign = '';
     for (var i = 0, l = textures.length; i < l; i++) {
         // Uniforms
         textures[i].wrapS = textures[i].wrapT = THREE.RepeatWrapping;
+        textures[i].needsUpdate = true;
         uniforms['texture_' + i] = {
             type: 't',
             value: textures[i].texture,
@@ -252,22 +255,24 @@ THREE.Terrain.generateBlendedMaterial = function(textures) {
         }
     }
     var params = {
+        // I don't know which of these properties have any effect
         fog: true,
         lights: true,
-        //shading: THREE.SmoothShading,
-        //blending: THREE.NormalBlending,
+        // shading: THREE.SmoothShading,
+        // blending: THREE.NormalBlending,
         // depthTest: <bool>,
         // depthWrite: <bool>,
-        //wireframe: false,
-        //wireframeLinewidth: 1,
-        //vertexColors: THREE.NoColors,
+        // wireframe: false,
+        // wireframeLinewidth: 1,
+        // vertexColors: THREE.NoColors,
         // skinning: <bool>,
         // morphTargets: <bool>,
         // morphNormals: <bool>,
         // opacity: 1.0,
+        // transparent: <bool>,
         // side: THREE.FrontSide,
 
-        uniforms: THREE.UniformsUtils.merge([THREE.ShaderLib.lambert.uniforms, uniforms]),
+        uniforms: uniforms,
         vertexShader: THREE.ShaderLib.lambert.vertexShader.replace(
             'void main() {',
             'varying vec2 MyvUv;\nvarying vec3 vPosition;\nvoid main() {\nMyvUv = uv;\nvPosition = position;'
@@ -293,10 +298,10 @@ THREE.Terrain.generateBlendedMaterial = function(textures) {
             'varying vec3 vPosition;',
 
             'void main() {',
-            '    gl_FragColor = vec4( vec3( 1.0 ), opacity );',
+            //'    gl_FragColor = vec4( vec3( 1.0 ), opacity );',
             '    vec4 color = texture2D( texture_0, MyvUv ); // base',
                 assign,
-            '    gl_FragColor = gl_FragColor * color;',
+            '    gl_FragColor = color;',
             //'    gl_FragColor.a = opacity;',
 
                 THREE.ShaderChunk.logdepthbuf_fragment,
@@ -323,7 +328,6 @@ THREE.Terrain.generateBlendedMaterial = function(textures) {
             '}'
         ].join('\n'),
     };
-    console.log(params);
     return new THREE.ShaderMaterial(params);
 };
 
