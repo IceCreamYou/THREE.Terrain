@@ -212,7 +212,7 @@ function setupDatGui() {
     document.getElementById('code').style.left = '120px';
   }
   else {
-    stats = {begin:function(){},end:function(){}};
+    stats = {begin: function() {}, end: function() {}};
   }
 }
 
