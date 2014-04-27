@@ -1,5 +1,5 @@
 /**
- * THREE.Terrain.js 1.0.0-21042014
+ * THREE.Terrain.js 1.0.0-27042014
  *
  * @author Isaac Sukin (http://www.isaacsukin.com/)
  * @license MIT
@@ -190,9 +190,27 @@
  * Usage: `var terrainScene = THREE.Terrain();`
  *
  * TODO: Make blended materials work with fog, lighting, envMaps, etc.
+ *   See https://github.com/mrdoob/three.js/blob/master/src/renderers/shaders/ShaderLib.js
  * TODO: Allow scattering other meshes randomly across the terrain
  * TODO: Implement optimization types?
+ * TODO: Implement hill algorithm (feature picking)
+ *   See http://www.stuffwithstuff.com/robot-frog/3d/hills/hill.html
+ * TODO: Implement a smoothing pass (for each point, put the average of its
+ *   neighbors into a second heightmap)
+ * TODO: Implement an easing pass (instead of easing the randomness, stretch
+ *   the heightmap at the end)
+ * TODO: Implement a pass to make edges go up or down
+ * TODO: Implement some variation of a polygon adjacency graph algorithm
+ *   See http://www-cs-students.stanford.edu/~amitp/game-programming/polygon-map-generation/
  * TODO: Support infinite terrain?
+ * TODO: Add the ability to manually convolve terrain
+ * TODO: Add the ability to manually paint terrain?
+ * TODO: Make automatically blended terrain take slope into account
+ * TODO: Add dramatic lighting, horizon, and sky (clouds/sun/lens flare) to the
+ *   demo
+ * TODO: Support the terrain casting shadows onto itself?
+ * TODO: Add the ability to pre-blend textures so they're not dependent on
+ *   vertex resolution?
  *
  * @param {Object} [options]
  *   An optional map of settings that control how the terrain is constructed
@@ -315,6 +333,12 @@ THREE.Terrain = function(options) {
  * and a tutorial on morph targets at
  * http://nikdudnik.com/making-3d-gfx-for-the-cinema-on-low-budget-and-three-js/
  *
+ * POLYGONREDUCTION: Combine areas that are relatively coplanar into larger
+ * polygons as described at http://www.shamusyoung.com/twentysidedtale/?p=142.
+ * This method can be combined with the others if done very carefully, or it
+ * can be adjusted to be more aggressive at greater distance from the camera
+ * (similar to combining with geomipmapping).
+ *
  * If these do get implemented, here is the option description to add to the
  * `THREE.Terrain` docblock:
  *
@@ -337,6 +361,7 @@ THREE.Terrain = function(options) {
 THREE.Terrain.NONE = 0;
 THREE.Terrain.GEOMIPMAP = 1;
 THREE.Terrain.GEOCLIPMAP = 2;
+THREE.Terrain.POLYGONREDUCTION = 3;
 
 (function() {
 
@@ -705,13 +730,12 @@ if (window.noise && window.noise.simplex) {
  *   passes.
  */
 THREE.Terrain.MultiPass = function(g, options, passes) {
-    var GRANULARITY = 0.1,
-        maxHeight = options.maxHeight,
+    var maxHeight = options.maxHeight,
         minHeight = options.minHeight;
     for (var i = 0, l = passes.length; i < l; i++) {
         if (i !== 0) {
             var gran = typeof passes[i].granularity === 'undefined' ? 1 : passes[i].granularity,
-                move = (options.maxHeight - options.minHeight) * 0.5 * GRANULARITY * gran;
+                move = (options.maxHeight - options.minHeight) * 0.5 * gran;
             options.maxHeight -= move;
             options.minHeight += move;
         }
@@ -753,7 +777,7 @@ THREE.Terrain.Clamp = function(g, options) {
 THREE.Terrain.PerlinDiamond = function(g, options) {
     THREE.Terrain.MultiPass(g, options, [
         {method: THREE.Terrain.Perlin},
-        {method: THREE.Terrain.DiamondSquare, granularity: -2},
+        {method: THREE.Terrain.DiamondSquare, granularity: -0.2},
     ]);
 };
 
@@ -765,6 +789,6 @@ THREE.Terrain.PerlinDiamond = function(g, options) {
 THREE.Terrain.SimplexCorner = function(g, options) {
     THREE.Terrain.MultiPass(g, options, [
         {method: THREE.Terrain.Simplex},
-        {method: THREE.Terrain.Corner, granularity: 2},
+        {method: THREE.Terrain.Corner, granularity: 0.2},
     ]);
 };
