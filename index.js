@@ -3,7 +3,7 @@ var webglExists = ( function () { try { var canvas = document.createElement( 'ca
 // Workaround: in Chrome, if a page is opened with window.open(), window.innerWidth and window.innerHeight will be zero.
 if ( window.innerWidth === 0 ) { window.innerWidth = parent.innerWidth; window.innerHeight = parent.innerHeight; }
 
-var camera, scene, renderer, clock, player, terrainScene, controls = {}, fpsCamera, skyDome, fog;
+var camera, scene, renderer, clock, player, terrainScene, controls = {}, fpsCamera, skyDome, skyLight;
 var INV_MAX_FPS = 1 / 100,
     frameDelta = 0,
     paused = true,
@@ -53,7 +53,7 @@ function setup() {
 
 function setupThreeJS() {
   scene = new THREE.Scene();
-  scene.fog = new THREE.FogExp2(0xcc6655, 0.0025);
+  scene.fog = new THREE.FogExp2(0xe5f9e9, 0.0007);
 
   renderer = webglExists ? new THREE.WebGLRenderer({ antialias: true }) : new THREE.CanvasRenderer();
   renderer.setSize(window.innerWidth, window.innerHeight);
@@ -89,6 +89,13 @@ function setupWorld() {
     );
     scene.add(skyDome);
   });
+
+  skyLight = new THREE.DirectionalLight(0xfffbef, 1.85);
+  skyLight.position.set(1, 1, 1);
+  scene.add(skyLight);
+  var light = new THREE.DirectionalLight(0xc3eaff, 1);
+  light.position.set(-1, -0.5, -1);
+  scene.add(light);
 }
 
 function setupDatGui() {
@@ -97,7 +104,7 @@ function setupDatGui() {
   function Settings() {
     var that = this;
     var mat = new THREE.MeshBasicMaterial({color: 0x5566aa, wireframe: true});
-    var blend;
+    var blend, grass;
     THREE.ImageUtils.loadTexture('img/sand1.jpg', undefined, function(t1) {
       THREE.ImageUtils.loadTexture('img/grass1.jpg', undefined, function(t2) {
         THREE.ImageUtils.loadTexture('img/stone1.jpg', undefined, function(t3) {
@@ -108,6 +115,7 @@ function setupDatGui() {
               {texture: t3, levels: [20, 50, 60, 85]},
               {texture: t4, glsl: '1.0 - smoothstep(65.0 + smoothstep(-256.0, 256.0, vPosition.x) * 10.0, 80.0, vPosition.z)'},
             ], scene);
+            grass = new THREE.MeshLambertMaterial({map: t2});
             that.Regenerate();
           });
         });
@@ -122,13 +130,14 @@ function setupDatGui() {
     this.texture = webglExists ? 'Blended' : 'Wireframe';
     this['width:length ratio'] = 1;
     this['Flight mode'] = useFPS;
+    this['Light color'] = '#fffbef';
     this.Regenerate = function() {
       var s = parseInt(that.segments, 10),
           h = that.heightmap === 'heightmap.png';
       var o = {
         easing: THREE.Terrain[that.easing],
         heightmap: h ? heightmapImage : THREE.Terrain[that.heightmap],
-        material: that.texture == 'Wireframe' ? mat : blend,
+        material: that.texture == 'Wireframe' ? mat : (that.texture == 'Blended' ? blend : grass),
         maxHeight: (that.maxHeight - 100) * (h ? 0.25 : 1),
         minHeight: -100 * (h ? 0.25 : 1),
         useBufferGeometry: s >= 64 && that.texture != 'Wireframe',
@@ -140,6 +149,7 @@ function setupDatGui() {
       scene.remove(terrainScene);
       terrainScene = THREE.Terrain(o);
       scene.add(terrainScene);
+      skyDome.visible = that.texture != 'Wireframe';
       var he = document.getElementById('heightmap');
       if (he) {
         if (s < 64 || that.texture == 'Wireframe') {
@@ -157,11 +167,16 @@ function setupDatGui() {
   var settings = new Settings();
   //gui.add(settings, 'easing', ['NoEasing', 'EaseInOut', 'InEaseOut']).onFinishChange(settings.Regenerate);
   gui.add(settings, 'heightmap', ['Corner', 'DiamondSquare', 'heightmap.png', 'Perlin', 'Simplex', 'PerlinDiamond', 'SimplexCorner']).onFinishChange(settings.Regenerate);
-  gui.add(settings, 'texture', ['Blended', 'Wireframe']).onFinishChange(settings.Regenerate);
+  gui.add(settings, 'texture', ['Blended', 'Wireframe'/*, 'Grass'*/]).onFinishChange(settings.Regenerate);
   gui.add(settings, 'segments', 7, 127).step(1).onFinishChange(settings.Regenerate);
+  gui.addColor(settings, 'Light color').onChange(function(val) {
+    skyLight.color.set(val);
+  });
+  /*
   gui.add(settings, 'sky').onChange(function(val) {
     skyDome.visible = val;
   });
+   */
   gui.add(settings, 'Flight mode').onChange(function(val) {
     useFPS = val;
     fpsCamera.position.x = 449;
