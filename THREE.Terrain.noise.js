@@ -1,5 +1,5 @@
 /**
- * THREE.Terrain.js 1.0.0-27042014
+ * THREE.Terrain.js 1.0.0-28042014
  *
  * @author Isaac Sukin (http://www.isaacsukin.com/)
  * @license MIT
@@ -195,8 +195,6 @@
  *   See http://www.stuffwithstuff.com/robot-frog/3d/hills/hill.html
  * TODO: Implement a smoothing pass (for each point, put the average of its
  *   neighbors into a second heightmap)
- * TODO: Implement an easing pass (instead of easing the randomness, stretch
- *   the heightmap at the end)
  * TODO: Implement a pass to make edges go up or down
  * TODO: Implement some variation of a polygon adjacency graph algorithm
  *   See http://www-cs-students.stanford.edu/~amitp/game-programming/polygon-map-generation/
@@ -212,6 +210,11 @@
  *   An optional map of settings that control how the terrain is constructed
  *   and displayed. Options include:
  *
+ *   - `easing`: A function that affects the distribution of slopes by
+ *     interpolating the height of each vertex along a curve. Valid values
+ *     include `THREE.Terrain.NoEasing`, `THREE.Terrain.EaseInOut`,
+ *     `THREE.Terrain.InEaseOut`, and any custom function that accepts a float
+ *     between 0 and 1 and returns a float between 0 and 1.
  *   - `heightmap`: Either a pre-loaded image (from the same domain as the
  *     webpage or served with a CORS-friendly header) representing terrain
  *     height data (lighter pixels are higher); or a function used to generate
@@ -246,6 +249,7 @@
  */
 THREE.Terrain = function(options) {
     var defaultOptions = {
+        easing: THREE.Terrain.NoEasing,
         heightmap: THREE.Terrain.DiamondSquare,
         material: null,
         maxHeight: 100,
@@ -289,6 +293,9 @@ THREE.Terrain = function(options) {
     else if (window.console && console.warn) {
         console.warn('An invalid value was passed for `options.heightmap`: ' + options.heightmap);
     }
+    // Keep the terrain within the allotted height range if necessary, and do easing.
+    THREE.Terrain.Clamp(mesh.geometry.vertices, options);
+    // Mark the geometry as having changed and needing updates.
     mesh.geometry.verticesNeedUpdate = true;
     mesh.geometry.normalsNeedUpdate = true;
     mesh.geometry.computeBoundingSphere();
@@ -592,7 +599,7 @@ THREE.Terrain.toHeightmap = function(g, options) {
  * @param {THREE.Vector3[]} g
  *   The vertex array for plane geometry to modify with heightmap data. This
  *   method sets the `z` property of each vertex.
- * @param {Object} options
+ * @param {Object} [options]
  *    An optional map of settings that control how the terrain is constructed
  *    and displayed. Valid values are the same as those for the `options`
  *    parameter of {@link THREE.Terrain}().
@@ -610,11 +617,7 @@ THREE.Terrain.Corner = function(g, options) {
                 r = Math.random(),
                 v = (r < 0.2 ? l : (r < 0.4 ? b : l + b)) * 0.5, // Neighbors
                 m = Math.random() * maxVar - maxVarHalf; // Disturb distance
-            g[k].z += THREE.Math.clamp(
-                v + m,
-                options.minHeight,
-                options.maxHeight
-            );
+            g[k].z += v + m;
         }
     }
 };
@@ -685,11 +688,7 @@ THREE.Terrain.DiamondSquare = function(g, options) {
     // Apply heightmap
     for (i = 0; i < xl; i++) {
         for (j = 0; j < yl; j++) {
-            g[j * xl + i].z += THREE.Math.clamp(
-                heightmap[i][j],
-                options.minHeight,
-                options.maxHeight
-            );
+            g[j * xl + i].z += heightmap[i][j];
         }
     }
 };
@@ -706,11 +705,7 @@ if (window.noise && window.noise.perlin) {
             divisor = (Math.min(options.xSegments, options.ySegments) + 1) * options.perlinScale;
         for (var i = 0, xl = options.xSegments + 1; i < xl; i++) {
             for (var j = 0, yl = options.ySegments + 1; j < yl; j++) {
-                g[j * xl + i].z += THREE.Math.clamp(
-                    noise.perlin(i / divisor, j / divisor) * range,
-                    options.minHeight,
-                    options.maxHeight
-                );
+                g[j * xl + i].z += noise.perlin(i / divisor, j / divisor) * range;
             }
         }
     };
@@ -728,11 +723,7 @@ if (window.noise && window.noise.simplex) {
             divisor = (Math.min(options.xSegments, options.ySegments) + 1) * options.perlinScale * 2;
         for (var i = 0, xl = options.xSegments + 1; i < xl; i++) {
             for (var j = 0, yl = options.ySegments + 1; j < yl; j++) {
-                g[j * xl + i].z += THREE.Math.clamp(
-                    noise.simplex(i / divisor, j / divisor) * range,
-                    options.minHeight,
-                    options.maxHeight
-                );
+                g[j * xl + i].z += noise.simplex(i / divisor, j / divisor) * range;
             }
         }
     };
@@ -747,7 +738,7 @@ if (window.noise && window.noise.simplex) {
  * @param {THREE.Vector3[]} g
  *   The vertex array for plane geometry to modify with heightmap data. This
  *   method sets the `z` property of each vertex.
- * @param {Object} options
+ * @param {Object} [options]
  *    An optional map of settings that control how the terrain is constructed
  *    and displayed. Valid values are the same as those for the `options`
  *    parameter of {@link THREE.Terrain}().
@@ -774,52 +765,97 @@ THREE.Terrain.MultiPass = function(g, options, passes) {
     }
     options.maxHeight = maxHeight;
     options.minHeight = minHeight;
-    THREE.Terrain.Clamp(g, options);
 };
 
 /**
- * Clamp the heightmap of a terrain within the maximum range.
+ * Rescale the heightmap of a terrain to keep it within the maximum range.
  *
- * Parameters are the same as those for {@link THREE.Terrain.Corner}.
+ * @param {THREE.Vector3[]} g
+ *   The vertex array for plane geometry to modify with heightmap data. This
+ *   method sets the `z` property of each vertex.
+ * @param {Object} options
+ *   A map of settings that control how the terrain is constructed and
+ *   displayed. Valid values are the same as those for the `options` parameter
+ *   of {@link THREE.Terrain}() but only `maxHeight`, `minHeight`, and `easing`
+ *   are used.
  */
 THREE.Terrain.Clamp = function(g, options) {
     var min = Infinity,
         max = -Infinity,
         l = g.length,
         i;
+    options.easing = options.easing || THREE.Terrain.NoEasing;
     for (i = 0; i < l; i++) {
         if (g[i].z < min) min = g[i].z;
         if (g[i].z > max) max = g[i].z;
     }
     var actualRange = max - min,
-        targetMax = max < options.maxHeight ? max : options.maxHeight,
-        targetMin = min > options.minHeight ? min : options.minHeight,
+        optMax = typeof options.maxHeight === 'undefined' ? max : options.maxHeight,
+        optMin = typeof options.minHeight === 'undefined' ? min : options.minHeight,
+        targetMax = max < optMax ? max : optMax,
+        targetMin = min > optMin ? min : optMin,
         range = targetMax - targetMin;
     for (i = 0; i < l; i++) {
-        g[i].z = ((g[i].z - min) / actualRange) * range + options.minHeight;
+        g[i].z = options.easing((g[i].z - min) / actualRange) * range + optMin;
     }
 };
 
 /**
- * Generate random terrain using the Perlin and Diamond-Square methods composed.
- *
- * Parameters are the same as those for {@link THREE.Terrain.Corner}.
+ * Randomness interpolation functions.
  */
-THREE.Terrain.PerlinDiamond = function(g, options) {
-    THREE.Terrain.MultiPass(g, options, [
-        {method: THREE.Terrain.Perlin},
-        {method: THREE.Terrain.DiamondSquare, granularity: -0.2},
-    ]);
+THREE.Terrain.NoEasing = function(x) {
+    return x;
 };
 
-/**
- * Generate random terrain using the Simplex and Corner methods composed.
- *
- * Parameters are the same as those for {@link THREE.Terrain.Corner}.
- */
-THREE.Terrain.SimplexCorner = function(g, options) {
-    THREE.Terrain.MultiPass(g, options, [
-        {method: THREE.Terrain.Simplex},
-        {method: THREE.Terrain.Corner, granularity: 0.2},
-    ]);
+// x = [0, 1], x^2
+THREE.Terrain.EaseIn = function(x) {
+    return x*x;
 };
+
+// x = [0, 1], -x(x-2)
+THREE.Terrain.EaseOut = function(x) {
+    return -x * (x - 2);
+};
+
+// x = [0, 1], x^2(3-2x)
+// Nearly identical alternatives: 0.5+0.5*cos(x*pi-pi), x^a/(x^a+(1-x)^a) (where a=1.6 seems nice)
+// For comparison: http://www.wolframalpha.com/input/?i=x^1.6%2F%28x^1.6%2B%281-x%29^1.6%29%2C+x^2%283-2x%29%2C+0.5%2B0.5*cos%28x*pi-pi%29+from+0+to+1
+THREE.Terrain.EaseInOut = function(x) {
+    return x*x*(3-2*x);
+};
+
+// x = [0, 1], 0.5*(2x-1)^3+0.5
+THREE.Terrain.InEaseOut = function(x) {
+    var y = 2*x-1;
+    return 0.5 * y*y*y + 0.5;
+};
+
+if (THREE.Terrain.Perlin) {
+    /**
+     * Generate random terrain using the Perlin and Diamond-Square methods composed.
+     *
+     * Parameters are the same as those for {@link THREE.Terrain.Corner}.
+     */
+    THREE.Terrain.PerlinDiamond = function(g, options) {
+        THREE.Terrain.MultiPass(g, options, [
+            {method: THREE.Terrain.Perlin},
+            // There's nothing special about -0.2, it just looks nice.
+            {method: THREE.Terrain.DiamondSquare, granularity: -0.2},
+        ]);
+    };
+}
+
+if (THREE.Terrain.Simplex) {
+    /**
+     * Generate random terrain using the Simplex and Corner methods composed.
+     *
+     * Parameters are the same as those for {@link THREE.Terrain.Corner}.
+     */
+    THREE.Terrain.SimplexCorner = function(g, options) {
+        THREE.Terrain.MultiPass(g, options, [
+            {method: THREE.Terrain.Simplex},
+            // There's nothing special about 0.2, it just looks nice.
+            {method: THREE.Terrain.Corner, granularity: 0.2},
+        ]);
+    };
+}

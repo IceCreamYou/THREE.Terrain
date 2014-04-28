@@ -108,7 +108,7 @@ function setupDatGui() {
   function Settings() {
     var that = this;
     var mat = new THREE.MeshBasicMaterial({color: 0x5566aa, wireframe: true});
-    var blend, grass;
+    var blend;
     THREE.ImageUtils.loadTexture('img/sand1.jpg', undefined, function(t1) {
       THREE.ImageUtils.loadTexture('img/grass1.jpg', undefined, function(t2) {
         THREE.ImageUtils.loadTexture('img/stone1.jpg', undefined, function(t3) {
@@ -119,7 +119,6 @@ function setupDatGui() {
               {texture: t3, levels: [20, 50, 60, 85]},
               {texture: t4, glsl: '1.0 - smoothstep(65.0 + smoothstep(-256.0, 256.0, vPosition.x) * 10.0, 80.0, vPosition.z)'},
             ], scene);
-            grass = new THREE.MeshLambertMaterial({map: t2});
             that.Regenerate();
           });
         });
@@ -141,7 +140,7 @@ function setupDatGui() {
       var o = {
         easing: THREE.Terrain[that.easing],
         heightmap: h ? heightmapImage : THREE.Terrain[that.heightmap],
-        material: that.texture == 'Wireframe' ? mat : (that.texture == 'Blended' ? blend : grass),
+        material: that.texture == 'Wireframe' ? mat : blend,
         maxHeight: (that.maxHeight - 100) * (h ? 0.25 : 1),
         minHeight: -100 * (h ? 0.25 : 1),
         useBufferGeometry: s >= 64 && that.texture != 'Wireframe',
@@ -169,9 +168,9 @@ function setupDatGui() {
   }
   var gui = new dat.GUI();
   var settings = new Settings();
-  //gui.add(settings, 'easing', ['NoEasing', 'EaseInOut', 'InEaseOut']).onFinishChange(settings.Regenerate);
   gui.add(settings, 'heightmap', ['Corner', 'DiamondSquare', 'heightmap.png', 'Perlin', 'Simplex', 'PerlinDiamond', 'SimplexCorner']).onFinishChange(settings.Regenerate);
-  gui.add(settings, 'texture', ['Blended', 'Wireframe'/*, 'Grass'*/]).onFinishChange(settings.Regenerate);
+  gui.add(settings, 'easing', ['NoEasing', 'EaseIn', 'EaseOut', 'EaseInOut', 'InEaseOut']).onFinishChange(settings.Regenerate);
+  gui.add(settings, 'texture', ['Blended', 'Wireframe']).onFinishChange(settings.Regenerate);
   gui.add(settings, 'segments', 7, 127).step(1).onFinishChange(settings.Regenerate);
   gui.addColor(settings, 'Light color').onChange(function(val) {
     skyLight.color.set(val);
