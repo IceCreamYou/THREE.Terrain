@@ -1,5 +1,5 @@
 /**
- * THREE.Terrain.js 1.0.0-28042014
+ * THREE.Terrain.js 1.0.0-29042014
  *
  * @author Isaac Sukin (http://www.isaacsukin.com/)
  * @license MIT
@@ -589,6 +589,32 @@ THREE.Terrain.toHeightmap = function(g, options) {
     }
     context.putImageData(d, 0, 0);
     return canvas;
+};
+
+/**
+ * Smooth the terrain by setting each point to the mean of its neighborhood.
+ *
+ * Parameters are the same as those for {@link THREE.Terrain.Corner}.
+ */
+THREE.Terrain.Smooth = function(g, options) {
+    var heightmap = new Array(g.length);
+    for (var i = 0, xl = options.xSegments + 1; i < xl; i++) {
+        for (var j = 0; j < options.ySegments + 1; j++) {
+            var sum = 0;
+            for (var n = -1; n <= 1; n++) {
+                for (var m = -1; m <= 1; m++) {
+                    var key = (j+n)*xl + i + m;
+                    if (typeof g[key] !== 'undefined') {
+                        sum += g[key].z;
+                    }
+                }
+            }
+            heightmap[j*xl + i] = sum / 9;
+        }
+    }
+    for (var k = 0, l = g.length; k < l; k++) {
+        g[k].z = heightmap[k];
+    }
 };
 
 /**
