@@ -1,5 +1,5 @@
 /**
- * THREE.Terrain.js 1.0.0-29042014
+ * THREE.Terrain.js 1.0.0-30042014
  *
  * @author Isaac Sukin (http://www.isaacsukin.com/)
  * @license MIT
@@ -193,8 +193,6 @@
  * TODO: Implement optimization types?
  * TODO: Implement hill algorithm (feature picking)
  *   See http://www.stuffwithstuff.com/robot-frog/3d/hills/hill.html
- * TODO: Implement a smoothing pass (for each point, put the average of its
- *   neighbors into a second heightmap)
  * TODO: Implement a pass to make edges go up or down
  * TODO: Implement some variation of a polygon adjacency graph algorithm
  *   See http://www-cs-students.stanford.edu/~amitp/game-programming/polygon-map-generation/
@@ -882,6 +880,7 @@ if (THREE.Terrain.Simplex) {
             {method: THREE.Terrain.Simplex},
             // There's nothing special about 0.2, it just looks nice.
             {method: THREE.Terrain.Corner, granularity: 0.2},
+            {method: THREE.Terrain.Smooth},
         ]);
     };
 }
