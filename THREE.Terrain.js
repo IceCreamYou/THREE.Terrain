@@ -3,11 +3,11 @@
  *
  * Usage: `var terrainScene = THREE.Terrain();`
  *
+ * TODO: Make edge pass work on non-square terrain, and add it as a demo option
  * TODO: Allow scattering other meshes randomly across the terrain
  * TODO: Implement optimization types?
  * TODO: Implement hill algorithm (feature picking)
  *   See http://www.stuffwithstuff.com/robot-frog/3d/hills/hill.html
- * TODO: Implement a pass to make edges go up or down
  * TODO: Implement some variation of a polygon adjacency graph algorithm
  *   See http://www-cs-students.stanford.edu/~amitp/game-programming/polygon-map-generation/
  * TODO: Support infinite terrain?
@@ -430,6 +430,55 @@ THREE.Terrain.Smooth = function(g, options) {
 };
 
 /**
+ * Move the edges of the terrain up or down.
+ *
+ * Useful to make islands or enclosing walls/cliffs.
+ *
+ * @param {THREE.Vector3[]} g
+ *   The vertex array for plane geometry to modify with heightmap data. This
+ *   method sets the `z` property of each vertex.
+ * @param {Object} options
+ *    An optional map of settings that control how the terrain is constructed
+ *    and displayed. Valid values are the same as those for the `options`
+ *    parameter of {@link THREE.Terrain}().
+ * @param {Boolean} direction
+ *    `true` if the edges should be turned up; `false` if they should be turned
+ *    down.
+ * @param {Number} distance
+ *    The distance from the edge at which the edges should begin to be affected
+ *    by this operation.
+ */
+THREE.Terrain.Edges = function(g, options, direction, distance) {
+    var numXSegments = Math.floor(distance / (options.xSize / options.xSegments)) || 1,
+        numYSegments = Math.floor(distance / (options.ySize / options.ySegments)) || 1,
+        peak = direction ? options.maxHeight : options.minHeight,
+        max = direction ? Math.max : Math.min,
+        xl = options.xSegments + 1,
+        yl = options.ySegments + 1,
+        i, j, multiplier, target, k1, k2;
+    for (i = 0; i < xl; i++) {
+        for (j = 0; j < numYSegments; j++) {
+            multiplier = THREE.Terrain.EaseIn(1 - j / numYSegments);
+            target = peak * multiplier;
+            k1 = j*xl+i;
+            k2 = (options.ySegments-j)*xl + i;
+            g[k1].z = max(g[k1].z, (peak - g[k1].z) * multiplier + g[k1].z);
+            g[k2].z = max(g[k2].z, (peak - g[k2].z) * multiplier + g[k2].z);
+        }
+    }
+    for (i = 0; i < yl; i++) {
+        for (j = 0; j < numXSegments; j++) {
+            multiplier = THREE.Terrain.EaseIn(1 - j / numXSegments);
+            target = peak * multiplier;
+            k1 = i*yl+j;
+            k2 = (options.xSegments-i)*yl + (options.ySegments-j);
+            g[k1].z = max(g[k1].z, (peak - g[k1].z) * multiplier + g[k1].z);
+            g[k2].z = max(g[k2].z, (peak - g[k2].z) * multiplier + g[k2].z);
+        }
+    }
+};
+
+/**
  * Generate random terrain using the Corner method.
  *
  * This looks much more like random noise than realistic terrain.
@@ -437,7 +486,7 @@ THREE.Terrain.Smooth = function(g, options) {
  * @param {THREE.Vector3[]} g
  *   The vertex array for plane geometry to modify with heightmap data. This
  *   method sets the `z` property of each vertex.
- * @param {Object} [options]
+ * @param {Object} options
  *    An optional map of settings that control how the terrain is constructed
  *    and displayed. Valid values are the same as those for the `options`
  *    parameter of {@link THREE.Terrain}().
