@@ -1,5 +1,5 @@
 /**
- * THREE.Terrain.js 1.0.0-01052014
+ * THREE.Terrain.js 1.0.0-02052014
  *
  * @author Isaac Sukin (http://www.isaacsukin.com/)
  * @license MIT
@@ -207,9 +207,16 @@
  *   An optional map of settings that control how the terrain is constructed
  *   and displayed. Options include:
  *
+ *   - `after`: A function to run after other transformations on the terrain
+ *     produce the highest-detail heightmap, but before optimizations and
+ *     visual properties are applied. Takes two parameters, which are the same
+ *     as those for {@link THREE.Terrain.Corner}: an array of `THREE.Vector3`
+ *     objects representing the vertices of the terrain, and a map of options
+ *     with the same available properties as the `options` parameter for the
+ *     `THREE.Terrain` function.
  *   - `easing`: A function that affects the distribution of slopes by
  *     interpolating the height of each vertex along a curve. Valid values
- *     include `THREE.Terrain.NoEasing`, `THREE.Terrain.EaseInOut`,
+ *     include `THREE.Terrain.Linear`, `THREE.Terrain.EaseInOut`,
  *     `THREE.Terrain.InEaseOut`, and any custom function that accepts a float
  *     between 0 and 1 and returns a float between 0 and 1.
  *   - `heightmap`: Either a pre-loaded image (from the same domain as the
@@ -246,7 +253,8 @@
  */
 THREE.Terrain = function(options) {
     var defaultOptions = {
-        easing: THREE.Terrain.NoEasing,
+        after: null,
+        easing: THREE.Terrain.Linear,
         heightmap: THREE.Terrain.DiamondSquare,
         material: null,
         maxHeight: 100,
@@ -292,6 +300,10 @@ THREE.Terrain = function(options) {
     }
     // Keep the terrain within the allotted height range if necessary, and do easing.
     THREE.Terrain.Clamp(mesh.geometry.vertices, options);
+    // Call the "after" callback
+    if (typeof options.after === 'function') {
+        options.after(mesh.geometry.vertices, options);
+    }
     // Mark the geometry as having changed and needing updates.
     mesh.geometry.verticesNeedUpdate = true;
     mesh.geometry.normalsNeedUpdate = true;
@@ -633,7 +645,7 @@ THREE.Terrain.Smooth = function(g, options) {
  *    The distance from the edge at which the edges should begin to be affected
  *    by this operation.
  */
-THREE.Terrain.Edges = function(g, options, direction, distance) {
+THREE.Terrain.Edges = function(g, options, direction, distance, easing) {
     var numXSegments = Math.floor(distance / (options.xSize / options.xSegments)) || 1,
         numYSegments = Math.floor(distance / (options.ySize / options.ySegments)) || 1,
         peak = direction ? options.maxHeight : options.minHeight,
@@ -641,9 +653,10 @@ THREE.Terrain.Edges = function(g, options, direction, distance) {
         xl = options.xSegments + 1,
         yl = options.ySegments + 1,
         i, j, multiplier, target, k1, k2;
+    easing = easing || THREE.Terrain.EaseInOut;
     for (i = 0; i < xl; i++) {
         for (j = 0; j < numYSegments; j++) {
-            multiplier = THREE.Terrain.EaseIn(1 - j / numYSegments);
+            multiplier = easing(1 - j / numYSegments);
             target = peak * multiplier;
             k1 = j*xl+i;
             k2 = (options.ySegments-j)*xl + i;
@@ -653,10 +666,10 @@ THREE.Terrain.Edges = function(g, options, direction, distance) {
     }
     for (i = 0; i < yl; i++) {
         for (j = 0; j < numXSegments; j++) {
-            multiplier = THREE.Terrain.EaseIn(1 - j / numXSegments);
+            multiplier = easing(1 - j / numXSegments);
             target = peak * multiplier;
-            k1 = i*yl+j;
-            k2 = (options.xSegments-i)*yl + (options.ySegments-j);
+            k1 = i*xl+j;
+            k2 = (options.ySegments-i)*xl + (options.xSegments-j);
             g[k1].z = max(g[k1].z, (peak - g[k1].z) * multiplier + g[k1].z);
             g[k2].z = max(g[k2].z, (peak - g[k2].z) * multiplier + g[k2].z);
         }
@@ -856,7 +869,7 @@ THREE.Terrain.Clamp = function(g, options) {
         max = -Infinity,
         l = g.length,
         i;
-    options.easing = options.easing || THREE.Terrain.NoEasing;
+    options.easing = options.easing || THREE.Terrain.Linear;
     for (i = 0; i < l; i++) {
         if (g[i].z < min) min = g[i].z;
         if (g[i].z > max) max = g[i].z;
@@ -875,7 +888,7 @@ THREE.Terrain.Clamp = function(g, options) {
 /**
  * Randomness interpolation functions.
  */
-THREE.Terrain.NoEasing = function(x) {
+THREE.Terrain.Linear = function(x) {
     return x;
 };
 

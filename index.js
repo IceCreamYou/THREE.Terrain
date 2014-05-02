@@ -124,20 +124,34 @@ function setupDatGui() {
         });
       });
     });
-    this.easing = 'NoEasing';
+    this.easing = 'Linear';
     this.heightmap = 'PerlinDiamond';
     this.maxHeight = 200;
     this.segments = webglExists ? 63 : 31;
     this.size = 1024;
     this.sky = true;
     this.texture = webglExists ? 'Blended' : 'Wireframe';
+    this.edgeDirection = 'Normal';
+    this.edgeDistance = 128;
+    this.edgeCurve = 'EaseInOut';
     this['width:length ratio'] = 1;
     this['Flight mode'] = useFPS;
     this['Light color'] = '#fffbef';
+    this.after = function(vertices, options) {
+      if (that.edgeDirection === 'Normal') return;
+      THREE.Terrain.Edges(
+        vertices,
+        options,
+        that.edgeDirection === 'Up' ? true : false,
+        that.edgeDistance,
+        THREE.Terrain[that.edgeCurve]
+      );
+    };
     this.Regenerate = function() {
       var s = parseInt(that.segments, 10),
           h = that.heightmap === 'heightmap.png';
       var o = {
+        after: that.after,
         easing: THREE.Terrain[that.easing],
         heightmap: h ? heightmapImage : THREE.Terrain[that.heightmap],
         material: that.texture == 'Wireframe' ? mat : blend,
@@ -169,7 +183,7 @@ function setupDatGui() {
   var gui = new dat.GUI();
   var settings = new Settings();
   gui.add(settings, 'heightmap', ['Corner', 'DiamondSquare', 'heightmap.png', 'Perlin', 'Simplex', 'PerlinDiamond', 'SimplexCorner']).onFinishChange(settings.Regenerate);
-  gui.add(settings, 'easing', ['NoEasing', 'EaseIn', 'EaseOut', 'EaseInOut', 'InEaseOut']).onFinishChange(settings.Regenerate);
+  gui.add(settings, 'easing', ['Linear', 'EaseIn', 'EaseOut', 'EaseInOut', 'InEaseOut']).onFinishChange(settings.Regenerate);
   gui.add(settings, 'texture', ['Blended', 'Wireframe']).onFinishChange(settings.Regenerate);
   gui.add(settings, 'segments', 7, 127).step(1).onFinishChange(settings.Regenerate);
   gui.addColor(settings, 'Light color').onChange(function(val) {
@@ -203,6 +217,10 @@ function setupDatGui() {
   folder.add(settings, 'size', 256, 3072).step(256).onFinishChange(settings.Regenerate);
   folder.add(settings, 'maxHeight', 2, 300).step(2).onFinishChange(settings.Regenerate);
   folder.add(settings, 'width:length ratio', 0.2, 2).step(0.05).onFinishChange(settings.Regenerate);
+  var edges = gui.addFolder('Edges');
+  edges.add(settings, 'edgeDirection', ['Normal', 'Up', 'Down']).onFinishChange(settings.Regenerate);
+  edges.add(settings, 'edgeDistance', 0, 256).step(16).onFinishChange(settings.Regenerate);
+  edges.add(settings, 'edgeCurve', ['Linear', 'EaseIn', 'EaseOut', 'EaseInOut']).onFinishChange(settings.Regenerate);
   gui.add(settings, 'Regenerate');
 
   if (typeof window.Stats !== 'undefined' && /[?&]stats=1\b/g.test(location.search)) {
