@@ -3,6 +3,7 @@
  *
  * Usage: `var terrainScene = THREE.Terrain();`
  *
+ * TODO: Decide on a way to document maxVariation and perlinScale
  * TODO: Allow scattering other meshes randomly across the terrain
  * TODO: Implement optimization types?
  * TODO: Implement hill algorithm (feature picking)
@@ -46,9 +47,9 @@
  *   - `material`: a THREE.Material instance used to display the terrain.
  *     Defaults to `new THREE.MeshBasicMaterial({color: 0xee6633})`.
  *   - `maxHeight`: the highest point, in Three.js units, that a peak should
- *     reach. Defaults to 300.
+ *     reach. Defaults to 100.
  *   - `minHeight`: the lowest point, in Three.js units, that a valley should
- *     reach. Defaults to -50.
+ *     reach. Defaults to -100.
  *   - `useBufferGeometry`: a Boolean indicating whether to use
  *     THREE.BufferGeometry instead of THREE.Geometry for the Terrain plane.
  *     Defaults to `true`.
