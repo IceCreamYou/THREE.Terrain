@@ -202,8 +202,6 @@ function setupDatGui() {
       var geo = terrainScene.children[0].geometry;
       terrainScene.remove(decoScene);
       var o = {
-        maxVariation: 12,
-        perlinScale: 0.4,
         xSegments: s,
         ySegments: Math.round(s * that['width:length ratio']),
       };

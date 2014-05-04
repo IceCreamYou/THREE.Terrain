@@ -857,7 +857,6 @@ THREE.Terrain.ScatterMeshes = function(geometry, options) {
         spread: 0.025,
         sizeVariance: 0.1,
         randomness: Math.random,
-        perlinScale: 0.4,
         x: 0,
         y: 0,
         w: 0,
@@ -938,10 +937,14 @@ THREE.Terrain.ScatterMeshes = function(geometry, options) {
 THREE.Terrain.ScatterHelper = function(method, options, skip, threshold) {
     skip = skip || 1;
     threshold = threshold || 0.25;
+    options.perlinScale = options.perlinScale || 0.4;
+    options.maxVariation = options.maxVariation ||  12;
+
     var xS = options.xSegments;
     options.xSegments *= 2;
     var heightmap = THREE.Terrain.heightmapArray(method, options);
     options.xSegments = xS;
+
     for (var i = 0, l = heightmap.length; i < l; i++) {
         if (i % skip || Math.random() > threshold) {
             heightmap[i] = 1;

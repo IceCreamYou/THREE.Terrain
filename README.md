@@ -15,6 +15,7 @@ Include the script on your page (after the `three.js` library):
 Then, in your own script, generate a terrain and add it to your scene:
 
 ```javascript
+var xS = 63, yS = 63;
 terrainScene = THREE.Terrain({
     easing: THREE.Terrain.Linear,
     heightmap: THREE.Terrain.DiamondSquare,
@@ -22,13 +23,23 @@ terrainScene = THREE.Terrain({
     maxHeight: 100,
     minHeight: -100,
     useBufferGeometry: true,
-    xSegments: 63,
+    xSegments: xS,
     xSize: 1024,
-    ySegments: 63,
+    ySegments: yS,
     ySize: 1024,
 });
 // Assuming you already have your global scene
 scene.add(terrainScene);
+
+// Add randomly distributed foliage
+decoScene = THREE.Terrain.ScatterMeshes(geo, {
+    mesh: new THREE.Mesh(new THREE.CylinderGeometry(2, 2, 12, 6)),
+    w: xS,
+    h: yS,
+    spread: 0.02,
+    randomness: Math.random,
+});
+terrainScene.add(decoScene);
 ```
 
 All parameters are optional and thoroughly documented in the
