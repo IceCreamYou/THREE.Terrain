@@ -12,10 +12,12 @@
  * TODO: Support infinite terrain?
  * TODO: Add the ability to manually convolve terrain
  * TODO: Add the ability to manually paint terrain?
- * TODO: Make automatically blended terrain take slope into account
- * TODO: Add dramatic lighting, horizon, and sky (clouds/sun/lens flare) to the
- *   demo
+ * TODO: Make automatically blended terrain take slope into account. Can
+ *   probably do this by taking the four cardinal neighbors and doing
+ *   avg(slope(E, W), slope(N, S)) and then passing that as a uniform.
+ * TODO: Add dramatic lighting, water, and lens flare to the demo
  * TODO: Support the terrain casting shadows onto itself?
+ *   Relevant: view-source:http://threejs.org/examples/webgl_geometry_terrain.html generateTexture()
  * TODO: Merge scattered meshes
  *
  * @param {Object} [options]
@@ -653,6 +655,9 @@ if (window.noise && window.noise.simplex) {
      * Generate random terrain using the Simplex Noise method.
      *
      * Parameters are the same as those for {@link THREE.Terrain.Corner}.
+     *
+     * See https://github.com/mrdoob/three.js/blob/master/examples/webgl_terrain_dynamic.html
+     * for an interesting comparison where the generation happens in GLSL.
      */
     THREE.Terrain.Simplex = function(g, options) {
         noise.seed(Math.random());
