@@ -190,7 +190,6 @@
  * Usage: `var terrainScene = THREE.Terrain();`
  *
  * TODO: Decide on a way to document maxVariation and perlinScale
- * TODO: Fix the rotation of scattered meshes, and add mesh scattering to the demo viewer
  * TODO: Implement optimization types?
  * TODO: Implement hill algorithm (feature picking)
  *   See http://www.stuffwithstuff.com/robot-frog/3d/hills/hill.html
@@ -203,6 +202,7 @@
  * TODO: Add dramatic lighting, horizon, and sky (clouds/sun/lens flare) to the
  *   demo
  * TODO: Support the terrain casting shadows onto itself?
+ * TODO: Merge scattered meshes
  *
  * @param {Object} [options]
  *   An optional map of settings that control how the terrain is constructed
@@ -1011,14 +1011,8 @@ if (THREE.Terrain.Simplex) {
  *     up or down when placed on the terrain.
  *   - `randomness`: If `options.spread` is a number, then this property is a
  *     function that determines where meshes are placed. Valid values include
- *     either `Math.random` or
- *     `THREE.Terrain.heightmapArray.bind(method, options)` where `method` is
- *     a random terrain generation function (i.e. a valid value for the
- *     `options.heightmap` parameter of the `THREE.Terrain` function) and
- *     `options` is a map of settings that control how the resulting noise
- *     should be generated (with the same parameters as the `options` parameter
- *     to the `THREE.Terrain` function) but where `options.minHeight === 0`
- *     and `options.maxHeight === 1` if they are specified.
+ *     `Math.random` and the return value of a call to
+ *     `THREE.Terrain.ScatterHelper`.
  *   - `x`, `y`, `w`, `h`: Together, these properties outline a rectangular
  *     region on the terrain inside which meshes should be scattered. The `x`
  *     and `y` properties indicate the upper-left corner of the box and the `w`
@@ -1038,6 +1032,10 @@ THREE.Terrain.ScatterMeshes = function(geometry, options) {
         console.error('options.mesh is required for THREE.Terrain.ScatterMeshes but was not passed');
         return;
     }
+    if (geometry instanceof THREE.BufferGeometry) {
+        console.warn('The terrain mesh is using BufferGeometry but THREE.Terrain.ScatterMeshes can only work with Geometry.');
+        return;
+    }
     if (!options.scene) {
         options.scene = new THREE.Object3D();
     }
@@ -1045,6 +1043,7 @@ THREE.Terrain.ScatterMeshes = function(geometry, options) {
         spread: 0.025,
         sizeVariance: 0.1,
         randomness: Math.random,
+        perlinScale: 0.4,
         x: 0,
         y: 0,
         w: 0,
@@ -1072,10 +1071,12 @@ THREE.Terrain.ScatterMeshes = function(geometry, options) {
                 f = geometry.faces[key];
             if (spreadIsNumber ? randomness(key) < options.spread : options.spread(v[f.a], key)) {
                 var mesh = options.mesh.clone();
+                //mesh.geometry.computeBoundingBox();
                 mesh.position.copy(v[f.a]).add(v[f.b]).add(v[f.c]).divideScalar(3);
-                mesh.rotation.x = f.normal.x + 90 / 180 * Math.PI;
-                mesh.rotation.y = f.normal.y + 90 / 180 * Math.PI;
-                mesh.rotation.z = f.normal.z + 0 / 180 * Math.PI;
+                //mesh.translateZ((mesh.geometry.boundingBox.max.z - mesh.geometry.boundingBox.min.z) * 0.5);
+                var normal = mesh.position.clone().add(f.normal);
+                mesh.lookAt(mesh.position.clone().add(f.normal));
+                mesh.rotation.x += 90 / 180 * Math.PI;
                 if (options.sizeVariance) {
                     var variance = Math.random() * doubleSizeVariance - options.sizeVariance;
                     mesh.scale.x = mesh.scale.z = 1 + variance;
@@ -1085,6 +1086,54 @@ THREE.Terrain.ScatterMeshes = function(geometry, options) {
             }
         }
     }
+    /*
+    TODO: It would be nice to merge all these meshes for more efficient
+    rendering (in fact it's probably necessary for large terrains). There are
+    two paths for doing this. If the mesh material is a MeshFaceMaterial, merge
+    all the geometries and materials into a single mesh. Otherwise, test
+    whether merging all the geometries (and converting them to BufferGeometry
+    afterwards) messes up skinning or not. (If the mesh geometry is already
+    BufferGeometry we can't do anything because there's no merge method
+    implemented yet.)
+    */
 
     return options.scene;
+};
+
+/**
+ * Generate a function that returns a heightmap to pass to ScatterMeshes.
+ *
+ * @param {Function} method
+ *   A random terrain generation function (i.e. a valid value for the
+ *   `options.heightmap` parameter of the `THREE.Terrain` function).
+ * @param {Object} options
+ *   A map of settings that control how the resulting noise should be generated
+ *   (with the same parameters as the `options` parameter to the
+ *   `THREE.Terrain` function, although typically only the `xSegments` and
+ *   `ySegments` fields are used). `options.minHeight` must equal `0` and
+ *   `options.maxHeight` must equal `1` if they are specified.
+ * @param {Number} skip
+ *   The number of sequential faces to skip between faces that are candidates
+ *   for placing a mesh. This avoid clumping meshes too closely together.
+ *
+ * @return {Function}
+ *   Returns a function that can be passed as the value of the
+ *   `options.randomness` parameter to the {@link THREE.Terrain.ScatterMeshes}
+ *   function.
+ */
+THREE.Terrain.ScatterHelper = function(method, options, skip, threshold) {
+    skip = skip || 1;
+    threshold = threshold || 0.25;
+    var xS = options.xSegments;
+    options.xSegments *= 2;
+    var heightmap = THREE.Terrain.heightmapArray(method, options);
+    options.xSegments = xS;
+    for (var i = 0, l = heightmap.length; i < l; i++) {
+        if (i % skip || Math.random() > threshold) {
+            heightmap[i] = 1;
+        }
+    }
+    return function() {
+        return heightmap;
+    };
 };

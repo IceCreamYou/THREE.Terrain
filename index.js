@@ -7,7 +7,7 @@ if (!webglExists) {
 // Workaround: in Chrome, if a page is opened with window.open(), window.innerWidth and window.innerHeight will be zero.
 if ( window.innerWidth === 0 ) { window.innerWidth = parent.innerWidth; window.innerHeight = parent.innerHeight; }
 
-var camera, scene, renderer, clock, player, terrainScene, controls = {}, fpsCamera, skyDome, skyLight;
+var camera, scene, renderer, clock, player, terrainScene, decoScene, controls = {}, fpsCamera, skyDome, skyLight;
 var INV_MAX_FPS = 1 / 100,
     frameDelta = 0,
     paused = true,
@@ -97,7 +97,7 @@ function setupWorld() {
   skyLight = new THREE.DirectionalLight(0xfffbef, 1.85);
   skyLight.position.set(1, 1, 1);
   scene.add(skyLight);
-  var light = new THREE.DirectionalLight(0xc3eaff, 1);
+  var light = new THREE.DirectionalLight(0xc3eaff, 0.5);
   light.position.set(-1, -0.5, -1);
   scene.add(light);
 }
@@ -137,6 +137,8 @@ function setupDatGui() {
     this['width:length ratio'] = 1;
     this['Flight mode'] = useFPS;
     this['Light color'] = '#fffbef';
+    this.spread = 40;
+    this.scattering = 'Altitude';
     this.after = function(vertices, options) {
       if (that.edgeDirection === 'Normal') return;
       THREE.Terrain.Edges(
@@ -178,22 +180,64 @@ function setupDatGui() {
           he.style.display = 'none';
         }
       }
+      that['Scatter meshes']();
+    };
+    this.altitudeSpread = function(v, k) {
+      if (v.z > -80 && v.z < -50) return !(k % 4) && Math.random() < THREE.Terrain.EaseInOut((v.z - -80) / (-50 - -80)) * that.spread * 0.002;
+      else if (v.z > -50 && v.z < 20) return !(k % 4) && Math.random() < that.spread * 0.002;
+      else if (v.z > 20 && v.z < 50) return !(k % 4) && Math.random() < THREE.Terrain.EaseInOut((v.z - 20) / (50 - 20)) * that.spread * 0.002;
+      return false;
+    };
+    this.hasSeenWarning = false;
+    var mesh = buildTree();
+    this['Scatter meshes'] = function() {
+      var s = parseInt(that.segments, 10);
+      var geo = terrainScene.children[0].geometry;
+      terrainScene.remove(decoScene);
+      var o = {
+        maxVariation: 12,
+        perlinScale: 0.4,
+        xSegments: s,
+        ySegments: Math.round(s * that['width:length ratio']),
+      };
+      decoScene = THREE.Terrain.ScatterMeshes(geo, {
+        mesh: mesh,
+        w: s,
+        h: Math.round(s * that['width:length ratio']),
+        spread: that.scattering === 'Altitude' ? that.altitudeSpread : (that.scattering === 'Linear' ? that.spread*0.0005 : THREE.Terrain.InEaseOut(that.spread*0.01)*0.5),
+        randomness: that.scattering === 'Linear' ? Math.random : (that.scattering === 'Altitude' ? null : THREE.Terrain.ScatterHelper(THREE.Terrain[that.scattering], o, 2, 0.125)),
+      });
+      if (decoScene) {
+        terrainScene.add(decoScene);
+      }
+      else if (!that.hasSeenWarning) {
+        that.hasSeenWarning = true;
+        alert('Scattering meshes has been temporarily disabled for more than 63 segments.');
+      }
     };
   }
   var gui = new dat.GUI();
   var settings = new Settings();
-  gui.add(settings, 'heightmap', ['Corner', 'DiamondSquare', 'heightmap.png', 'Perlin', 'Simplex', 'PerlinDiamond', 'SimplexCorner']).onFinishChange(settings.Regenerate);
-  gui.add(settings, 'easing', ['Linear', 'EaseIn', 'EaseOut', 'EaseInOut', 'InEaseOut']).onFinishChange(settings.Regenerate);
-  gui.add(settings, 'texture', ['Blended', 'Wireframe']).onFinishChange(settings.Regenerate);
-  gui.add(settings, 'segments', 7, 127).step(1).onFinishChange(settings.Regenerate);
-  gui.addColor(settings, 'Light color').onChange(function(val) {
+  var heightmapFolder = gui.addFolder('Heightmap');
+  heightmapFolder.add(settings, 'heightmap', ['Corner', 'DiamondSquare', 'heightmap.png', 'Perlin', 'Simplex', 'PerlinDiamond', 'SimplexCorner']).onFinishChange(settings.Regenerate);
+  heightmapFolder.add(settings, 'easing', ['Linear', 'EaseIn', 'EaseOut', 'EaseInOut', 'InEaseOut']).onFinishChange(settings.Regenerate);
+  heightmapFolder.add(settings, 'segments', 7, 127).step(1).onFinishChange(settings.Regenerate);
+  heightmapFolder.open();
+  var decoFolder = gui.addFolder('Decoration');
+  decoFolder.add(settings, 'texture', ['Blended', 'Wireframe']).onFinishChange(settings.Regenerate);
+  decoFolder.add(settings, 'scattering', ['Altitude', 'Linear', 'DiamondSquare', 'Perlin', 'Simplex']).onFinishChange(settings['Scatter meshes']);
+  decoFolder.add(settings, 'spread', 0, 100).step(1).onFinishChange(settings['Scatter meshes']);
+  decoFolder.addColor(settings, 'Light color').onChange(function(val) {
     skyLight.color.set(val);
   });
-  /*
-  gui.add(settings, 'sky').onChange(function(val) {
-    skyDome.visible = val;
-  });
-   */
+  var sizeFolder = gui.addFolder('Size');
+  sizeFolder.add(settings, 'size', 256, 3072).step(256).onFinishChange(settings.Regenerate);
+  sizeFolder.add(settings, 'maxHeight', 2, 300).step(2).onFinishChange(settings.Regenerate);
+  sizeFolder.add(settings, 'width:length ratio', 0.2, 2).step(0.05).onFinishChange(settings.Regenerate);
+  var edgesFolder = gui.addFolder('Edges');
+  edgesFolder.add(settings, 'edgeDirection', ['Normal', 'Up', 'Down']).onFinishChange(settings.Regenerate);
+  edgesFolder.add(settings, 'edgeCurve', ['Linear', 'EaseIn', 'EaseOut', 'EaseInOut']).onFinishChange(settings.Regenerate);
+  edgesFolder.add(settings, 'edgeDistance', 0, 256).step(16).onFinishChange(settings.Regenerate);
   gui.add(settings, 'Flight mode').onChange(function(val) {
     useFPS = val;
     fpsCamera.position.x = 449;
@@ -213,14 +257,7 @@ function setupDatGui() {
       document.getElementById('fpscontrols').className = '';
     }
   });
-  var folder = gui.addFolder('Terrain size');
-  folder.add(settings, 'size', 256, 3072).step(256).onFinishChange(settings.Regenerate);
-  folder.add(settings, 'maxHeight', 2, 300).step(2).onFinishChange(settings.Regenerate);
-  folder.add(settings, 'width:length ratio', 0.2, 2).step(0.05).onFinishChange(settings.Regenerate);
-  var edges = gui.addFolder('Edges');
-  edges.add(settings, 'edgeDirection', ['Normal', 'Up', 'Down']).onFinishChange(settings.Regenerate);
-  edges.add(settings, 'edgeDistance', 0, 256).step(16).onFinishChange(settings.Regenerate);
-  edges.add(settings, 'edgeCurve', ['Linear', 'EaseIn', 'EaseOut', 'EaseInOut']).onFinishChange(settings.Regenerate);
+  gui.add(settings, 'Scatter meshes');
   gui.add(settings, 'Regenerate');
 
   if (typeof window.Stats !== 'undefined' && /[?&]stats=1\b/g.test(location.search)) {
@@ -290,4 +327,43 @@ function __printCameraData() {
   s += 'controls.lat = ' + Math.round(controls.lat) + ';\n';
   s += 'controls.lon = ' + Math.round(controls.lon) + ';\n';
   console.log(s);
+}
+
+function buildTree() {
+  var obj = new THREE.Object3D();
+  var material = new THREE.MeshFaceMaterial([
+    new THREE.MeshLambertMaterial({ color: 0x3d2817 }), // brown
+    new THREE.MeshLambertMaterial({ color: 0x2d4c1e }), // green
+  ]);
+
+  var c0 = new THREE.Mesh(new THREE.CylinderGeometry(2, 2, 12, 6));
+  c0.position.y = 6;
+  var c1 = new THREE.Mesh(new THREE.CylinderGeometry(0, 10, 14, 6));
+  c1.position.y = 18;
+  var c2 = new THREE.Mesh(new THREE.CylinderGeometry(0, 9, 13, 6));
+  c2.position.y = 25;
+  var c3 = new THREE.Mesh(new THREE.CylinderGeometry(0, 8, 12, 6));
+  c3.position.y = 32;
+
+  var g = new THREE.Geometry();
+  c0.updateMatrix();
+  c1.updateMatrix();
+  c2.updateMatrix();
+  c3.updateMatrix();
+  g.merge(c0.geometry, c0.matrix);
+  g.merge(c1.geometry, c1.matrix);
+  g.merge(c2.geometry, c2.matrix);
+  g.merge(c3.geometry, c3.matrix);
+
+  var b = c0.geometry.faces.length;
+  for (var i = 0, l = g.faces.length; i < l; i++) {
+    g.faces[i].materialIndex = i < b ? 0 : 1;
+  }
+
+  var m = new THREE.Mesh(g, material);
+  obj.add(m);
+
+  obj.scale.x = obj.scale.z = 5;
+  obj.scale.y = 1.25;
+  return obj;
 }
