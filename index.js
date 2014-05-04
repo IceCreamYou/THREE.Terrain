@@ -4,6 +4,13 @@ if (!webglExists) {
   alert('Your browser does not appear to support WebGL. You can try viewing this page anyway, but it may be slow and some things may not look as intended. Please try viewing on desktop Firefox or Chrome.');
 }
 
+if (/&?webgl=0\b/g.test(location.hash)) {
+  webglExists = !confirm('Are you sure you want to disable WebGL on this page?');
+  if (webglExists) {
+    location.hash = '#';
+  }
+}
+
 // Workaround: in Chrome, if a page is opened with window.open(), window.innerWidth and window.innerHeight will be zero.
 if ( window.innerWidth === 0 ) { window.innerWidth = parent.innerWidth; window.innerHeight = parent.innerHeight; }
 
