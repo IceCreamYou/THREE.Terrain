@@ -251,7 +251,7 @@ function draw() {
 }
 
 function update(delta) {
-  if (terrainScene) terrainScene.children[0].rotation.z = Date.now() * 0.00001;
+  if (terrainScene) terrainScene.rotation.z = Date.now() * 0.00001;
   if (controls.update) controls.update(delta);
 }
 

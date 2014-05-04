@@ -1,5 +1,5 @@
 /**
- * THREE.Terrain.js 1.0.0-02052014
+ * THREE.Terrain.js 1.0.0-04052014
  *
  * @author Isaac Sukin (http://www.isaacsukin.com/)
  * @license MIT
@@ -189,7 +189,8 @@
  *
  * Usage: `var terrainScene = THREE.Terrain();`
  *
- * TODO: Allow scattering other meshes randomly across the terrain
+ * TODO: Decide on a way to document maxVariation and perlinScale
+ * TODO: Fix the rotation of scattered meshes, and add mesh scattering to the demo viewer
  * TODO: Implement optimization types?
  * TODO: Implement hill algorithm (feature picking)
  *   See http://www.stuffwithstuff.com/robot-frog/3d/hills/hill.html
@@ -232,20 +233,20 @@
  *   - `material`: a THREE.Material instance used to display the terrain.
  *     Defaults to `new THREE.MeshBasicMaterial({color: 0xee6633})`.
  *   - `maxHeight`: the highest point, in Three.js units, that a peak should
- *     reach. Defaults to 300.
+ *     reach. Defaults to 100.
  *   - `minHeight`: the lowest point, in Three.js units, that a valley should
- *     reach. Defaults to -50.
+ *     reach. Defaults to -100.
  *   - `useBufferGeometry`: a Boolean indicating whether to use
  *     THREE.BufferGeometry instead of THREE.Geometry for the Terrain plane.
  *     Defaults to `true`.
  *   - `xSegments`: The number of segments (rows) to divide the terrain plane
- *     into. (This basically determines how detailed the terrain is) Defaults
+ *     into. (This basically determines how detailed the terrain is.) Defaults
  *     to 63.
  *   - `xSize`: The width of the terrain in Three.js units. Defaults to 1024.
  *     Rendering might be slightly faster if this is a multiple of
  *     `options.xSegments + 1`.
  *   - `ySegments`: The number of segments (columns) to divide the terrain
- *     plane into. (This basically determines how detailed the terrain is)
+ *     plane into. (This basically determines how detailed the terrain is.)
  *     Defaults to 63.
  *   - `ySize`: The length of the terrain in Three.js units. Defaults to 1024.
  *     Rendering might be slightly faster if this is a multiple of
@@ -274,19 +275,20 @@ THREE.Terrain = function(options) {
             options[opt] = typeof options[opt] === 'undefined' ? defaultOptions[opt] : options[opt];
         }
     }
-    options.unit = (options.xSize / (options.xSegments+1) + options.ySize / (options.ySegments+1)) * 0.5;
+    //options.unit = (options.xSize / (options.xSegments+1) + options.ySize / (options.ySegments+1)) * 0.5;
     options.material = options.material || new THREE.MeshBasicMaterial({ color: 0xee6633 });
 
     // Using a scene instead of a mesh allows us to implement more complex
     // features eventually, like adding the ability to randomly scatter plants
     // across the terrain or having multiple meshes for optimization purposes.
-    var scene = new THREE.Scene();
+    var scene = new THREE.Object3D();
+    // Planes are initialized on the XY plane, so rotate so Z is up.
+    scene.rotation.x = -0.5 * Math.PI;
 
     var mesh = new THREE.Mesh(
         new THREE.PlaneGeometry(options.xSize, options.ySize, options.xSegments, options.ySegments),
         options.material
     );
-    mesh.rotation.x = -0.5 * Math.PI;
 
     // It's actually possible to pass a canvas with heightmap data instead of an image.
     if (options.heightmap instanceof HTMLCanvasElement || options.heightmap instanceof Image) {
@@ -601,6 +603,42 @@ THREE.Terrain.toHeightmap = function(g, options) {
 };
 
 /**
+ * Generate a 1D array containing random heightmap data.
+ *
+ * This is like {@link THREE.Terrain.toHeightmap} except that instead of
+ * generating the Three.js mesh and material information you can just get the
+ * height data.
+ *
+ * @param {Function} method
+ *   The method to use to generate the heightmap data. Works with function that
+ *   would be an acceptable value for the `heightmap` option for the
+ *   {@link THREE.Terrain} function.
+ * @param {Number} options
+ *   The same as the options parameter for the {@link THREE.Terrain} function.
+ */
+THREE.Terrain.heightmapArray = function(method, options) {
+    var arr = new Array((options.xSegments+1) * (options.ySegments+1)),
+        l = arr.length,
+        i;
+    // The heightmap functions provided by this script operate on THREE.Vector3
+    // objects by changing the z field, so we need to make that available.
+    // Unfortunately that means creating a bunch of objects we're just going to
+    // throw away, but a conscious decision was made here to optimize for the
+    // vector case.
+    for (i = 0; i < l; i++) {
+        arr[i] = {z: 0};
+    }
+    options.minHeight = options.minHeight || 0;
+    options.maxHeight = typeof options.maxHeight === 'undefined' ? 1 : options.maxHeight;
+    method(arr, options);
+    THREE.Terrain.Clamp(arr, options, true);
+    for (i = 0; i < l; i++) {
+        arr[i] = arr[i].z;
+    }
+    return arr;
+};
+
+/**
  * Smooth the terrain by setting each point to the mean of its neighborhood.
  *
  * Parameters are the same as those for {@link THREE.Terrain.Corner}.
@@ -863,8 +901,11 @@ THREE.Terrain.MultiPass = function(g, options, passes) {
  *   displayed. Valid values are the same as those for the `options` parameter
  *   of {@link THREE.Terrain}() but only `maxHeight`, `minHeight`, and `easing`
  *   are used.
+ * @param {Boolean} [stretch=false]
+ *   Determines whether to stretch the heightmap across the maximum and minimum
+ *   height range if the actual height range is smaller.
  */
-THREE.Terrain.Clamp = function(g, options) {
+THREE.Terrain.Clamp = function(g, options, stretch) {
     var min = Infinity,
         max = -Infinity,
         l = g.length,
@@ -877,8 +918,8 @@ THREE.Terrain.Clamp = function(g, options) {
     var actualRange = max - min,
         optMax = typeof options.maxHeight === 'undefined' ? max : options.maxHeight,
         optMin = typeof options.minHeight === 'undefined' ? min : options.minHeight,
-        targetMax = max < optMax ? max : optMax,
-        targetMin = min > optMin ? min : optMin,
+        targetMax = stretch ? optMax : (max < optMax ? max : optMax),
+        targetMin = stretch ? optMin : (min > optMin ? min : optMin),
         range = targetMax - targetMin;
     for (i = 0; i < l; i++) {
         g[i].z = options.easing((g[i].z - min) / actualRange) * range + optMin;
@@ -945,3 +986,105 @@ if (THREE.Terrain.Simplex) {
         ]);
     };
 }
+
+/**
+ * Scatter a mesh across the terrain.
+ *
+ * @param {THREE.Geometry} geometry
+ *   The terrain's geometry (or the highest-resolution version of it).
+ * @param {Object} options
+ *   A map of settings that controls how the meshes are scattered, with the
+ *   following properties:
+ *   - `mesh`: A `THREE.Mesh` instance to scatter across the terrain.
+ *   - `spread`: A number or a function that affects where meshes are placed.
+ *     If it is a number, it represents the percent of faces of the terrain
+ *     onto which a mesh should be placed. If it is a function, it takes a
+ *     vertex from the terrain and the key of a related face and returns a
+ *     boolean indicating whether to place a mesh on that face or not. An
+ *     example could be `function(v, k) { return v.z > 0 && !(k % 4); }`.
+ *     Defaults to 0.025.
+ *   - `scene`: A `THREE.Object3D` instance to which the scattered meshes will
+ *     be added. This is expected to be either a return value of a call to
+ *     `THREE.Terrain()` or added to that return value; otherwise the position
+ *     and rotation of the meshes will be wrong.
+ *   - `sizeVariance`: The percent by which instances of the mesh can be scaled
+ *     up or down when placed on the terrain.
+ *   - `randomness`: If `options.spread` is a number, then this property is a
+ *     function that determines where meshes are placed. Valid values include
+ *     either `Math.random` or
+ *     `THREE.Terrain.heightmapArray.bind(method, options)` where `method` is
+ *     a random terrain generation function (i.e. a valid value for the
+ *     `options.heightmap` parameter of the `THREE.Terrain` function) and
+ *     `options` is a map of settings that control how the resulting noise
+ *     should be generated (with the same parameters as the `options` parameter
+ *     to the `THREE.Terrain` function) but where `options.minHeight === 0`
+ *     and `options.maxHeight === 1` if they are specified.
+ *   - `x`, `y`, `w`, `h`: Together, these properties outline a rectangular
+ *     region on the terrain inside which meshes should be scattered. The `x`
+ *     and `y` properties indicate the upper-left corner of the box and the `w`
+ *     and `h` properties indicate its width and height, respectively, in units
+ *     of terrain segments (like those specified in the `options` parameter for
+ *     the `THREE.Terrain` function). `x` and `y` default to zero, but `w` and
+ *     `h` are required.
+ *
+ * @return {THREE.Object3D}
+ *   An Object3D containing the scattered meshes. This is the value of the
+ *   `options.scene` parameter if passed. This is expected to be either a
+ *   return value of a call to `THREE.Terrain()` or added to that return value;
+ *   otherwise the position and rotation of the meshes will be wrong.
+ */
+THREE.Terrain.ScatterMeshes = function(geometry, options) {
+    if (!options.mesh) {
+        console.error('options.mesh is required for THREE.Terrain.ScatterMeshes but was not passed');
+        return;
+    }
+    if (!options.scene) {
+        options.scene = new THREE.Object3D();
+    }
+    var defaultOptions = {
+        spread: 0.025,
+        sizeVariance: 0.1,
+        randomness: Math.random,
+        x: 0,
+        y: 0,
+        w: 0,
+        h: 0,
+    };
+    for (var opt in defaultOptions) {
+        if (defaultOptions.hasOwnProperty(opt)) {
+            options[opt] = typeof options[opt] === 'undefined' ? defaultOptions[opt] : options[opt];
+        }
+    }
+
+    var spreadIsNumber = typeof options.spread === 'number',
+        randomHeightmap,
+        randomness,
+        doubleSizeVariance = options.sizeVariance * 2,
+        v = geometry.vertices;
+    if (spreadIsNumber) {
+        randomHeightmap = options.randomness();
+        randomness = typeof randomHeightmap === 'number' ? Math.random : function(k) { return randomHeightmap[k]; };
+    }
+    geometry.computeFaceNormals();
+    for (var i = options.y, w = options.w*2; i < w; i++) {
+        for (var j = options.x, h = options.h; j < h; j++) {
+            var key = j*w + i,
+                f = geometry.faces[key];
+            if (spreadIsNumber ? randomness(key) < options.spread : options.spread(v[f.a], key)) {
+                var mesh = options.mesh.clone();
+                mesh.position.copy(v[f.a]).add(v[f.b]).add(v[f.c]).divideScalar(3);
+                mesh.rotation.x = f.normal.x + 90 / 180 * Math.PI;
+                mesh.rotation.y = f.normal.y + 90 / 180 * Math.PI;
+                mesh.rotation.z = f.normal.z + 0 / 180 * Math.PI;
+                if (options.sizeVariance) {
+                    var variance = Math.random() * doubleSizeVariance - options.sizeVariance;
+                    mesh.scale.x = mesh.scale.z = 1 + variance;
+                    mesh.scale.y += variance;
+                }
+                options.scene.add(mesh);
+            }
+        }
+    }
+
+    return options.scene;
+};
