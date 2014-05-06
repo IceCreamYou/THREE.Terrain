@@ -193,8 +193,6 @@
  * TODO: Implement optimization types?
  * TODO: Implement hill algorithm (feature picking)
  *   See http://www.stuffwithstuff.com/robot-frog/3d/hills/hill.html
- * TODO: Implement some variation of a polygon adjacency graph algorithm
- *   See http://www-cs-students.stanford.edu/~amitp/game-programming/polygon-map-generation/
  * TODO: Support infinite terrain?
  * TODO: Add the ability to manually convolve terrain
  * TODO: Add the ability to manually paint terrain?
@@ -213,7 +211,7 @@
  *   - `after`: A function to run after other transformations on the terrain
  *     produce the highest-detail heightmap, but before optimizations and
  *     visual properties are applied. Takes two parameters, which are the same
- *     as those for {@link THREE.Terrain.Corner}: an array of `THREE.Vector3`
+ *     as those for {@link THREE.Terrain.DiamondSquare}: an array of `THREE.Vector3`
  *     objects representing the vertices of the terrain, and a map of options
  *     with the same available properties as the `options` parameter for the
  *     `THREE.Terrain` function.
@@ -226,12 +224,13 @@
  *     webpage or served with a CORS-friendly header) representing terrain
  *     height data (lighter pixels are higher); or a function used to generate
  *     random height data for the terrain. Valid random functions include
- *     `THREE.Terrain.Corner`, `THREE.Terrain.DiamondSquare` (the default),
- *     `THREE.Terrain.Perlin`, `THREE.Terrain.Simplex`, or a custom function
- *     with the same signature. (Ideally heightmap images have the same number
- *     of pixels as the terrain has vertices, as determined by the `xSegments`
- *     and `ySegments` options, but this is not required: if the heightmap is a
- *     different size, vertex height values will be interpolated.)
+ *     `THREE.Terrain.DiamondSquare` (the default), `THREE.Terrain.Perlin`,
+ *     `THREE.Terrain.Simplex`, `THREE.Terrain.PerlinDiamond`, or a custom
+ *     function with the same signature. (Ideally heightmap images have the
+ *     same number of pixels as the terrain has vertices, as determined by the
+ *     `xSegments` and `ySegments` options, but this is not required: if the
+ *     heightmap is a different size, vertex height values will be
+ *     interpolated.)
  *   - `material`: a THREE.Material instance used to display the terrain.
  *     Defaults to `new THREE.MeshBasicMaterial({color: 0xee6633})`.
  *   - `maxHeight`: the highest point, in Three.js units, that a peak should
@@ -643,7 +642,7 @@ THREE.Terrain.heightmapArray = function(method, options) {
 /**
  * Smooth the terrain by setting each point to the mean of its neighborhood.
  *
- * Parameters are the same as those for {@link THREE.Terrain.Corner}.
+ * Parameters are the same as those for {@link THREE.Terrain.DiamondSquare}.
  */
 THREE.Terrain.Smooth = function(g, options) {
     var heightmap = new Array(g.length);
@@ -717,9 +716,9 @@ THREE.Terrain.Edges = function(g, options, direction, distance, easing) {
 };
 
 /**
- * Generate random terrain using the Corner method.
+ * Generate random terrain using the Diamond-Square method.
  *
- * This looks much more like random noise than realistic terrain.
+ * Based on https://github.com/srchea/Terrain-Generation/blob/master/js/classes/TerrainGeneration.js
  *
  * @param {THREE.Vector3[]} g
  *   The vertex array for plane geometry to modify with heightmap data. This
@@ -728,31 +727,6 @@ THREE.Terrain.Edges = function(g, options, direction, distance, easing) {
  *    An optional map of settings that control how the terrain is constructed
  *    and displayed. Valid values are the same as those for the `options`
  *    parameter of {@link THREE.Terrain}().
- */
-THREE.Terrain.Corner = function(g, options) {
-    var maxVar = options.maxVariation,
-        maxVarHalf = maxVar * 0.5;
-    for (var i = 0, xl = options.xSegments + 1; i < xl; i++) {
-        for (var j = 0; j < options.ySegments + 1; j++) {
-            var k = j*xl + i, // Vertex index
-                s = (j-1)*xl + i, // Bottom vertex index
-                t = j*xl + i-1, // Left vertex index
-                l = s < 0 ? g[k].z : g[s].z, // Height of bottom vertex
-                b = t < 0 ? g[k].z : g[t].z, // Height of left vertex
-                r = Math.random(),
-                v = (r < 0.2 ? l : (r < 0.4 ? b : l + b)) * 0.5, // Neighbors
-                m = Math.random() * maxVar - maxVarHalf; // Disturb distance
-            g[k].z += v + m;
-        }
-    }
-};
-
-/**
- * Generate random terrain using the Diamond-Square method.
- *
- * Based on https://github.com/srchea/Terrain-Generation/blob/master/js/classes/TerrainGeneration.js
- *
- * Parameters are the same as those for {@link THREE.Terrain.Corner}.
  */
 THREE.Terrain.DiamondSquare = function(g, options) {
     // Set the segment length to the smallest power of 2 that is greater than
@@ -822,7 +796,7 @@ if (window.noise && window.noise.perlin) {
     /**
      * Generate random terrain using the Perlin Noise method.
      *
-     * Parameters are the same as those for {@link THREE.Terrain.Corner}.
+     * Parameters are the same as those for {@link THREE.Terrain.DiamondSquare}.
      */
     THREE.Terrain.Perlin = function(g, options) {
         noise.seed(Math.random());
@@ -840,7 +814,7 @@ if (window.noise && window.noise.simplex) {
     /**
      * Generate random terrain using the Simplex Noise method.
      *
-     * Parameters are the same as those for {@link THREE.Terrain.Corner}.
+     * Parameters are the same as those for {@link THREE.Terrain.DiamondSquare}.
      *
      * See https://github.com/mrdoob/three.js/blob/master/examples/webgl_terrain_dynamic.html
      * for an interesting comparison where the generation happens in GLSL.
@@ -965,29 +939,13 @@ if (THREE.Terrain.Perlin) {
     /**
      * Generate random terrain using the Perlin and Diamond-Square methods composed.
      *
-     * Parameters are the same as those for {@link THREE.Terrain.Corner}.
+     * Parameters are the same as those for {@link THREE.Terrain.DiamondSquare}.
      */
     THREE.Terrain.PerlinDiamond = function(g, options) {
         THREE.Terrain.MultiPass(g, options, [
             {method: THREE.Terrain.Perlin},
             // There's nothing special about -0.2, it just looks nice.
             {method: THREE.Terrain.DiamondSquare, granularity: -0.2},
-        ]);
-    };
-}
-
-if (THREE.Terrain.Simplex) {
-    /**
-     * Generate random terrain using the Simplex and Corner methods composed.
-     *
-     * Parameters are the same as those for {@link THREE.Terrain.Corner}.
-     */
-    THREE.Terrain.SimplexCorner = function(g, options) {
-        THREE.Terrain.MultiPass(g, options, [
-            {method: THREE.Terrain.Simplex},
-            // There's nothing special about 0.2, it just looks nice.
-            {method: THREE.Terrain.Corner, granularity: 0.2},
-            {method: THREE.Terrain.Smooth},
         ]);
     };
 }

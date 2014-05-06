@@ -224,7 +224,7 @@ function setupDatGui() {
   var gui = new dat.GUI();
   var settings = new Settings();
   var heightmapFolder = gui.addFolder('Heightmap');
-  heightmapFolder.add(settings, 'heightmap', ['Corner', 'DiamondSquare', 'heightmap.png', 'Perlin', 'Simplex', 'PerlinDiamond', 'SimplexCorner']).onFinishChange(settings.Regenerate);
+  heightmapFolder.add(settings, 'heightmap', ['DiamondSquare', 'heightmap.png', 'Perlin', 'Simplex', 'PerlinDiamond']).onFinishChange(settings.Regenerate);
   heightmapFolder.add(settings, 'easing', ['Linear', 'EaseIn', 'EaseOut', 'EaseInOut', 'InEaseOut']).onFinishChange(settings.Regenerate);
   heightmapFolder.add(settings, 'segments', 7, 127).step(1).onFinishChange(settings.Regenerate);
   heightmapFolder.open();
@@ -340,7 +340,7 @@ function buildTree() {
     new THREE.MeshLambertMaterial({ color: 0x2d4c1e }), // green
   ]);
 
-  var c0 = new THREE.Mesh(new THREE.CylinderGeometry(2, 2, 12, 6));
+  var c0 = new THREE.Mesh(new THREE.CylinderGeometry(2, 2, 12, 6, 1, true));
   c0.position.y = 6;
   var c1 = new THREE.Mesh(new THREE.CylinderGeometry(0, 10, 14, 8));
   c1.position.y = 18;
