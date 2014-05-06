@@ -335,7 +335,6 @@ function __printCameraData() {
 }
 
 function buildTree() {
-  var obj = new THREE.Object3D();
   var material = new THREE.MeshFaceMaterial([
     new THREE.MeshLambertMaterial({ color: 0x3d2817 }), // brown
     new THREE.MeshLambertMaterial({ color: 0x2d4c1e }), // green
@@ -343,11 +342,11 @@ function buildTree() {
 
   var c0 = new THREE.Mesh(new THREE.CylinderGeometry(2, 2, 12, 6));
   c0.position.y = 6;
-  var c1 = new THREE.Mesh(new THREE.CylinderGeometry(0, 10, 14, 6));
+  var c1 = new THREE.Mesh(new THREE.CylinderGeometry(0, 10, 14, 8));
   c1.position.y = 18;
-  var c2 = new THREE.Mesh(new THREE.CylinderGeometry(0, 9, 13, 6));
+  var c2 = new THREE.Mesh(new THREE.CylinderGeometry(0, 9, 13, 8));
   c2.position.y = 25;
-  var c3 = new THREE.Mesh(new THREE.CylinderGeometry(0, 8, 12, 6));
+  var c3 = new THREE.Mesh(new THREE.CylinderGeometry(0, 8, 12, 8));
   c3.position.y = 32;
 
   var g = new THREE.Geometry();
@@ -366,9 +365,8 @@ function buildTree() {
   }
 
   var m = new THREE.Mesh(g, material);
-  obj.add(m);
 
-  obj.scale.x = obj.scale.z = 5;
-  obj.scale.y = 1.25;
-  return obj;
+  m.scale.x = m.scale.z = 5;
+  m.scale.y = 1.25;
+  return m;
 }

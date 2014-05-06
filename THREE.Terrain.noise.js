@@ -1,5 +1,5 @@
 /**
- * THREE.Terrain.js 1.0.0-04052014
+ * THREE.Terrain.js 1.0.0-06052014
  *
  * @author Isaac Sukin (http://www.isaacsukin.com/)
  * @license MIT
@@ -1063,7 +1063,8 @@ THREE.Terrain.ScatterMeshes = function(geometry, options) {
         randomHeightmap,
         randomness,
         doubleSizeVariance = options.sizeVariance * 2,
-        v = geometry.vertices;
+        v = geometry.vertices,
+        meshes = [];
     if (spreadIsNumber) {
         randomHeightmap = options.randomness();
         randomness = typeof randomHeightmap === 'number' ? Math.random : function(k) { return randomHeightmap[k]; };
@@ -1086,20 +1087,33 @@ THREE.Terrain.ScatterMeshes = function(geometry, options) {
                     mesh.scale.x = mesh.scale.z = 1 + variance;
                     mesh.scale.y += variance;
                 }
-                options.scene.add(mesh);
+                meshes.push(mesh);
             }
         }
     }
-    /*
-    TODO: It would be nice to merge all these meshes for more efficient
-    rendering (in fact it's probably necessary for large terrains). There are
-    two paths for doing this. If the mesh material is a MeshFaceMaterial, merge
-    all the geometries and materials into a single mesh. Otherwise, test
-    whether merging all the geometries (and converting them to BufferGeometry
-    afterwards) messes up skinning or not. (If the mesh geometry is already
-    BufferGeometry we can't do anything because there's no merge method
-    implemented yet.)
-    */
+
+    // Merge geometries.
+    var k, l;
+    if (options.mesh.geometry instanceof THREE.Geometry) {
+        var g = new THREE.Geometry();
+        for (k = 0, l = meshes.length; k < l; k++) {
+            var m = meshes[k];
+            m.updateMatrix();
+            g.merge(m.geometry, m.matrix);
+        }
+        /*
+        if (!(options.mesh.material instanceof THREE.MeshFaceMaterial)) {
+            g = THREE.BufferGeometryUtils.fromGeometry(g);
+        }
+        */
+        options.scene.add(new THREE.Mesh(g, options.mesh.material));
+    }
+    // There's no BufferGeometry merge method implemented yet.
+    else {
+        for (k = 0, l = meshes.length; k < l; k++) {
+            options.scene.add(meshes[k]);
+        }
+    }
 
     return options.scene;
 };
