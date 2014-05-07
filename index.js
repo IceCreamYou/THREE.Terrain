@@ -135,6 +135,7 @@ function setupDatGui() {
     this.heightmap = 'PerlinDiamond';
     this.maxHeight = 200;
     this.segments = webglExists ? 63 : 31;
+    this.steps = 1;
     this.size = 1024;
     this.sky = true;
     this.texture = webglExists ? 'Blended' : 'Wireframe';
@@ -166,6 +167,7 @@ function setupDatGui() {
         material: that.texture == 'Wireframe' ? mat : blend,
         maxHeight: (that.maxHeight - 100) * (h ? 0.25 : 1),
         minHeight: -100 * (h ? 0.25 : 1),
+        steps: that.steps,
         stretch: false,
         useBufferGeometry: s >= 64 && that.texture != 'Wireframe',
         xSize: that.size,
@@ -228,6 +230,7 @@ function setupDatGui() {
   heightmapFolder.add(settings, 'heightmap', ['DiamondSquare', 'heightmap.png', 'Perlin', 'Simplex', 'PerlinDiamond', 'PerlinLayers', 'SimplexLayers']).onFinishChange(settings.Regenerate);
   heightmapFolder.add(settings, 'easing', ['Linear', 'EaseIn', 'EaseOut', 'EaseInOut', 'InEaseOut']).onFinishChange(settings.Regenerate);
   heightmapFolder.add(settings, 'segments', 7, 127).step(1).onFinishChange(settings.Regenerate);
+  heightmapFolder.add(settings, 'steps', 1, 8).step(1).onFinishChange(settings.Regenerate);
   heightmapFolder.open();
   var decoFolder = gui.addFolder('Decoration');
   decoFolder.add(settings, 'texture', ['Blended', 'Wireframe']).onFinishChange(settings.Regenerate);

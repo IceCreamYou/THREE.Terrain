@@ -198,8 +198,14 @@
  * TODO: Add the ability to manually paint terrain?
  * TODO: Make automatically blended terrain take slope into account. Can
  *   probably do this by taking the four cardinal neighbors and doing
- *   avg(slope(E, W), slope(N, S)) and then passing that as a uniform.
+ *   avg(slope(E, W), slope(N, S)) and then passing that as a uniform. Or just
+ *   take the angle to the vertex normal.
+ * TODO: Randomly rotate scattered meshes perpendicular to the normal
  * TODO: Add dramatic lighting, water, and lens flare to the demo
+ * TODO: Instead of the region parameters for ScatterMeshes, add a function
+ *   that checks whether given coordinates are acceptable for placing a mesh
+ * TODO: Add an option to THREE.Terrain.Smooth to interpolate between the
+ *   current and smoothed value
  * TODO: Support the terrain casting shadows onto itself?
  *   Relevant: view-source:http://threejs.org/examples/webgl_geometry_terrain.html generateTexture()
  *
@@ -236,6 +242,8 @@
  *     reach. Defaults to 100.
  *   - `minHeight`: the lowest point, in Three.js units, that a valley should
  *     reach. Defaults to -100.
+ *   - `steps`: If this is a number above 1, the terrain will be paritioned
+ *     into that many flat "steps," resulting in a blocky appearance.
  *   - `stretch`: Determines whether to stretch the heightmap across the
  *     maximum and minimum height range if the height range produced by the
  *     `heightmap` property is smaller. Defaults to false.
@@ -265,6 +273,7 @@ THREE.Terrain = function(options) {
         minHeight: -100,
         optimization: THREE.Terrain.NONE,
         frequency: 0.4,
+        steps: 1,
         stretch: false,
         useBufferGeometry: true,
         xSegments: 63,
@@ -293,21 +302,26 @@ THREE.Terrain = function(options) {
         options.material
     );
 
+    var v = mesh.geometry.vertices;
     // It's actually possible to pass a canvas with heightmap data instead of an image.
     if (options.heightmap instanceof HTMLCanvasElement || options.heightmap instanceof Image) {
-        THREE.Terrain.fromHeightmap(mesh.geometry.vertices, options);
+        THREE.Terrain.fromHeightmap(v, options);
     }
     else if (typeof options.heightmap === 'function') {
-        options.heightmap(mesh.geometry.vertices, options);
+        options.heightmap(v, options);
     }
     else if (window.console && console.warn) {
         console.warn('An invalid value was passed for `options.heightmap`: ' + options.heightmap);
     }
+    if (options.steps > 1) {
+        THREE.Terrain.Step(v, options.steps);
+        THREE.Terrain.Smooth(v, options);
+    }
     // Keep the terrain within the allotted height range if necessary, and do easing.
-    THREE.Terrain.Clamp(mesh.geometry.vertices, options);
+    THREE.Terrain.Clamp(v, options);
     // Call the "after" callback
     if (typeof options.after === 'function') {
-        options.after(mesh.geometry.vertices, options);
+        options.after(v, options);
     }
     // Mark the geometry as having changed and needing updates.
     mesh.geometry.verticesNeedUpdate = true;
@@ -665,6 +679,58 @@ THREE.Terrain.Smooth = function(g, options) {
     }
     for (var k = 0, l = g.length; k < l; k++) {
         g[k].z = heightmap[k];
+    }
+};
+
+/**
+ * Partition a terrain into flat steps.
+ *
+ * @param {THREE.Vector3[]} g
+ *   The vertex array for plane geometry to modify with heightmap data. This
+ *   method sets the `z` property of each vertex.
+ * @param {Number} [levels]
+ *   The number of steps to divide the terrain into. Defaults to
+ *   (g.length/2)^(1/4).
+ */
+THREE.Terrain.Step = function(g, levels) {
+    // Calculate the max, min, and avg values for each bucket
+    var i = 0,
+        j = 0,
+        l = g.length,
+        inc = Math.floor(l / levels),
+        heights = new Array(l),
+        buckets = new Array(levels);
+    if (typeof levels === 'undefined') {
+        levels = Math.floor(Math.pow(l*0.5, 0.25));
+    }
+    for (i = 0; i < l; i++) {
+        heights[i] = g[i].z;
+    }
+    heights.sort(function(a, b) { return a - b; });
+    for (i = 0; i < levels; i++) {
+        // Bucket by population (bucket size) not range size
+        var subset = heights.slice(i*inc, (i+1)*inc),
+            sum = 0,
+            bl = subset.length;
+        for (j = 0; j < bl; j++) {
+            sum += subset[j];
+        }
+        buckets[i] = {
+            min: subset[0],
+            max: subset[subset.length-1],
+            avg: sum / bl,
+        };
+    }
+
+    // Set the height of each vertex to the average height of its bucket
+    for (i = 0; i < l; i++) {
+        var startHeight = g[i].z;
+        for (j = 0; j < levels; j++) {
+            if (startHeight >= buckets[j].min && startHeight <= buckets[j].max) {
+                g[i].z = buckets[j].avg;
+                break;
+            }
+        }
     }
 };
 
