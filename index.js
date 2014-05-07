@@ -187,9 +187,9 @@ function setupDatGui() {
       that['Scatter meshes']();
     };
     this.altitudeSpread = function(v, k) {
-      if (v.z > -80 && v.z < -50) return !(k % 4) && Math.random() < THREE.Terrain.EaseInOut((v.z - -80) / (-50 - -80)) * that.spread * 0.002;
-      else if (v.z > -50 && v.z < 20) return !(k % 4) && Math.random() < that.spread * 0.002;
-      else if (v.z > 20 && v.z < 50) return !(k % 4) && Math.random() < THREE.Terrain.EaseInOut((v.z - 20) / (50 - 20)) * that.spread * 0.002;
+      if (v.z > -80 && v.z < -50) return !(k % 4) && Math.random() < THREE.Terrain.EaseInOut((v.z - -80) / (-50 - -80)) * that.spread * 0.002; // jshint ignore:line
+      else if (v.z > -50 && v.z < 20) return !(k % 4) && Math.random() < that.spread * 0.002; // jshint ignore:line
+      else if (v.z > 20 && v.z < 50) return !(k % 4) && Math.random() < THREE.Terrain.EaseInOut((v.z - 20) / (50 - 20)) * that.spread * 0.002; // jshint ignore:line
       return false;
     };
     var mesh = buildTree();
