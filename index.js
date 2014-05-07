@@ -136,6 +136,7 @@ function setupDatGui() {
     this.maxHeight = 200;
     this.segments = webglExists ? 63 : 31;
     this.steps = 1;
+    this.turbulent = false;
     this.size = 1024;
     this.sky = true;
     this.texture = webglExists ? 'Blended' : 'Wireframe';
@@ -169,6 +170,7 @@ function setupDatGui() {
         minHeight: -100,
         steps: that.steps,
         stretch: false,
+        turbulent: that.turbulent,
         useBufferGeometry: false,
         xSize: that.size,
         ySize: Math.round(that.size * that['width:length ratio']),
@@ -220,6 +222,7 @@ function setupDatGui() {
   heightmapFolder.add(settings, 'easing', ['Linear', 'EaseIn', 'EaseOut', 'EaseInOut', 'InEaseOut']).onFinishChange(settings.Regenerate);
   heightmapFolder.add(settings, 'segments', 7, 127).step(1).onFinishChange(settings.Regenerate);
   heightmapFolder.add(settings, 'steps', 1, 8).step(1).onFinishChange(settings.Regenerate);
+  heightmapFolder.add(settings, 'turbulent').onFinishChange(settings.Regenerate);
   heightmapFolder.open();
   var decoFolder = gui.addFolder('Decoration');
   decoFolder.add(settings, 'texture', ['Blended', 'Wireframe']).onFinishChange(settings.Regenerate);

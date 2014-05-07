@@ -62,6 +62,7 @@
  *   - `stretch`: Determines whether to stretch the heightmap across the
  *     maximum and minimum height range if the height range produced by the
  *     `heightmap` property is smaller. Defaults to false.
+ *   - `turbulent`: Whether to perform a turbulence transformation.
  *   - `useBufferGeometry`: a Boolean indicating whether to use
  *     THREE.BufferGeometry instead of THREE.Geometry for the Terrain plane.
  *     Defaults to `true`.
@@ -90,6 +91,7 @@ THREE.Terrain = function(options) {
         frequency: 0.4,
         steps: 1,
         stretch: false,
+        turbulent: false,
         useBufferGeometry: true,
         xSegments: 63,
         xSize: 1024,
@@ -127,6 +129,9 @@ THREE.Terrain = function(options) {
     }
     else {
         console.warn('An invalid value was passed for `options.heightmap`: ' + options.heightmap);
+    }
+    if (options.turbulent) {
+        THREE.Terrain.Turbulence(v, options);
     }
     if (options.steps > 1) {
         THREE.Terrain.Step(v, options.steps);
@@ -596,6 +601,18 @@ THREE.Terrain.Edges = function(g, options, direction, distance, easing) {
             g[k1].z = max(g[k1].z, (peak - g[k1].z) * multiplier + g[k1].z);
             g[k2].z = max(g[k2].z, (peak - g[k2].z) * multiplier + g[k2].z);
         }
+    }
+};
+
+/**
+ * Transform to turbulent noise.
+ *
+ * Parameters are the same as those for {@link THREE.Terrain.DiamondSquare}.
+ */
+THREE.Terrain.Turbulence = function(g, options) {
+    var range = options.maxHeight - options.minHeight;
+    for (var i = 0, l = g.length; i < l; i++) {
+        g[i].z = options.minHeight + Math.abs((g[i].z - options.minHeight) * 2 - range);
     }
 };
 
