@@ -1,5 +1,5 @@
 /**
- * THREE.Terrain.js 1.0.0-06052014
+ * THREE.Terrain.js 1.0.0-07052014
  *
  * @author Isaac Sukin (http://www.isaacsukin.com/)
  * @license MIT
@@ -189,7 +189,7 @@
  *
  * Usage: `var terrainScene = THREE.Terrain();`
  *
- * TODO: Decide on a way to document maxVariation and perlinScale
+ * TODO: Decide on a way to document frequency
  * TODO: Implement optimization types?
  * TODO: Implement hill algorithm (feature picking)
  *   See http://www.stuffwithstuff.com/robot-frog/3d/hills/hill.html
@@ -202,7 +202,6 @@
  * TODO: Add dramatic lighting, water, and lens flare to the demo
  * TODO: Support the terrain casting shadows onto itself?
  *   Relevant: view-source:http://threejs.org/examples/webgl_geometry_terrain.html generateTexture()
- * TODO: Merge scattered meshes
  *
  * @param {Object} [options]
  *   An optional map of settings that control how the terrain is constructed
@@ -237,6 +236,9 @@
  *     reach. Defaults to 100.
  *   - `minHeight`: the lowest point, in Three.js units, that a valley should
  *     reach. Defaults to -100.
+ *   - `stretch`: Determines whether to stretch the heightmap across the
+ *     maximum and minimum height range if the height range produced by the
+ *     `heightmap` property is smaller. Defaults to false.
  *   - `useBufferGeometry`: a Boolean indicating whether to use
  *     THREE.BufferGeometry instead of THREE.Geometry for the Terrain plane.
  *     Defaults to `true`.
@@ -260,10 +262,10 @@ THREE.Terrain = function(options) {
         heightmap: THREE.Terrain.DiamondSquare,
         material: null,
         maxHeight: 100,
-        maxVariation: 12,
         minHeight: -100,
         optimization: THREE.Terrain.NONE,
-        perlinScale: 0.4,
+        frequency: 0.4,
+        stretch: false,
         useBufferGeometry: true,
         xSegments: 63,
         xSize: 1024,
@@ -631,8 +633,9 @@ THREE.Terrain.heightmapArray = function(method, options) {
     }
     options.minHeight = options.minHeight || 0;
     options.maxHeight = typeof options.maxHeight === 'undefined' ? 1 : options.maxHeight;
+    options.stretch = options.stretch || false;
     method(arr, options);
-    THREE.Terrain.Clamp(arr, options, true);
+    THREE.Terrain.Clamp(arr, options);
     for (i = 0; i < l; i++) {
         arr[i] = arr[i].z;
     }
@@ -801,7 +804,7 @@ if (window.noise && window.noise.perlin) {
     THREE.Terrain.Perlin = function(g, options) {
         noise.seed(Math.random());
         var range = options.maxHeight - options.minHeight * 0.5,
-            divisor = (Math.min(options.xSegments, options.ySegments) + 1) * options.perlinScale;
+            divisor = (Math.min(options.xSegments, options.ySegments) + 1) * options.frequency;
         for (var i = 0, xl = options.xSegments + 1; i < xl; i++) {
             for (var j = 0, yl = options.ySegments + 1; j < yl; j++) {
                 g[j * xl + i].z += noise.perlin(i / divisor, j / divisor) * range;
@@ -822,7 +825,7 @@ if (window.noise && window.noise.simplex) {
     THREE.Terrain.Simplex = function(g, options) {
         noise.seed(Math.random());
         var range = (options.maxHeight - options.minHeight) * 0.5,
-            divisor = (Math.min(options.xSegments, options.ySegments) + 1) * options.perlinScale * 2;
+            divisor = (Math.min(options.xSegments, options.ySegments) + 1) * options.frequency * 2;
         for (var i = 0, xl = options.xSegments + 1; i < xl; i++) {
             for (var j = 0, yl = options.ySegments + 1; j < yl; j++) {
                 g[j * xl + i].z += noise.simplex(i / divisor, j / divisor) * range;
@@ -833,9 +836,6 @@ if (window.noise && window.noise.simplex) {
 
 /**
  * A utility for generating heightmap functions by composition.
- *
- * This modifies `options.maxHeight` and `options.minHeight` while running, so
- * it is NOT THREAD SAFE for operations that use those values.
  *
  * @param {THREE.Vector3[]} g
  *   The vertex array for plane geometry to modify with heightmap data. This
@@ -848,25 +848,27 @@ if (window.noise && window.noise.simplex) {
  *   Determines which heightmap functions to compose to create a new one.
  *   Consists of an array of objects with a `method` property containing
  *   something that will be passed around as an `options.heightmap` (a
- *   heightmap-generating function or a heightmap image) and optionally a
- *   `granularity` property which is a multiplier for the heightmap of that
- *   pass which will be applied before adding it to the result of previous
+ *   heightmap-generating function or a heightmap image) and optionally an
+ *   `amplitude` property which is a multiplier for the heightmap of that
+ *   pass that will be applied before adding it to the result of previous
  *   passes.
  */
 THREE.Terrain.MultiPass = function(g, options, passes) {
-    var maxHeight = options.maxHeight,
-        minHeight = options.minHeight;
-    for (var i = 0, l = passes.length; i < l; i++) {
-        if (i !== 0) {
-            var gran = typeof passes[i].granularity === 'undefined' ? 1 : passes[i].granularity,
-                move = (options.maxHeight - options.minHeight) * 0.5 * gran;
-            options.maxHeight -= move;
-            options.minHeight += move;
+    var clonedOptions = {};
+    for (var opt in options) {
+        if (options.hasOwnProperty(opt)) {
+            clonedOptions[opt] = options[opt];
         }
-        passes[i].method(g, options);
     }
-    options.maxHeight = maxHeight;
-    options.minHeight = minHeight;
+    var range = options.maxHeight - options.minHeight;
+    for (var i = 0, l = passes.length; i < l; i++) {
+        var amp = typeof passes[i].amplitude === 'undefined' ? 1 : passes[i].amplitude,
+            move = 0.5 * (range - range * amp);
+        clonedOptions.maxHeight = options.maxHeight - move;
+        clonedOptions.minHeight = options.minHeight + move;
+        clonedOptions.frequency = typeof passes[i].frequency === 'undefined' ? options.frequency : passes[i].frequency;
+        passes[i].method(g, clonedOptions);
+    }
 };
 
 /**
@@ -880,11 +882,8 @@ THREE.Terrain.MultiPass = function(g, options, passes) {
  *   displayed. Valid values are the same as those for the `options` parameter
  *   of {@link THREE.Terrain}() but only `maxHeight`, `minHeight`, and `easing`
  *   are used.
- * @param {Boolean} [stretch=false]
- *   Determines whether to stretch the heightmap across the maximum and minimum
- *   height range if the actual height range is smaller.
  */
-THREE.Terrain.Clamp = function(g, options, stretch) {
+THREE.Terrain.Clamp = function(g, options) {
     var min = Infinity,
         max = -Infinity,
         l = g.length,
@@ -897,8 +896,8 @@ THREE.Terrain.Clamp = function(g, options, stretch) {
     var actualRange = max - min,
         optMax = typeof options.maxHeight === 'undefined' ? max : options.maxHeight,
         optMin = typeof options.minHeight === 'undefined' ? min : options.minHeight,
-        targetMax = stretch ? optMax : (max < optMax ? max : optMax),
-        targetMin = stretch ? optMin : (min > optMin ? min : optMin),
+        targetMax = options.stretch ? optMax : (max < optMax ? max : optMax),
+        targetMin = options.stretch ? optMin : (min > optMin ? min : optMin),
         range = targetMax - targetMin;
     for (i = 0; i < l; i++) {
         g[i].z = options.easing((g[i].z - min) / actualRange) * range + optMin;
@@ -944,8 +943,37 @@ if (THREE.Terrain.Perlin) {
     THREE.Terrain.PerlinDiamond = function(g, options) {
         THREE.Terrain.MultiPass(g, options, [
             {method: THREE.Terrain.Perlin},
-            // There's nothing special about -0.2, it just looks nice.
-            {method: THREE.Terrain.DiamondSquare, granularity: -0.2},
+            {method: THREE.Terrain.DiamondSquare, amplitude: 0.75},
+        ]);
+    };
+    /**
+     * Generate random terrain using layers of Perlin noise.
+     *
+     * Parameters are the same as those for {@link THREE.Terrain.DiamondSquare}.
+     */
+    THREE.Terrain.PerlinLayers = function(g, options) {
+        THREE.Terrain.MultiPass(g, options, [
+            {method: THREE.Terrain.Perlin,                  frequency: 0.8},
+            {method: THREE.Terrain.Perlin, amplitude: 0.05, frequency: 0.4},
+            {method: THREE.Terrain.Perlin, amplitude: 0.35, frequency: 0.2},
+            {method: THREE.Terrain.Perlin, amplitude: 0.15, frequency: 0.1},
+        ]);
+    };
+}
+
+if (THREE.Terrain.Simplex) {
+    /**
+     * Generate random terrain using layers of Simplex noise.
+     *
+     * Parameters are the same as those for {@link THREE.Terrain.DiamondSquare}.
+     */
+    THREE.Terrain.SimplexLayers = function(g, options) {
+        THREE.Terrain.MultiPass(g, options, [
+            {method: THREE.Terrain.Simplex,                    frequency: 0.8},
+            {method: THREE.Terrain.Simplex, amplitude: 0.5,    frequency: 0.4},
+            {method: THREE.Terrain.Simplex, amplitude: 0.25,   frequency: 0.2},
+            {method: THREE.Terrain.Simplex, amplitude: 0.125,  frequency: 0.1},
+            {method: THREE.Terrain.Simplex, amplitude: 0.0625, frequency: 0.05},
         ]);
     };
 }
@@ -976,6 +1004,9 @@ if (THREE.Terrain.Perlin) {
  *     function that determines where meshes are placed. Valid values include
  *     `Math.random` and the return value of a call to
  *     `THREE.Terrain.ScatterHelper`.
+ *   - `maxSlope`: The angle in radians between the normal of a face of the
+ *     terrain and the "up" vector above which no mesh will be placed on the
+ *     related face. Defaults to ~0.63, which is 36 degrees.
  *   - `x`, `y`, `w`, `h`: Together, these properties outline a rectangular
  *     region on the terrain inside which meshes should be scattered. The `x`
  *     and `y` properties indicate the upper-left corner of the box and the `w`
@@ -1006,6 +1037,7 @@ THREE.Terrain.ScatterMeshes = function(geometry, options) {
         spread: 0.025,
         sizeVariance: 0.1,
         randomness: Math.random,
+        maxSlope: 0.6283185307179586, // 36deg or 36 / 180 * Math.PI, about the angle of repose of earth
         x: 0,
         y: 0,
         w: 0,
@@ -1022,7 +1054,8 @@ THREE.Terrain.ScatterMeshes = function(geometry, options) {
         randomness,
         doubleSizeVariance = options.sizeVariance * 2,
         v = geometry.vertices,
-        meshes = [];
+        meshes = [],
+        up = options.mesh.up.clone().applyAxisAngle(new THREE.Vector3(1, 0, 0), 0.5*Math.PI);
     if (spreadIsNumber) {
         randomHeightmap = options.randomness();
         randomness = typeof randomHeightmap === 'number' ? Math.random : function(k) { return randomHeightmap[k]; };
@@ -1033,12 +1066,16 @@ THREE.Terrain.ScatterMeshes = function(geometry, options) {
             var key = j*w + i,
                 f = geometry.faces[key];
             if (spreadIsNumber ? randomness(key) < options.spread : options.spread(v[f.a], key)) {
+                // Don't place a mesh if the angle is too steep.
+                if (f.normal.angleTo(up) > options.maxSlope) {
+                    continue;
+                }
                 var mesh = options.mesh.clone();
                 //mesh.geometry.computeBoundingBox();
                 mesh.position.copy(v[f.a]).add(v[f.b]).add(v[f.c]).divideScalar(3);
                 //mesh.translateZ((mesh.geometry.boundingBox.max.z - mesh.geometry.boundingBox.min.z) * 0.5);
                 var normal = mesh.position.clone().add(f.normal);
-                mesh.lookAt(mesh.position.clone().add(f.normal));
+                mesh.lookAt(normal);
                 mesh.rotation.x += 90 / 180 * Math.PI;
                 if (options.sizeVariance) {
                     var variance = Math.random() * doubleSizeVariance - options.sizeVariance;
@@ -1085,8 +1122,7 @@ THREE.Terrain.ScatterMeshes = function(geometry, options) {
  * @param {Object} options
  *   A map of settings that control how the resulting noise should be generated
  *   (with the same parameters as the `options` parameter to the
- *   `THREE.Terrain` function, although typically only the `xSegments` and
- *   `ySegments` fields are used). `options.minHeight` must equal `0` and
+ *   `THREE.Terrain` function). `options.minHeight` must equal `0` and
  *   `options.maxHeight` must equal `1` if they are specified.
  * @param {Number} skip
  *   The number of sequential faces to skip between faces that are candidates
@@ -1100,13 +1136,18 @@ THREE.Terrain.ScatterMeshes = function(geometry, options) {
 THREE.Terrain.ScatterHelper = function(method, options, skip, threshold) {
     skip = skip || 1;
     threshold = threshold || 0.25;
-    options.perlinScale = options.perlinScale || 0.4;
-    options.maxVariation = options.maxVariation ||  12;
+    options.frequency = options.frequency || 0.4;
 
-    var xS = options.xSegments;
-    options.xSegments *= 2;
-    var heightmap = THREE.Terrain.heightmapArray(method, options);
-    options.xSegments = xS;
+    var clonedOptions = {};
+    for (var opt in options) {
+        if (options.hasOwnProperty(opt)) {
+            clonedOptions[opt] = options[opt];
+        }
+    }
+
+    clonedOptions.xSegments *= 2;
+    clonedOptions.stretch = true;
+    var heightmap = THREE.Terrain.heightmapArray(method, clonedOptions);
 
     for (var i = 0, l = heightmap.length; i < l; i++) {
         if (i % skip || Math.random() > threshold) {

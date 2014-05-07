@@ -166,6 +166,7 @@ function setupDatGui() {
         material: that.texture == 'Wireframe' ? mat : blend,
         maxHeight: (that.maxHeight - 100) * (h ? 0.25 : 1),
         minHeight: -100 * (h ? 0.25 : 1),
+        stretch: false,
         useBufferGeometry: s >= 64 && that.texture != 'Wireframe',
         xSize: that.size,
         ySize: Math.round(that.size * that['width:length ratio']),
@@ -224,7 +225,7 @@ function setupDatGui() {
   var gui = new dat.GUI();
   var settings = new Settings();
   var heightmapFolder = gui.addFolder('Heightmap');
-  heightmapFolder.add(settings, 'heightmap', ['DiamondSquare', 'heightmap.png', 'Perlin', 'Simplex', 'PerlinDiamond']).onFinishChange(settings.Regenerate);
+  heightmapFolder.add(settings, 'heightmap', ['DiamondSquare', 'heightmap.png', 'Perlin', 'Simplex', 'PerlinDiamond', 'PerlinLayers', 'SimplexLayers']).onFinishChange(settings.Regenerate);
   heightmapFolder.add(settings, 'easing', ['Linear', 'EaseIn', 'EaseOut', 'EaseInOut', 'InEaseOut']).onFinishChange(settings.Regenerate);
   heightmapFolder.add(settings, 'segments', 7, 127).step(1).onFinishChange(settings.Regenerate);
   heightmapFolder.open();
