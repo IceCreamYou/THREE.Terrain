@@ -169,7 +169,7 @@ function setupDatGui() {
         minHeight: -100,
         steps: that.steps,
         stretch: false,
-        useBufferGeometry: s >= 64 && that.texture != 'Wireframe',
+        useBufferGeometry: false,
         xSize: that.size,
         ySize: Math.round(that.size * that['width:length ratio']),
         xSegments: s,
@@ -181,14 +181,8 @@ function setupDatGui() {
       skyDome.visible = that.texture != 'Wireframe';
       var he = document.getElementById('heightmap');
       if (he) {
-        if (s < 64 || that.texture == 'Wireframe') {
-          he.style.display = 'block';
-          o.heightmap = he;
-          THREE.Terrain.toHeightmap(terrainScene.children[0].geometry.vertices, o);
-        }
-        else {
-          he.style.display = 'none';
-        }
+        o.heightmap = he;
+        THREE.Terrain.toHeightmap(terrainScene.children[0].geometry.vertices, o);
       }
       that['Scatter meshes']();
     };
@@ -198,7 +192,6 @@ function setupDatGui() {
       else if (v.z > 20 && v.z < 50) return !(k % 4) && Math.random() < THREE.Terrain.EaseInOut((v.z - 20) / (50 - 20)) * that.spread * 0.002;
       return false;
     };
-    this.hasSeenWarning = false;
     var mesh = buildTree();
     this['Scatter meshes'] = function() {
       var s = parseInt(that.segments, 10);
@@ -217,10 +210,6 @@ function setupDatGui() {
       });
       if (decoScene) {
         terrainScene.add(decoScene);
-      }
-      else if (!that.hasSeenWarning) {
-        that.hasSeenWarning = true;
-        alert('Scattering meshes has been temporarily disabled for more than 63 segments.');
       }
     };
   }

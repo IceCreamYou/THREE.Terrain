@@ -22,6 +22,7 @@
  *   current and smoothed value
  * TODO: Support the terrain casting shadows onto itself?
  *   Relevant: view-source:http://threejs.org/examples/webgl_geometry_terrain.html generateTexture()
+ * TODO: Make scattering be based on spatial distance, not faces
  *
  * @param {Object} [options]
  *   An optional map of settings that control how the terrain is constructed
