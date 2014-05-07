@@ -310,7 +310,7 @@ THREE.Terrain = function(options) {
     else if (typeof options.heightmap === 'function') {
         options.heightmap(v, options);
     }
-    else if (window.console && console.warn) {
+    else {
         console.warn('An invalid value was passed for `options.heightmap`: ' + options.heightmap);
     }
     if (options.steps > 1) {
@@ -577,7 +577,7 @@ THREE.Terrain.fromHeightmap = function(g, options) {
         for (var col = 0; col < cols; col++) {
             var i = row * cols + col,
                 idx = i * 4;
-            g[i].z = (data[idx] + data[idx+1] + data[idx+2]) / 765 * spread;
+            g[i].z = (data[idx] + data[idx+1] + data[idx+2]) / 765 * spread + options.minHeight;
         }
     }
 };
