@@ -158,7 +158,7 @@ function setupDatGui() {
         THREE.Terrain[that.edgeCurve]
       );
     };
-    this.Regenerate = function() {
+    window.rebuild = this.Regenerate = function() {
       var s = parseInt(that.segments, 10),
           h = that.heightmap === 'heightmap.png';
       var o = {
@@ -169,7 +169,7 @@ function setupDatGui() {
         maxHeight: that.maxHeight - 100,
         minHeight: -100,
         steps: that.steps,
-        stretch: false,
+        stretch: true,
         turbulent: that.turbulent,
         useBufferGeometry: false,
         xSize: that.size,
@@ -218,7 +218,7 @@ function setupDatGui() {
   var gui = new dat.GUI();
   var settings = new Settings();
   var heightmapFolder = gui.addFolder('Heightmap');
-  heightmapFolder.add(settings, 'heightmap', ['DiamondSquare', 'heightmap.png', 'Perlin', 'Simplex', 'PerlinDiamond', 'PerlinLayers', 'SimplexLayers']).onFinishChange(settings.Regenerate);
+  heightmapFolder.add(settings, 'heightmap', ['DiamondSquare', 'heightmap.png', 'Perlin', 'Simplex', 'PerlinDiamond', 'PerlinLayers', 'SimplexLayers', 'Value', 'Weierstrass', 'Worley']).onFinishChange(settings.Regenerate);
   heightmapFolder.add(settings, 'easing', ['Linear', 'EaseIn', 'EaseOut', 'EaseInOut', 'InEaseOut']).onFinishChange(settings.Regenerate);
   heightmapFolder.add(settings, 'segments', 7, 127).step(1).onFinishChange(settings.Regenerate);
   heightmapFolder.add(settings, 'steps', 1, 8).step(1).onFinishChange(settings.Regenerate);

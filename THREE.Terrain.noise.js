@@ -1,5 +1,5 @@
 /**
- * THREE.Terrain.js 1.0.0-07052014
+ * THREE.Terrain.js 1.0.0-08052014
  *
  * @author Isaac Sukin (http://www.isaacsukin.com/)
  * @license MIT
@@ -189,26 +189,41 @@
  *
  * Usage: `var terrainScene = THREE.Terrain();`
  *
- * TODO: Decide on a way to document frequency
- * TODO: Implement optimization types?
- * TODO: Implement hill algorithm (feature picking)
+ * TODO:
+ * - Decide on a way to document frequency
+ * - Implement optimization types?
+ * - Implement hill algorithm (feature picking)
  *   See http://www.stuffwithstuff.com/robot-frog/3d/hills/hill.html
- * TODO: Support infinite terrain?
- * TODO: Add the ability to manually convolve terrain
- * TODO: Add the ability to manually paint terrain?
- * TODO: Make automatically blended terrain take slope into account. Can
+ * - Support infinite terrain?
+ * - Add the ability to manually convolve terrain
+ * - Add the ability to manually paint terrain?
+ * - Make automatically blended terrain take slope into account. Can
  *   probably do this by taking the four cardinal neighbors and doing
  *   avg(slope(E, W), slope(N, S)) and then passing that as a uniform. Or just
  *   take the angle to the vertex normal.
- * TODO: Randomly rotate scattered meshes perpendicular to the normal
- * TODO: Add dramatic lighting, water, and lens flare to the demo
- * TODO: Instead of the region parameters for ScatterMeshes, add a function
+ * - Randomly rotate scattered meshes perpendicular to the normal
+ * - Add dramatic lighting, water, and lens flare to the demo
+ * - Instead of the region parameters for ScatterMeshes, add a function
  *   that checks whether given coordinates are acceptable for placing a mesh
- * TODO: Add an option to THREE.Terrain.Smooth to interpolate between the
+ * - Add an option to THREE.Terrain.Smooth to interpolate between the
  *   current and smoothed value
- * TODO: Support the terrain casting shadows onto itself?
+ * - Support the terrain casting shadows onto itself?
  *   Relevant: view-source:http://threejs.org/examples/webgl_geometry_terrain.html generateTexture()
- * TODO: Make scattering be based on spatial distance, not faces
+ * - Make scattering be based on spatial distance, not faces
+ * - Fix minHeight not being properly applied
+ * - Fix artifacts in the value noise implementation
+ * - In the demo, combine the segments and size settings into just size
+ * - The Poisson Disk function should take width, height, numPoints,
+ *   minDist instead of the options parameter
+ * - Allow the Poisson Disk function to use Perlin noise for the minDist
+ * - The Worley noise function should optionally take a point generation
+ *   function and a distance function
+ * - Split this file into multiple files for better manageability
+ * - Try using the terrain with a physics library
+ * - Add a multipass filter to apply finer-grained noise more on higher
+ *   slopes
+ * - Add a method to get the terrain height at a given spatial location
+ * - Support using Poisson Disks for mesh scattering
  *
  * @param {Object} [options]
  *   An optional map of settings that control how the terrain is constructed
@@ -247,7 +262,7 @@
  *     into that many flat "steps," resulting in a blocky appearance.
  *   - `stretch`: Determines whether to stretch the heightmap across the
  *     maximum and minimum height range if the height range produced by the
- *     `heightmap` property is smaller. Defaults to false.
+ *     `heightmap` property is smaller. Defaults to true.
  *   - `turbulent`: Whether to perform a turbulence transformation.
  *   - `useBufferGeometry`: a Boolean indicating whether to use
  *     THREE.BufferGeometry instead of THREE.Geometry for the Terrain plane.
@@ -276,7 +291,7 @@ THREE.Terrain = function(options) {
         optimization: THREE.Terrain.NONE,
         frequency: 0.4,
         steps: 1,
-        stretch: false,
+        stretch: true,
         turbulent: false,
         useBufferGeometry: true,
         xSegments: 63,
@@ -879,6 +894,175 @@ THREE.Terrain.DiamondSquare = function(g, options) {
     }
 };
 
+/**
+ * Generate random terrain using Weierstrass functions.
+ *
+ * Weierstrass functions are known for being continuous but not differentiable
+ * anywhere. This produces some nice shapes that look terrain-like, but can
+ * look repetitive from above.
+ *
+ * Parameters are the same as those for {@link THREE.Terrain.DiamondSquare}.
+ */
+THREE.Terrain.Weierstrass = function(g, options) {
+    var range = (options.maxHeight - options.minHeight) * 0.5,
+        dir1 = Math.random() < 0.5 ? 1 : -1,
+        dir2 = Math.random() < 0.5 ? 1 : -1,
+        r11 = 0.5+Math.random()*1.0,
+        r12 = 0.5+Math.random()*1.0,
+        r13 = 0.025+Math.random()*0.10,
+        r14 = -1.0+Math.random()*2.0,
+        r21 = 0.5+Math.random()*1.0,
+        r22 = 0.5+Math.random()*1.0,
+        r23 = 0.025+Math.random()*0.10,
+        r24 = -1.0+Math.random()*2.0;
+    for (var i = 0, xl = options.xSegments + 1; i < xl; i++) {
+        for (var j = 0, yl = options.ySegments + 1; j < yl; j++) {
+            var sum = 0;
+            for (var k = 0; k < 20; k++) {
+                var x = Math.pow(1+r11, -k) * Math.sin(Math.pow(1+r12, k) * (i+0.25*Math.cos(j)+r14*j) * r13);
+                var y = Math.pow(1+r21, -k) * Math.sin(Math.pow(1+r22, k) * (j+0.25*Math.cos(i)+r24*i) * r23);
+                sum += -1 * Math.exp(dir1*x*x+dir2*y*y);
+            }
+            g[j * xl + i].z += sum * range;
+        }
+    }
+    THREE.Terrain.Clamp(g, options);
+};
+
+/**
+ * Generate random terrain using value noise.
+ *
+ * Parameters are the same as those for {@link THREE.Terrain.DiamondSquare}.
+ */
+THREE.Terrain.Value = function(g, options) {
+    // Set the segment length to the smallest power of 2 that is greater than
+    // the number of vertices in either dimension of the plane
+    var segments = Math.max(options.xSegments, options.ySegments) + 1, n;
+    for (n = 1; Math.pow(2, n) < segments; n++) {}
+    segments = Math.pow(2, n);
+
+    var range = options.maxHeight - options.minHeight,
+        data = new Array(segments*(segments+1));
+    // Fill a random 2D array of a smaller octave than the target
+    // then interpolate to get the higher-resolution result
+    function WhiteNoise(scale, amplitude) {
+        if (scale > segments) return;
+        var i = 0,
+            j = 0,
+            xl = options.xSegments + 1,
+            yl = options.ySegments + 1,
+            inc = Math.floor(segments / scale),
+            k;
+        for (i = 0; i <= xl; i += inc) {
+            for (j = 0; j <= yl; j += inc) {
+                k = j * xl + i;
+                data[k] = Math.random() * range * amplitude;
+                if (k) {
+                    /* c b *
+                     * l t */
+                    var t = data[k],
+                        l = data[ j      * xl + (i-inc)] || t,
+                        b = data[(j-inc) * xl +  i     ] || t,
+                        c = data[(j-inc) * xl + (i-inc)] || t;
+                    for (var lastX = i-inc, x = lastX; x < i; x++) {
+                        for (var lastY = j-inc, y = lastY; y < j; y++) {
+                            if (x === lastX && y === lastY) continue;
+                            var px = ((x-lastX) / inc),
+                                py = ((y-lastY) / inc),
+                                r1 = px * b + (1-px) * c,
+                                r2 = px * t + (1-px) * l;
+                            data[y * xl + x] = py * r2 + (1-py) * r1;
+                        }
+                    }
+                }
+            }
+        }
+        for (i = 0; i < xl; i++) {
+            for (j = 0; j < yl; j++) {
+                k = j * xl + i;
+                if (!data[k]) console.log(i, j);
+                g[k].z += data[k] || 0;
+            }
+        }
+    }
+    for (var i = 2; i < 7; i++) {
+        WhiteNoise(Math.pow(2, i), Math.pow(2, 2.4-i*1.2));
+    }
+    //for (var j = 0; j < g.length; j++) g[j].z += options.minHeight;
+    THREE.Terrain.Smooth(g, options);
+    options.stretch = true;
+    //THREE.Terrain.Clamp(g, options);
+};
+
+/**
+ * Generate random terrain using Worley noise.
+ *
+ * Parameters are the same as those for {@link THREE.Terrain.DiamondSquare}.
+ */
+THREE.Terrain.Worley = function(g, options) {
+    var points = generatePoints(),
+        coords = {x: 0, y: 0},
+        distanceFunc = distance;
+    // For every point in the heightmap, the color is the distance to the closest distributed point
+    for (var i = 0, xl = options.xSegments + 1; i < xl; i++) {
+        for (var j = 0; j < options.ySegments + 1; j++) {
+            coords.x = i;
+            coords.y = j;
+            g[j*xl+i].z = -distanceToNearest(points, coords, distanceFunc);
+        }
+    }
+    options.stretch = true;
+    //THREE.Terrain.Clamp(g, options);
+
+    function distance(a, b) {
+        return a.distanceTo(b);
+    }
+    function distanceSquared(a, b) {
+        return a.distanceToSquared(b);
+    }
+    function distanceManhattan(a, b) {
+        return Math.abs(a.x - b.x) + Math.abs(a.y - b.y);
+    }
+    function distanceChebyshev(a, b) {
+        var c = Math.abs(a.x - b.x), d = Math.abs(a.y - b.y);
+        return c <= d ? d : c;
+    }
+    function distanceQuadratic(a, b) {
+        var c = Math.abs(a.x - b.x), d = Math.abs(a.y - b.y);
+        return c*c + c*d + d*d;
+    }
+
+    // Randomly distribute points in space
+    // For more regular cells, this could be done with a jittered grid
+    // Poisson Disks are the other implemented option
+    function generatePoints() {
+        var numPoints = Math.floor(Math.sqrt(options.xSegments * options.ySegments * options.frequency * 0.5)) || 1,
+            points = new Array(numPoints);
+        for (var i = 0; i < numPoints; i++) {
+            var p = new THREE.Vector2(
+                Math.random() * options.xSegments,
+                Math.random() * options.ySegments
+            );
+            points[i] = p;
+        }
+        return points;
+    }
+
+    // Find the point closest to the terrain vertex
+    // This is naive, but the numbers aren't big enough to matter
+    // Alternatives include Fortune's algorithm and using a grid
+    function distanceToNearest(points, coords, distanceFunc) {
+        var color = Infinity;
+        for (var k = 0; k < points.length; k++) {
+            var d = distanceFunc(points[k], coords);
+            if (d < color) {
+                color = d;
+            }
+        }
+        return color;
+    }
+};
+
 if (window.noise && window.noise.perlin) {
     /**
      * Generate random terrain using the Perlin Noise method.
@@ -983,6 +1167,10 @@ THREE.Terrain.Clamp = function(g, options) {
         targetMax = options.stretch ? optMax : (max < optMax ? max : optMax),
         targetMin = options.stretch ? optMin : (min > optMin ? min : optMin),
         range = targetMax - targetMin;
+    if (targetMax < targetMin) {
+        targetMax = optMax;
+        range = targetMax - targetMin;
+    }
     for (i = 0; i < l; i++) {
         g[i].z = options.easing((g[i].z - min) / actualRange) * range + optMin;
     }
@@ -1030,6 +1218,7 @@ if (THREE.Terrain.Perlin) {
             {method: THREE.Terrain.DiamondSquare, amplitude: 0.75},
         ]);
     };
+
     /**
      * Generate random terrain using layers of Perlin noise.
      *
@@ -1241,4 +1430,103 @@ THREE.Terrain.ScatterHelper = function(method, options, skip, threshold) {
     return function() {
         return heightmap;
     };
+};
+
+/**
+ * Generate a set of points using Poisson disk sampling.
+ *
+ * Useful for clustering scattered meshes and Voronoi cells for Worley noise.
+ *
+ * Ported from pseudocode at http://devmag.org.za/2009/05/03/poisson-disk-sampling/
+ *
+ * @param {Object} options
+ *   A map of settings that control how the resulting noise should be generated
+ *   (with the same parameters as the `options` parameter to the
+ *   `THREE.Terrain` function).
+ *
+ * @return {THREE.Vector2[]}
+ *   An array of points.
+ */
+THREE.Terrain.PoissonDisks = function(options) {
+    function removeAndReturnRandomElement(arr) {
+        return arr.splice(Math.floor(Math.random() * arr.length), 1)[0];
+    }
+
+    function putInGrid(grid, point, cellSize) {
+        var gx = Math.floor(point.x / cellSize), gy = Math.floor(point.y / cellSize);
+        if (!grid[gx]) grid[gx] = [];
+        grid[gx][gy] = point;
+    }
+
+    function inRectangle(point) {
+        return  point.x >= 0 &&
+                point.y >= 0 &&
+                point.x <= options.xSegments+1 &&
+                point.y <= options.ySegments+1;
+    }
+
+    function inNeighborhood(grid, point, minDist, cellSize) {
+        var gx = Math.floor(point.x / cellSize),
+            gy = Math.floor(point.y / cellSize);
+        for (var x = gx - 1; x <= gx + 1; x++) {
+            for (var y = gy - 1; y <= gy + 1; y++) {
+                if (x !== gx && y !== gy &&
+                    typeof grid[x] !== 'undefined' && typeof grid[x][y] !== 'undefined') {
+                    var cx = x * cellSize, cy = y * cellSize;
+                    if (Math.sqrt((point.x - cx) * (point.x - cx) + (point.y - cy) * (point.y - cy)) < minDist) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
+    function generateRandomPointAround(point, minDist) {
+        var radius = minDist * (Math.random() + 1),
+            angle = 2 * Math.PI * Math.random();
+        return new THREE.Vector2(
+            point.x + radius * Math.cos(angle),
+            point.y + radius * Math.sin(angle)
+        );
+    }
+
+    var numPoints = Math.floor(Math.sqrt(options.xSegments * options.ySegments * options.frequency * 0.5)) || 1,
+        minDist = Math.sqrt((options.xSegments + options.ySegments) * (1 / options.frequency)),
+        cellSize = minDist / Math.sqrt(2);
+    if (cellSize < 2) cellSize = 2;
+
+    var grid = [];
+
+    var processList = [],
+        samplePoints = [];
+
+    var firstPoint = new THREE.Vector2(
+        Math.random() * options.xSegments,
+        Math.random() * options.ySegments
+    );
+    processList.push(firstPoint);
+    samplePoints.push(firstPoint);
+    putInGrid(grid, firstPoint, cellSize);
+
+    var count = 0;
+    while (processList.length) {
+        var point = removeAndReturnRandomElement(processList);
+        for (var i = 0; i < numPoints; i++) {
+            // optionally, minDist = perlin(point.x / options.xSegments, point.y / options.ySegments)
+            var newPoint = generateRandomPointAround(point, minDist);
+            if (inRectangle(newPoint) && !inNeighborhood(grid, newPoint, minDist, cellSize)) {
+                processList.push(newPoint);
+                samplePoints.push(newPoint);
+                putInGrid(grid, newPoint, cellSize);
+                if (samplePoints.length >= numPoints) break;
+            }
+        }
+        if (samplePoints.length >= numPoints) break;
+        // Sanity check
+        if (++count > numPoints*numPoints) {
+            break;
+        }
+    }
+    return samplePoints;
 };
