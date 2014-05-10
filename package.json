@@ -1,35 +1,35 @@
 {
-  "name": "three.terrain.js",
-  "version": "1.1.0",
-  "description": "Extends the Three.js web-based 3D graphics framework to support generating random terrains and rendering terrain from predetermined heightmaps.",
-  "homepage": "https://github.com/IceCreamYou/THREE.Terrain",
-  "bugs": "https://github.com/IceCreamYou/THREE.Terrain/issues",
-  "directories": {
-    "lib": "build",
-    "example": "demo"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git://github.com/IceCreamYou/THREE.Terrain.git"
-  },
-  "keywords": [
-    "THREE",
-    "three.js",
-    "terrain",
-    "land",
-    "DiamondSquare",
-    "random",
-    "generator"
-  ],
-  "author": "Isaac Sukin (http://www.isaacsukin.com/)",
-  "license": "MIT",
-  "readmeFilename": "README.md",
-  "devDependencies": {
-    "grunt": "~0.4.4",
-    "grunt-contrib-concat": "~0.4.0",
-    "grunt-contrib-jshint": "~0.10.0",
-    "grunt-contrib-uglify": "~0.4.0",
-    "grunt-jscs-checker": "~0.4.1",
-    "grunt-contrib-watch": "^0.6.1"
-  }
+    "name": "three.terrain.js",
+    "version": "1.1.0",
+    "description": "Extends the Three.js web-based 3D graphics framework to support generating random terrains and rendering terrain from predetermined heightmaps.",
+    "homepage": "https://github.com/IceCreamYou/THREE.Terrain",
+    "bugs": "https://github.com/IceCreamYou/THREE.Terrain/issues",
+    "directories": {
+        "lib": "build",
+        "example": "demo"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git://github.com/IceCreamYou/THREE.Terrain.git"
+    },
+    "keywords": [
+        "THREE",
+        "three.js",
+        "terrain",
+        "land",
+        "DiamondSquare",
+        "random",
+        "generator"
+    ],
+    "author": "Isaac Sukin (http://www.isaacsukin.com/)",
+    "license": "MIT",
+    "readmeFilename": "README.md",
+    "devDependencies": {
+        "grunt": "~0.4.4",
+        "grunt-contrib-concat": "~0.4.0",
+        "grunt-contrib-jshint": "~0.10.0",
+        "grunt-contrib-uglify": "~0.4.0",
+        "grunt-jscs-checker": "~0.4.1",
+        "grunt-contrib-watch": "^0.6.1"
+    }
 }
