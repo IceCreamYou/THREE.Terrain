@@ -320,6 +320,8 @@ THREE.Terrain = function(options) {
     mesh.geometry.verticesNeedUpdate = true;
     mesh.geometry.normalsNeedUpdate = true;
     mesh.geometry.computeBoundingSphere();
+    mesh.geometry.computeFaceNormals();
+    mesh.geometry.computeVertexNormals();
 
     if (options.useBufferGeometry) {
         mesh.geometry = THREE.BufferGeometryUtils.fromGeometry(mesh.geometry);
@@ -1167,7 +1169,7 @@ THREE.Terrain.generateBlendedMaterial = function(textures) {
         uniforms: uniforms,
         vertexShader: THREE.ShaderLib.lambert.vertexShader.replace(
             'void main() {',
-            'varying vec2 MyvUv;\nvarying vec3 vPosition;\nvoid main() {\nMyvUv = uv;\nvPosition = position;'
+            'varying vec2 MyvUv;\nvarying vec3 vPosition;\nvarying vec3 myNormal; void main() {\nMyvUv = uv;\nvPosition = position;\nmyNormal = normal;'
         ),
         fragmentShader: [
             'uniform float opacity;',
@@ -1188,8 +1190,13 @@ THREE.Terrain.generateBlendedMaterial = function(textures) {
             declare,
             'varying vec2 MyvUv;',
             'varying vec3 vPosition;',
+            'varying vec3 myNormal;',
 
             'void main() {',
+
+            // TODO: The second vector here is the object's "up" vector. Ideally we'd just pass it in directly.
+            'float slope = acos(max(min(dot(myNormal, vec3(0.0, 0.0, 1.0)), 1.0), -1.0));',
+
             //'    gl_FragColor = vec4( vec3( 1.0 ), opacity );',
             '    vec4 color = texture2D( texture_0, MyvUv ); // base',
                 assign,

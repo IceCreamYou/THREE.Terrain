@@ -134,6 +134,8 @@ THREE.Terrain = function(options) {
     mesh.geometry.verticesNeedUpdate = true;
     mesh.geometry.normalsNeedUpdate = true;
     mesh.geometry.computeBoundingSphere();
+    mesh.geometry.computeFaceNormals();
+    mesh.geometry.computeVertexNormals();
 
     if (options.useBufferGeometry) {
         mesh.geometry = THREE.BufferGeometryUtils.fromGeometry(mesh.geometry);

@@ -4,18 +4,12 @@
  - Support infinite terrain?
  - Add the ability to manually convolve terrain
  - Add the ability to manually paint terrain?
- - Make automatically blended terrain take slope into account. Can
-   probably do this by taking the four cardinal neighbors and doing
-   avg(slope(E, W), slope(N, S)) and then passing that as a uniform. Or just
-   take the angle to the vertex normal.
  - Randomly rotate scattered meshes perpendicular to the normal
- - Add dramatic lighting, water, and lens flare to the demo
+ - Add water and lens flare to the demo
  - Instead of the region parameters for ScatterMeshes, add a function
    that checks whether given coordinates are acceptable for placing a mesh
  - Add an option to THREE.Terrain.Smooth to interpolate between the
    current and smoothed value
- - Support the terrain casting shadows onto itself?
-   Relevant: view-source:http://threejs.org/examples/webgl_geometry_terrain.html generateTexture()
  - Make scattering be based on spatial distance, not faces
  - Fix minHeight not being properly applied
  - Fix artifacts in the value noise implementation

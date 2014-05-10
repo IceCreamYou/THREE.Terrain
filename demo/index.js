@@ -101,10 +101,10 @@ function setupWorld() {
     scene.add(skyDome);
   });
 
-  skyLight = new THREE.DirectionalLight(0xfffbef, 1.85);
+  skyLight = new THREE.DirectionalLight(0xead3d3, 1.5);
   skyLight.position.set(1, 1, 1);
   scene.add(skyLight);
-  var light = new THREE.DirectionalLight(0xc3eaff, 0.5);
+  var light = new THREE.DirectionalLight(0xc3eaff, 0.75);
   light.position.set(-1, -0.5, -1);
   scene.add(light);
 }
@@ -125,6 +125,7 @@ function setupDatGui() {
               {texture: t2, levels: [-80, -35, 20, 50]},
               {texture: t3, levels: [20, 50, 60, 85]},
               {texture: t4, glsl: '1.0 - smoothstep(65.0 + smoothstep(-256.0, 256.0, vPosition.x) * 10.0, 80.0, vPosition.z)'},
+              {texture: t3, glsl: 'slope > 0.7853981633974483 ? 0.2 : 1.0 - smoothstep(0.47123889803846897, 0.7853981633974483, slope) + 0.2'}, // between 27 and 45 degrees
             ], scene);
             that.Regenerate();
           });
