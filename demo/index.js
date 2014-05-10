@@ -93,7 +93,7 @@ function setupControls() {
 }
 
 function setupWorld() {
-  THREE.ImageUtils.loadTexture('img/sky1.jpg', undefined, function(t1) {
+  THREE.ImageUtils.loadTexture('demo/img/sky1.jpg', undefined, function(t1) {
     skyDome = new THREE.Mesh(
       new THREE.SphereGeometry(4096, 64, 64),
       new THREE.MeshBasicMaterial({map: t1, side: THREE.BackSide, fog: false})
@@ -111,15 +111,15 @@ function setupWorld() {
 
 function setupDatGui() {
   var heightmapImage = new Image();
-  heightmapImage.src = 'img/heightmap.png';
+  heightmapImage.src = 'demo/img/heightmap.png';
   function Settings() {
     var that = this;
     var mat = new THREE.MeshBasicMaterial({color: 0x5566aa, wireframe: true});
     var blend;
-    THREE.ImageUtils.loadTexture('img/sand1.jpg', undefined, function(t1) {
-      THREE.ImageUtils.loadTexture('img/grass1.jpg', undefined, function(t2) {
-        THREE.ImageUtils.loadTexture('img/stone1.jpg', undefined, function(t3) {
-          THREE.ImageUtils.loadTexture('img/snow1.jpg', undefined, function(t4) {
+    THREE.ImageUtils.loadTexture('demo/img/sand1.jpg', undefined, function(t1) {
+      THREE.ImageUtils.loadTexture('demo/img/grass1.jpg', undefined, function(t2) {
+        THREE.ImageUtils.loadTexture('demo/img/stone1.jpg', undefined, function(t3) {
+          THREE.ImageUtils.loadTexture('demo/img/snow1.jpg', undefined, function(t4) {
             blend = THREE.Terrain.generateBlendedMaterial([
               {texture: t1},
               {texture: t2, levels: [-80, -35, 20, 50]},

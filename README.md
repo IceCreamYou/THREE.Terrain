@@ -9,7 +9,7 @@ graphics library for the web.
 Include the script on your page (after the `three.js` library):
 
 ```html
-<script src="THREE.Terrain.noise.min.js"></script>
+<script src="THREE.Terrain.min.js"></script>
 ```
 
 Then, in your own script, generate a terrain and add it to your scene:

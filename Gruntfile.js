@@ -10,16 +10,21 @@ module.exports = function(grunt) {
     concat: {
       options: {
         banner: banner + "\n",
-        separator: grunt.util.linefeed
+        separator: grunt.util.linefeed,
       },
       target: {
         src: [
-              'noise.js',
-              'THREE.Terrain.js'
-              ],
-        dest: 'THREE.Terrain.noise.js',
-        nonull: true
-      }
+          'src/noise.js',
+          'src/core.js',
+          'src/images.js',
+          'src/filters.js',
+          'src/generators.js',
+          'src/materials.js',
+          'src/scatter.js',
+        ],
+        dest: 'build/THREE.Terrain.js',
+        nonull: true,
+      },
     },
     uglify: {
       options: {
@@ -27,51 +32,67 @@ module.exports = function(grunt) {
         compress: {
           dead_code: false,
           side_effects: false,
-          unused: false
+          unused: false,
         },
         mangle: true,
         preserveComments: function(node, comment) {
           return (/^!/).test(comment.value);
         },
         report: 'min',
-        sourceMap: true
+        sourceMap: true,
       },
       target: {
         files: {
-          'THREE.Terrain.min.js': ['THREE.Terrain.js'],
-          'THREE.Terrain.noise.min.js': ['THREE.Terrain.noise.js']
-        }
-      }
+          'build/THREE.Terrain.min.js': ['build/THREE.Terrain.js'],
+        },
+      },
     },
     jshint: {
       options: {
-        trailing: true
+        trailing: true,
       },
       target: {
-        src : [
-               'index.js',
-               'THREE.Terrain.js',
-               'noise.js'
-               ]
-      }
+        src: [
+          'demo/index.js',
+          'src/noise.js',
+          'src/core.js',
+          'src/images.js',
+          'src/filters.js',
+          'src/generators.js',
+          'src/materials.js',
+          'src/scatter.js',
+          'Gruntfile.js',
+        ],
+      },
     },
     jscs: {
       options: {
-        config: '.jscs.json'
+        config: '.jscs.json',
       },
       main: [
-               'index.js',
-               'THREE.Terrain.js',
-               'noise.js'
-             ]
+        'demo/index.js',
+        'src/noise.js',
+        'src/core.js',
+        'src/images.js',
+        'src/filters.js',
+        'src/generators.js',
+        'src/materials.js',
+        'src/scatter.js',
+        'Gruntfile.js',
+      ],
     },
     watch: {
       files: [
-               'THREE.Terrain.js',
-               'noise.js'
-              ],
-      tasks: ['concat', 'uglify']
-    }
+        'src/noise.js',
+        'src/core.js',
+        'src/images.js',
+        'src/filters.js',
+        'src/generators.js',
+        'src/materials.js',
+        'src/scatter.js',
+      ],
+      tasks: ['concat', 'uglify'],
+    },
   });
 
   grunt.loadNpmTasks('grunt-contrib-concat');
