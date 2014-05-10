@@ -80,7 +80,7 @@ THREE.Terrain.ScatterMeshes = function(geometry, options) {
         randomHeightmap = options.randomness();
         randomness = typeof randomHeightmap === 'number' ? Math.random : function(k) { return randomHeightmap[k]; };
     }
-    geometry.computeFaceNormals();
+    //geometry.computeFaceNormals();
     for (var i = options.y, w = options.w*2; i < w; i++) {
         for (var j = options.x, h = options.h; j < h; j++) {
             var key = j*w + i,
