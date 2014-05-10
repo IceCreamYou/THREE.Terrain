@@ -1,4 +1,3 @@
- - Decide on a way to document frequency
  - Implement optimization types?
  - Implement hill algorithm (feature picking)
    See http://www.stuffwithstuff.com/robot-frog/3d/hills/hill.html

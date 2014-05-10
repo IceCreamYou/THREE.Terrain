@@ -19,6 +19,14 @@
  *     include `THREE.Terrain.Linear`, `THREE.Terrain.EaseInOut`,
  *     `THREE.Terrain.InEaseOut`, and any custom function that accepts a float
  *     between 0 and 1 and returns a float between 0 and 1.
+ *   - `frequency`: For terrain generation methods that support it (Perlin,
+ *     Simplex, and Worley) the octave of randomness. This basically controls
+ *     how big features of the terrain will be (higher frequencies result in
+ *     smaller features). Often running multiple generation functions with
+ *     different frequencies and heights results in nice detail, as
+ *     the PerlinLayers and SimplexLayers methods demonstrate. (The counterpart
+ *     to frequency, amplitude, is represented by the difference between the
+ *     `maxHeight` and `minHeight` parameters.) Defaults to 2.5.
  *   - `heightmap`: Either a pre-loaded image (from the same domain as the
  *     webpage or served with a CORS-friendly header) representing terrain
  *     height data (lighter pixels are higher); or a function used to generate
@@ -67,7 +75,7 @@ THREE.Terrain = function(options) {
         maxHeight: 100,
         minHeight: -100,
         optimization: THREE.Terrain.NONE,
-        frequency: 0.4,
+        frequency: 2.5,
         steps: 1,
         stretch: true,
         turbulent: false,

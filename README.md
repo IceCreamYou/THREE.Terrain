@@ -18,6 +18,7 @@ Then, in your own script, generate a terrain and add it to your scene:
 var xS = 63, yS = 63;
 terrainScene = THREE.Terrain({
     easing: THREE.Terrain.Linear,
+    frequency: 2.5,
     heightmap: THREE.Terrain.DiamondSquare,
     material: new THREE.MeshBasicMaterial({color: 0x5566aa}),
     maxHeight: 100,

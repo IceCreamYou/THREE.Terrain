@@ -156,7 +156,7 @@ THREE.Terrain.ScatterMeshes = function(geometry, options) {
 THREE.Terrain.ScatterHelper = function(method, options, skip, threshold) {
     skip = skip || 1;
     threshold = threshold || 0.25;
-    options.frequency = options.frequency || 0.4;
+    options.frequency = options.frequency || 2.5;
 
     var clonedOptions = {};
     for (var opt in options) {
@@ -238,8 +238,8 @@ THREE.Terrain.PoissonDisks = function(options) {
         );
     }
 
-    var numPoints = Math.floor(Math.sqrt(options.xSegments * options.ySegments * options.frequency * 0.5)) || 1,
-        minDist = Math.sqrt((options.xSegments + options.ySegments) * (1 / options.frequency)),
+    var numPoints = Math.floor(Math.sqrt(options.xSegments * options.ySegments * 0.5 / options.frequency)) || 1,
+        minDist = Math.sqrt((options.xSegments + options.ySegments) * options.frequency),
         cellSize = minDist / Math.sqrt(2);
     if (cellSize < 2) cellSize = 2;
 

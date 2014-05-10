@@ -205,6 +205,14 @@
  *     include `THREE.Terrain.Linear`, `THREE.Terrain.EaseInOut`,
  *     `THREE.Terrain.InEaseOut`, and any custom function that accepts a float
  *     between 0 and 1 and returns a float between 0 and 1.
+ *   - `frequency`: For terrain generation methods that support it (Perlin,
+ *     Simplex, and Worley) the octave of randomness. This basically controls
+ *     how big features of the terrain will be (higher frequencies result in
+ *     smaller features). Often running multiple generation functions with
+ *     different frequencies and heights results in nice detail, as
+ *     the PerlinLayers and SimplexLayers methods demonstrate. (The counterpart
+ *     to frequency, amplitude, is represented by the difference between the
+ *     `maxHeight` and `minHeight` parameters.) Defaults to 2.5.
  *   - `heightmap`: Either a pre-loaded image (from the same domain as the
  *     webpage or served with a CORS-friendly header) representing terrain
  *     height data (lighter pixels are higher); or a function used to generate
@@ -253,7 +261,7 @@ THREE.Terrain = function(options) {
         maxHeight: 100,
         minHeight: -100,
         optimization: THREE.Terrain.NONE,
-        frequency: 0.4,
+        frequency: 2.5,
         steps: 1,
         stretch: true,
         turbulent: false,
@@ -691,7 +699,7 @@ THREE.Terrain.Turbulence = function(g, options) {
 };
 
 /**
- * A utility for generating heightmap functions by composition.
+ * A utility for generating heightmap functions by additive composition.
  *
  * @param {THREE.Vector3[]} g
  *   The vertex array for plane geometry to modify with heightmap data. This
@@ -702,12 +710,16 @@ THREE.Terrain.Turbulence = function(g, options) {
  *    parameter of {@link THREE.Terrain}().
  * @param {Object[]} passes
  *   Determines which heightmap functions to compose to create a new one.
- *   Consists of an array of objects with a `method` property containing
- *   something that will be passed around as an `options.heightmap` (a
- *   heightmap-generating function or a heightmap image) and optionally an
- *   `amplitude` property which is a multiplier for the heightmap of that
- *   pass that will be applied before adding it to the result of previous
- *   passes.
+ *   Consists of an array of objects with the following properties:
+ *   - `method`: Contains something that will be passed around as an
+ *     `options.heightmap` (a heightmap-generating function or a heightmap image)
+ *   - `amplitude`: A multiplier for the heightmap of the pass. Applied before
+ *     the result of the pass is added to the result of previous passes.
+ *   - `frequency`: For terrain generation methods that support it (Perlin,
+ *     Simplex, and Worley) the octave of randomness. This basically controls
+ *     how big features of the terrain will be (higher frequencies result in
+ *     smaller features). Often running multiple generation functions with
+ *     different frequencies and amplitudes results in nice detail.
  */
 THREE.Terrain.MultiPass = function(g, options, passes) {
     var clonedOptions = {};
@@ -946,7 +958,7 @@ THREE.Terrain.Worley = function(g, options) {
     // For more regular cells, this could be done with a jittered grid
     // Poisson Disks are the other implemented option
     function generatePoints() {
-        var numPoints = Math.floor(Math.sqrt(options.xSegments * options.ySegments * options.frequency * 0.5)) || 1,
+        var numPoints = Math.floor(Math.sqrt(options.xSegments * options.ySegments * 0.5 / options.frequency)) || 1,
             points = new Array(numPoints);
         for (var i = 0; i < numPoints; i++) {
             var p = new THREE.Vector2(
@@ -982,7 +994,7 @@ if (window.noise && window.noise.perlin) {
     THREE.Terrain.Perlin = function(g, options) {
         noise.seed(Math.random());
         var range = options.maxHeight - options.minHeight * 0.5,
-            divisor = (Math.min(options.xSegments, options.ySegments) + 1) * options.frequency;
+            divisor = (Math.min(options.xSegments, options.ySegments) + 1) / options.frequency;
         for (var i = 0, xl = options.xSegments + 1; i < xl; i++) {
             for (var j = 0, yl = options.ySegments + 1; j < yl; j++) {
                 g[j * xl + i].z += noise.perlin(i / divisor, j / divisor) * range;
@@ -997,8 +1009,8 @@ if (window.noise && window.noise.perlin) {
      */
     THREE.Terrain.PerlinDiamond = function(g, options) {
         THREE.Terrain.MultiPass(g, options, [
-            {method: THREE.Terrain.Perlin},
-            {method: THREE.Terrain.DiamondSquare, amplitude: 0.75},
+            { method: THREE.Terrain.Perlin },
+            { method: THREE.Terrain.DiamondSquare, amplitude: 0.75 },
         ]);
     };
 
@@ -1009,10 +1021,10 @@ if (window.noise && window.noise.perlin) {
      */
     THREE.Terrain.PerlinLayers = function(g, options) {
         THREE.Terrain.MultiPass(g, options, [
-            {method: THREE.Terrain.Perlin,                  frequency: 0.8},
-            {method: THREE.Terrain.Perlin, amplitude: 0.05, frequency: 0.4},
-            {method: THREE.Terrain.Perlin, amplitude: 0.35, frequency: 0.2},
-            {method: THREE.Terrain.Perlin, amplitude: 0.15, frequency: 0.1},
+            { method: THREE.Terrain.Perlin,                  frequency:  1.25 },
+            { method: THREE.Terrain.Perlin, amplitude: 0.05, frequency:  2.5  },
+            { method: THREE.Terrain.Perlin, amplitude: 0.35, frequency:  5    },
+            { method: THREE.Terrain.Perlin, amplitude: 0.15, frequency: 10    },
         ]);
     };
 }
@@ -1029,7 +1041,7 @@ if (window.noise && window.noise.simplex) {
     THREE.Terrain.Simplex = function(g, options) {
         noise.seed(Math.random());
         var range = (options.maxHeight - options.minHeight) * 0.5,
-            divisor = (Math.min(options.xSegments, options.ySegments) + 1) * options.frequency * 2;
+            divisor = (Math.min(options.xSegments, options.ySegments) + 1) * 2 / options.frequency;
         for (var i = 0, xl = options.xSegments + 1; i < xl; i++) {
             for (var j = 0, yl = options.ySegments + 1; j < yl; j++) {
                 g[j * xl + i].z += noise.simplex(i / divisor, j / divisor) * range;
@@ -1044,11 +1056,11 @@ if (window.noise && window.noise.simplex) {
      */
     THREE.Terrain.SimplexLayers = function(g, options) {
         THREE.Terrain.MultiPass(g, options, [
-            {method: THREE.Terrain.Simplex,                    frequency: 0.8},
-            {method: THREE.Terrain.Simplex, amplitude: 0.5,    frequency: 0.4},
-            {method: THREE.Terrain.Simplex, amplitude: 0.25,   frequency: 0.2},
-            {method: THREE.Terrain.Simplex, amplitude: 0.125,  frequency: 0.1},
-            {method: THREE.Terrain.Simplex, amplitude: 0.0625, frequency: 0.05},
+            { method: THREE.Terrain.Simplex,                    frequency:  1.25 },
+            { method: THREE.Terrain.Simplex, amplitude: 0.5,    frequency:  2.5  },
+            { method: THREE.Terrain.Simplex, amplitude: 0.25,   frequency:  5    },
+            { method: THREE.Terrain.Simplex, amplitude: 0.125,  frequency: 10    },
+            { method: THREE.Terrain.Simplex, amplitude: 0.0625, frequency: 20    },
         ]);
     };
 }
@@ -1369,7 +1381,7 @@ THREE.Terrain.ScatterMeshes = function(geometry, options) {
 THREE.Terrain.ScatterHelper = function(method, options, skip, threshold) {
     skip = skip || 1;
     threshold = threshold || 0.25;
-    options.frequency = options.frequency || 0.4;
+    options.frequency = options.frequency || 2.5;
 
     var clonedOptions = {};
     for (var opt in options) {
@@ -1451,8 +1463,8 @@ THREE.Terrain.PoissonDisks = function(options) {
         );
     }
 
-    var numPoints = Math.floor(Math.sqrt(options.xSegments * options.ySegments * options.frequency * 0.5)) || 1,
-        minDist = Math.sqrt((options.xSegments + options.ySegments) * (1 / options.frequency)),
+    var numPoints = Math.floor(Math.sqrt(options.xSegments * options.ySegments * 0.5 / options.frequency)) || 1,
+        minDist = Math.sqrt((options.xSegments + options.ySegments) * options.frequency),
         cellSize = minDist / Math.sqrt(2);
     if (cellSize < 2) cellSize = 2;
 
