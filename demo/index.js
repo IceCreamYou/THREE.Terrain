@@ -196,6 +196,9 @@ function setupDatGui() {
       return false;
     };
     var mesh = buildTree();
+    var decoMat = mesh.material.clone(); // new THREE.MeshBasicMaterial({color: 0x229966, wireframe: true});
+    decoMat.materials[0].wireframe = true;
+    decoMat.materials[1].wireframe = true;
     this['Scatter meshes'] = function() {
       var s = parseInt(that.segments, 10);
       var geo = terrainScene.children[0].geometry;
@@ -212,6 +215,9 @@ function setupDatGui() {
         randomness: that.scattering === 'Linear' ? Math.random : (that.scattering === 'Altitude' ? null : THREE.Terrain.ScatterHelper(THREE.Terrain[that.scattering], o, 2, 0.125)),
       });
       if (decoScene) {
+        if (that.texture == 'Wireframe') {
+          decoScene.children[0].material = decoMat;
+        }
         terrainScene.add(decoScene);
       }
     };
