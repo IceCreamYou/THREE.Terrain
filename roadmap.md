@@ -1,10 +1,5 @@
 ## 1.2
 
-Add an option to THREE.Terrain.Smooth to interpolate between the current and smoothed value
-The Poisson Disk function should take width, height, numPoints, minDist instead of the options parameter
-Allow the Poisson Disk function to use Perlin noise for the minDist
-The Worley noise function should optionally take a point generation function and a distance function
-Support using Poisson Disks for mesh scattering
 Randomly rotate scattered meshes perpendicular to the normal
 Add water and lens flare to the demo
 Instead of the region parameters for ScatterMeshes, add a function that checks whether given coordinates are acceptable for placing a mesh

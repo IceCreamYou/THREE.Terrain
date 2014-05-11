@@ -5,9 +5,9 @@
  *   The vertex array for plane geometry to modify with heightmap data. This
  *   method sets the `z` property of each vertex.
  * @param {Object} options
- *    An optional map of settings that control how the terrain is constructed
- *    and displayed. Valid values are the same as those for the `options`
- *    parameter of {@link THREE.Terrain}().
+ *   A map of settings that control how the terrain is constructed and
+ *   displayed. Valid values are the same as those for the `options` parameter
+ *   of {@link THREE.Terrain}().
  */
 THREE.Terrain.fromHeightmap = function(g, options) {
     var canvas = document.createElement('canvas'),

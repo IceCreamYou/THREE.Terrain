@@ -44,9 +44,9 @@ THREE.Terrain.Clamp = function(g, options) {
  *   The vertex array for plane geometry to modify with heightmap data. This
  *   method sets the `z` property of each vertex.
  * @param {Object} options
- *    An optional map of settings that control how the terrain is constructed
- *    and displayed. Valid values are the same as those for the `options`
- *    parameter of {@link THREE.Terrain}().
+ *   A map of settings that control how the terrain is constructed and
+ *   displayed. Valid values are the same as those for the `options` parameter
+ *   of {@link THREE.Terrain}().
  * @param {Boolean} direction
  *    `true` if the edges should be turned up; `false` if they should be turned
  *    down.
@@ -88,9 +88,18 @@ THREE.Terrain.Edges = function(g, options, direction, distance, easing) {
 /**
  * Smooth the terrain by setting each point to the mean of its neighborhood.
  *
- * Parameters are the same as those for {@link THREE.Terrain.DiamondSquare}.
+ * @param {THREE.Vector3[]} g
+ *   The vertex array for plane geometry to modify with heightmap data. This
+ *   method sets the `z` property of each vertex.
+ * @param {Object} options
+ *   A map of settings that control how the terrain is constructed and
+ *   displayed. Valid values are the same as those for the `options` parameter
+ *   of {@link THREE.Terrain}().
+ * @param {Number} [weight=0]
+ *   How much to weight the original vertex height against the average of its
+ *   neighbors.
  */
-THREE.Terrain.Smooth = function(g, options) {
+THREE.Terrain.Smooth = function(g, options, weight) {
     var heightmap = new Array(g.length);
     for (var i = 0, xl = options.xSegments + 1; i < xl; i++) {
         for (var j = 0; j < options.ySegments + 1; j++) {
@@ -106,8 +115,11 @@ THREE.Terrain.Smooth = function(g, options) {
             heightmap[j*xl + i] = sum / 9;
         }
     }
+    weight = weight || 0;
+    var w = 1 / (1 + weight);
+    console.log(w);
     for (var k = 0, l = g.length; k < l; k++) {
-        g[k].z = heightmap[k];
+        g[k].z = (heightmap[k] + g[k].z * weight) * w;
     }
 };
 

@@ -211,7 +211,7 @@ function setupDatGui() {
         mesh: mesh,
         w: s,
         h: Math.round(s * that['width:length ratio']),
-        spread: that.scattering === 'Altitude' ? that.altitudeSpread : (that.scattering === 'Linear' ? that.spread*0.0005 : THREE.Terrain.InEaseOut(that.spread*0.01)*0.5),
+        spread: that.scattering === 'Altitude' ? that.altitudeSpread : (that.scattering === 'Linear' ? that.spread*0.0005 : THREE.Terrain.InEaseOut(that.spread*0.01)* (that.scattering === 'Worley' ? 1 : 0.5)),
         randomness: that.scattering === 'Linear' ? Math.random : (that.scattering === 'Altitude' ? null : THREE.Terrain.ScatterHelper(THREE.Terrain[that.scattering], o, 2, 0.125)),
       });
       if (decoScene) {
@@ -225,7 +225,7 @@ function setupDatGui() {
   var gui = new dat.GUI();
   var settings = new Settings();
   var heightmapFolder = gui.addFolder('Heightmap');
-  heightmapFolder.add(settings, 'heightmap', ['DiamondSquare', 'heightmap.png', 'Perlin', 'Simplex', 'PerlinDiamond', 'PerlinLayers', 'SimplexLayers', 'Value', 'Weierstrass', 'Worley']).onFinishChange(settings.Regenerate);
+  heightmapFolder.add(settings, 'heightmap', ['DiamondSquare', 'heightmap.png', 'Perlin', 'PerlinDiamond', 'PerlinLayers', 'Simplex', 'SimplexLayers', 'Value', 'Weierstrass', 'Worley']).onFinishChange(settings.Regenerate);
   heightmapFolder.add(settings, 'easing', ['Linear', 'EaseIn', 'EaseOut', 'EaseInOut', 'InEaseOut']).onFinishChange(settings.Regenerate);
   heightmapFolder.add(settings, 'segments', 7, 127).step(1).onFinishChange(settings.Regenerate);
   heightmapFolder.add(settings, 'steps', 1, 8).step(1).onFinishChange(settings.Regenerate);
@@ -233,7 +233,7 @@ function setupDatGui() {
   heightmapFolder.open();
   var decoFolder = gui.addFolder('Decoration');
   decoFolder.add(settings, 'texture', ['Blended', 'Wireframe']).onFinishChange(settings.Regenerate);
-  decoFolder.add(settings, 'scattering', ['Altitude', 'Linear', 'DiamondSquare', 'Perlin', 'Simplex']).onFinishChange(settings['Scatter meshes']);
+  decoFolder.add(settings, 'scattering', ['Altitude', 'Linear', 'DiamondSquare', 'Perlin', 'Simplex', 'Value', 'Weierstrass', 'Worley']).onFinishChange(settings['Scatter meshes']);
   decoFolder.add(settings, 'spread', 0, 100).step(1).onFinishChange(settings['Scatter meshes']);
   decoFolder.addColor(settings, 'Light color').onChange(function(val) {
     skyLight.color.set(val);
