@@ -189,30 +189,64 @@ function setupDatGui() {
       }
       that['Scatter meshes']();
     };
+    function altitudeProbability(z) {
+      if (z > -80 && z < -50) return THREE.Terrain.EaseInOut((z + 80) / (-50 + 80)) * that.spread * 0.002;
+      else if (z > -50 && z < 20) return that.spread * 0.002;
+      else if (z > 20 && z < 50) return THREE.Terrain.EaseInOut((z - 20) / (50 - 20)) * that.spread * 0.002;
+      return 0;
+    }
     this.altitudeSpread = function(v, k) {
-      if (v.z > -80 && v.z < -50) return !(k % 4) && Math.random() < THREE.Terrain.EaseInOut((v.z - -80) / (-50 - -80)) * that.spread * 0.002; // jshint ignore:line
-      else if (v.z > -50 && v.z < 20) return !(k % 4) && Math.random() < that.spread * 0.002; // jshint ignore:line
-      else if (v.z > 20 && v.z < 50) return !(k % 4) && Math.random() < THREE.Terrain.EaseInOut((v.z - 20) / (50 - 20)) * that.spread * 0.002; // jshint ignore:line
-      return false;
+      return k % 4 === 0 && Math.random() < altitudeProbability(v.z);
     };
     var mesh = buildTree();
     var decoMat = mesh.material.clone(); // new THREE.MeshBasicMaterial({color: 0x229966, wireframe: true});
     decoMat.materials[0].wireframe = true;
     decoMat.materials[1].wireframe = true;
     this['Scatter meshes'] = function() {
-      var s = parseInt(that.segments, 10);
-      var geo = terrainScene.children[0].geometry;
-      terrainScene.remove(decoScene);
+      var s = parseInt(that.segments, 10),
+          spread,
+          randomness;
       var o = {
         xSegments: s,
         ySegments: Math.round(s * that['width:length ratio']),
       };
+      if (that.scattering === 'Linear') {
+        spread = that.spread * 0.0005;
+        randomness = Math.random;
+      }
+      else if (that.scattering === 'Altitude') {
+        spread = that.altitudeSpread;
+      }
+      else if (that.scattering === 'PerlinAltitude') {
+        spread = (function() {
+          var h = THREE.Terrain.ScatterHelper(THREE.Terrain.Perlin, o, 2, 0.125)(),
+              hs = THREE.Terrain.InEaseOut(that.spread * 0.01);
+          return function(v, k) {
+            var rv = h[k],
+                place = false;
+            if (rv < hs) {
+              place = true;
+            }
+            else if (rv < hs + 0.2) {
+              place = THREE.Terrain.EaseInOut((rv - hs) * 5) * hs < Math.random();
+            }
+            return Math.random() < altitudeProbability(v.z) * 5 && place;
+          };
+        })();
+      }
+      else {
+        spread = THREE.Terrain.InEaseOut(that.spread*0.01) * (that.scattering === 'Worley' ? 1 : 0.5);
+        randomness = THREE.Terrain.ScatterHelper(THREE.Terrain[that.scattering], o, 2, 0.125);
+      }
+      var geo = terrainScene.children[0].geometry;
+      terrainScene.remove(decoScene);
       decoScene = THREE.Terrain.ScatterMeshes(geo, {
         mesh: mesh,
         w: s,
         h: Math.round(s * that['width:length ratio']),
-        spread: that.scattering === 'Altitude' ? that.altitudeSpread : (that.scattering === 'Linear' ? that.spread*0.0005 : THREE.Terrain.InEaseOut(that.spread*0.01)* (that.scattering === 'Worley' ? 1 : 0.5)),
-        randomness: that.scattering === 'Linear' ? Math.random : (that.scattering === 'Altitude' ? null : THREE.Terrain.ScatterHelper(THREE.Terrain[that.scattering], o, 2, 0.125)),
+        spread: spread,
+        smoothSpread: that.scattering === 'Linear' ? 0 : 0.2,
+        randomness: randomness,
       });
       if (decoScene) {
         if (that.texture == 'Wireframe') {
@@ -233,7 +267,7 @@ function setupDatGui() {
   heightmapFolder.open();
   var decoFolder = gui.addFolder('Decoration');
   decoFolder.add(settings, 'texture', ['Blended', 'Wireframe']).onFinishChange(settings.Regenerate);
-  decoFolder.add(settings, 'scattering', ['Altitude', 'Linear', 'DiamondSquare', 'Perlin', 'Simplex', 'Value', 'Weierstrass', 'Worley']).onFinishChange(settings['Scatter meshes']);
+  decoFolder.add(settings, 'scattering', ['Altitude', 'Linear', 'DiamondSquare', 'Perlin', 'PerlinAltitude', 'Simplex', 'Value', 'Weierstrass', 'Worley']).onFinishChange(settings['Scatter meshes']);
   decoFolder.add(settings, 'spread', 0, 100).step(1).onFinishChange(settings['Scatter meshes']);
   decoFolder.addColor(settings, 'Light color').onChange(function(val) {
     skyLight.color.set(val);

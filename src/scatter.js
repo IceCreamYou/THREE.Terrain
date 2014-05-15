@@ -14,6 +14,12 @@
  *     boolean indicating whether to place a mesh on that face or not. An
  *     example could be `function(v, k) { return v.z > 0 && !(k % 4); }`.
  *     Defaults to 0.025.
+ *   - `smoothSpread`: If the `spread` option is a number, this affects how
+ *     much placement is "eased in." Specifically, if the `randomness` function
+ *     returns a value for a face that is within `smoothSpread` percentiles
+ *     above `spread`, then the probability that a mesh is placed there is
+ *     interpolated between zero and `spread`. This creates a "thinning" effect
+ *     near the edges of clumps, if the randomness function creates clumps.
  *   - `scene`: A `THREE.Object3D` instance to which the scattered meshes will
  *     be added. This is expected to be either a return value of a call to
  *     `THREE.Terrain()` or added to that return value; otherwise the position
@@ -21,7 +27,9 @@
  *   - `sizeVariance`: The percent by which instances of the mesh can be scaled
  *     up or down when placed on the terrain.
  *   - `randomness`: If `options.spread` is a number, then this property is a
- *     function that determines where meshes are placed. Valid values include
+ *     function that determines where meshes are placed. Specifically, it
+ *     returns an array of numbers, where each number is the probability that
+ *     a mesh is NOT placed on the corresponding face. Valid values include
  *     `Math.random` and the return value of a call to
  *     `THREE.Terrain.ScatterHelper`.
  *   - `maxSlope`: The angle in radians between the normal of a face of the
@@ -55,6 +63,7 @@ THREE.Terrain.ScatterMeshes = function(geometry, options) {
     }
     var defaultOptions = {
         spread: 0.025,
+        smoothSpread: 0,
         sizeVariance: 0.1,
         randomness: Math.random,
         maxSlope: 0.6283185307179586, // 36deg or 36 / 180 * Math.PI, about the angle of repose of earth
@@ -72,6 +81,7 @@ THREE.Terrain.ScatterMeshes = function(geometry, options) {
     var spreadIsNumber = typeof options.spread === 'number',
         randomHeightmap,
         randomness,
+        spreadRange = 1 / options.smoothSpread,
         doubleSizeVariance = options.sizeVariance * 2,
         v = geometry.vertices,
         meshes = [],
@@ -84,8 +94,24 @@ THREE.Terrain.ScatterMeshes = function(geometry, options) {
     for (var i = options.y, w = options.w*2; i < w; i++) {
         for (var j = options.x, h = options.h; j < h; j++) {
             var key = j*w + i,
-                f = geometry.faces[key];
-            if (spreadIsNumber ? randomness(key) < options.spread : options.spread(v[f.a], key)) {
+                f = geometry.faces[key],
+                place = false;
+            if (spreadIsNumber) {
+                var rv = randomness(key);
+                if (rv < options.spread) {
+                    place = true;
+                }
+                else if (rv < options.spread + options.smoothSpread) {
+                    // Interpolate rv between spread and spread + smoothSpread,
+                    // then multiply that "easing" value by the probability
+                    // that a mesh would get placed on a given face.
+                    place = THREE.Terrain.EaseInOut((rv - options.spread) * spreadRange) * options.spread > Math.random();
+                }
+            }
+            else {
+                place = options.spread(v[f.a], key, f);
+            }
+            if (place) {
                 // Don't place a mesh if the angle is too steep.
                 if (f.normal.angleTo(up) > options.maxSlope) {
                     continue;
@@ -136,6 +162,9 @@ THREE.Terrain.ScatterMeshes = function(geometry, options) {
 /**
  * Generate a function that returns a heightmap to pass to ScatterMeshes.
  *
+ * Specifically, this function generates a heightmap and then uses that
+ * heightmap as a map of probabilities of where meshes will be placed.
+ *
  * @param {Function} method
  *   A random terrain generation function (i.e. a valid value for the
  *   `options.heightmap` parameter of the `THREE.Terrain` function).
@@ -147,6 +176,11 @@ THREE.Terrain.ScatterMeshes = function(geometry, options) {
  * @param {Number} skip
  *   The number of sequential faces to skip between faces that are candidates
  *   for placing a mesh. This avoid clumping meshes too closely together.
+ *   Defaults to 1.
+ * @param {Number} threshold
+ *   The probability that, if a mesh can be placed on a non-skipped face due to
+ *   the shape of the heightmap, a mesh actually will be placed there. Helps
+ *   thin out placement and make it less regular. Defaults to 0.25.
  *
  * @return {Function}
  *   Returns a function that can be passed as the value of the
@@ -167,11 +201,13 @@ THREE.Terrain.ScatterHelper = function(method, options, skip, threshold) {
 
     clonedOptions.xSegments *= 2;
     clonedOptions.stretch = true;
+    clonedOptions.maxHeight = 1;
+    clonedOptions.minHeight = 0;
     var heightmap = THREE.Terrain.heightmapArray(method, clonedOptions);
 
     for (var i = 0, l = heightmap.length; i < l; i++) {
         if (i % skip || Math.random() > threshold) {
-            heightmap[i] = 1;
+            heightmap[i] = 1; // 0 = place, 1 = don't place
         }
     }
     return function() {
