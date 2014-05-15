@@ -1296,6 +1296,7 @@ THREE.Terrain.ScatterMeshes = function(geometry, options) {
                 var normal = mesh.position.clone().add(f.normal);
                 mesh.lookAt(normal);
                 mesh.rotation.x += 90 / 180 * Math.PI;
+                mesh.rotateY(Math.random() * 2 * Math.PI);
                 if (options.sizeVariance) {
                     var variance = Math.random() * doubleSizeVariance - options.sizeVariance;
                     mesh.scale.x = mesh.scale.z = 1 + variance;

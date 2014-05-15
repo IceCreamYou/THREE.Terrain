@@ -1,6 +1,5 @@
 ## 1.2
 
-Randomly rotate scattered meshes perpendicular to the normal
 Add water and lens flare to the demo
 In the demo, combine the segments and size settings into just size
 Fix minHeight not being properly applied
