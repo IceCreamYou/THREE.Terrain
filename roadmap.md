@@ -2,7 +2,6 @@
 
 Randomly rotate scattered meshes perpendicular to the normal
 Add water and lens flare to the demo
-Instead of the region parameters for ScatterMeshes, add a function that checks whether given coordinates are acceptable for placing a mesh
 In the demo, combine the segments and size settings into just size
 Fix minHeight not being properly applied
 Implement hill algorithm (feature picking). See http://www.stuffwithstuff.com/robot-frog/3d/hills/hill.html

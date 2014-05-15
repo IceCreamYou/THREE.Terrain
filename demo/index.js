@@ -147,8 +147,8 @@ function setupDatGui() {
     this['width:length ratio'] = 1;
     this['Flight mode'] = useFPS;
     this['Light color'] = '#fffbef';
-    this.spread = 40;
-    this.scattering = 'Altitude';
+    this.spread = 60;
+    this.scattering = 'PerlinAltitude';
     this.after = function(vertices, options) {
       if (that.edgeDirection === 'Normal') return;
       THREE.Terrain.Edges(

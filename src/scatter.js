@@ -35,13 +35,8 @@
  *   - `maxSlope`: The angle in radians between the normal of a face of the
  *     terrain and the "up" vector above which no mesh will be placed on the
  *     related face. Defaults to ~0.63, which is 36 degrees.
- *   - `x`, `y`, `w`, `h`: Together, these properties outline a rectangular
- *     region on the terrain inside which meshes should be scattered. The `x`
- *     and `y` properties indicate the upper-left corner of the box and the `w`
- *     and `h` properties indicate its width and height, respectively, in units
- *     of terrain segments (like those specified in the `options` parameter for
- *     the `THREE.Terrain` function). `x` and `y` default to zero, but `w` and
- *     `h` are required.
+ *   - `w`: The number of horizontal segments of the terrain.
+ *   - `h`: The number of vertical segments of the terrain.
  *
  * @return {THREE.Object3D}
  *   An Object3D containing the scattered meshes. This is the value of the
@@ -67,8 +62,6 @@ THREE.Terrain.ScatterMeshes = function(geometry, options) {
         sizeVariance: 0.1,
         randomness: Math.random,
         maxSlope: 0.6283185307179586, // 36deg or 36 / 180 * Math.PI, about the angle of repose of earth
-        x: 0,
-        y: 0,
         w: 0,
         h: 0,
     };
@@ -91,8 +84,8 @@ THREE.Terrain.ScatterMeshes = function(geometry, options) {
         randomness = typeof randomHeightmap === 'number' ? Math.random : function(k) { return randomHeightmap[k]; };
     }
     //geometry.computeFaceNormals();
-    for (var i = options.y, w = options.w*2; i < w; i++) {
-        for (var j = options.x, h = options.h; j < h; j++) {
+    for (var i = 0, w = options.w*2; i < w; i++) {
+        for (var j = 0, h = options.h; j < h; j++) {
             var key = j*w + i,
                 f = geometry.faces[key],
                 place = false;
@@ -109,7 +102,7 @@ THREE.Terrain.ScatterMeshes = function(geometry, options) {
                 }
             }
             else {
-                place = options.spread(v[f.a], key, f);
+                place = options.spread(v[f.a], key, f, i, j);
             }
             if (place) {
                 // Don't place a mesh if the angle is too steep.
