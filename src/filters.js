@@ -83,6 +83,11 @@ THREE.Terrain.Edges = function(g, options, direction, distance, easing) {
             g[k2].z = max(g[k2].z, (peak - g[k2].z) * multiplier + g[k2].z);
         }
     }
+    THREE.Terrain.Clamp(g, {
+        maxHeight: options.maxHeight,
+        minHeight: options.minHeight,
+        stretch: true,
+    });
 };
 
 /**
@@ -103,21 +108,21 @@ THREE.Terrain.Smooth = function(g, options, weight) {
     var heightmap = new Array(g.length);
     for (var i = 0, xl = options.xSegments + 1; i < xl; i++) {
         for (var j = 0; j < options.ySegments + 1; j++) {
-            var sum = 0;
+            var sum = 0, c = 0;
             for (var n = -1; n <= 1; n++) {
                 for (var m = -1; m <= 1; m++) {
                     var key = (j+n)*xl + i + m;
                     if (typeof g[key] !== 'undefined') {
                         sum += g[key].z;
+                        c++;
                     }
                 }
             }
-            heightmap[j*xl + i] = sum / 9;
+            heightmap[j*xl + i] = sum / c;
         }
     }
     weight = weight || 0;
     var w = 1 / (1 + weight);
-    console.log(w);
     for (var k = 0, l = g.length; k < l; k++) {
         g[k].z = (heightmap[k] + g[k].z * weight) * w;
     }

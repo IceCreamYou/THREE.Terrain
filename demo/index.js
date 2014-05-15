@@ -14,7 +14,7 @@ if (/&?webgl=0\b/g.test(location.hash)) {
 // Workaround: in Chrome, if a page is opened with window.open(), window.innerWidth and window.innerHeight will be zero.
 if ( window.innerWidth === 0 ) { window.innerWidth = parent.innerWidth; window.innerHeight = parent.innerHeight; }
 
-var camera, scene, renderer, clock, player, terrainScene, decoScene, controls = {}, fpsCamera, skyDome, skyLight;
+var camera, scene, renderer, clock, player, terrainScene, decoScene, controls = {}, fpsCamera, skyDome, skyLight, sand, water;
 var INV_MAX_FPS = 1 / 100,
     frameDelta = 0,
     paused = true,
@@ -64,7 +64,7 @@ function setup() {
 
 function setupThreeJS() {
   scene = new THREE.Scene();
-  scene.fog = new THREE.FogExp2(0xe5f9e9, 0.0007);
+  scene.fog = new THREE.FogExp2(0x868293, 0.0007);
 
   renderer = webglExists ? new THREE.WebGLRenderer({ antialias: true }) : new THREE.CanvasRenderer();
   renderer.setSize(window.innerWidth, window.innerHeight);
@@ -95,14 +95,23 @@ function setupControls() {
 function setupWorld() {
   THREE.ImageUtils.loadTexture('demo/img/sky1.jpg', undefined, function(t1) {
     skyDome = new THREE.Mesh(
-      new THREE.SphereGeometry(4096, 64, 64),
+      new THREE.SphereGeometry(4096, 16, 16, 0, Math.PI*2, 0, Math.PI*0.5),
       new THREE.MeshBasicMaterial({map: t1, side: THREE.BackSide, fog: false})
     );
+    skyDome.position.y = -99;
     scene.add(skyDome);
   });
 
-  skyLight = new THREE.DirectionalLight(0xead3d3, 1.5);
-  skyLight.position.set(1, 1, 1);
+  water = new THREE.Mesh(
+    new THREE.PlaneGeometry(8704, 8704, 8, 8),
+    new THREE.MeshLambertMaterial({color: 0x006ba0, transparent: true, opacity: 0.6})
+  );
+  water.position.y = -99;
+  water.rotation.x = -0.5 * Math.PI;
+  scene.add(water);
+
+  skyLight = new THREE.DirectionalLight(0xe8bdb0, 1.5);
+  skyLight.position.set(2950, 2625, -160); // Sun on the sky texture
   scene.add(skyLight);
   var light = new THREE.DirectionalLight(0xc3eaff, 0.75);
   light.position.set(-1, -0.5, -1);
@@ -117,6 +126,14 @@ function setupDatGui() {
     var mat = new THREE.MeshBasicMaterial({color: 0x5566aa, wireframe: true});
     var blend;
     THREE.ImageUtils.loadTexture('demo/img/sand1.jpg', undefined, function(t1) {
+      t1.wrapS = t1.wrapT = THREE.RepeatWrapping;
+      sand = new THREE.Mesh(
+        new THREE.PlaneGeometry(8704, 8704, 32, 32),
+        new THREE.MeshLambertMaterial({map: t1})
+      );
+      sand.position.y = -101;
+      sand.rotation.x = -0.5 * Math.PI;
+      scene.add(sand);
       THREE.ImageUtils.loadTexture('demo/img/grass1.jpg', undefined, function(t2) {
         THREE.ImageUtils.loadTexture('demo/img/stone1.jpg', undefined, function(t3) {
           THREE.ImageUtils.loadTexture('demo/img/snow1.jpg', undefined, function(t4) {
@@ -142,11 +159,11 @@ function setupDatGui() {
     this.sky = true;
     this.texture = webglExists ? 'Blended' : 'Wireframe';
     this.edgeDirection = 'Normal';
-    this.edgeDistance = 128;
+    this.edgeDistance = 256;
     this.edgeCurve = 'EaseInOut';
-    this['width:length ratio'] = 1;
+    this['width:length ratio'] = 1.0;
     this['Flight mode'] = useFPS;
-    this['Light color'] = '#fffbef';
+    this['Light color'] = '#' + skyLight.color.getHexString();
     this.spread = 60;
     this.scattering = 'PerlinAltitude';
     this.after = function(vertices, options) {
@@ -181,7 +198,7 @@ function setupDatGui() {
       scene.remove(terrainScene);
       terrainScene = THREE.Terrain(o);
       scene.add(terrainScene);
-      skyDome.visible = that.texture != 'Wireframe';
+      skyDome.visible = sand.visible = water.visible = that.texture != 'Wireframe';
       var he = document.getElementById('heightmap');
       if (he) {
         o.heightmap = he;
@@ -273,13 +290,13 @@ function setupDatGui() {
     skyLight.color.set(val);
   });
   var sizeFolder = gui.addFolder('Size');
-  sizeFolder.add(settings, 'size', 256, 3072).step(256).onFinishChange(settings.Regenerate);
+  sizeFolder.add(settings, 'size', 1024, 3072).step(256).onFinishChange(settings.Regenerate);
   sizeFolder.add(settings, 'maxHeight', 2, 300).step(2).onFinishChange(settings.Regenerate);
   sizeFolder.add(settings, 'width:length ratio', 0.2, 2).step(0.05).onFinishChange(settings.Regenerate);
   var edgesFolder = gui.addFolder('Edges');
   edgesFolder.add(settings, 'edgeDirection', ['Normal', 'Up', 'Down']).onFinishChange(settings.Regenerate);
   edgesFolder.add(settings, 'edgeCurve', ['Linear', 'EaseIn', 'EaseOut', 'EaseInOut']).onFinishChange(settings.Regenerate);
-  edgesFolder.add(settings, 'edgeDistance', 0, 256).step(16).onFinishChange(settings.Regenerate);
+  edgesFolder.add(settings, 'edgeDistance', 0, 512).step(32).onFinishChange(settings.Regenerate);
   gui.add(settings, 'Flight mode').onChange(function(val) {
     useFPS = val;
     fpsCamera.position.x = 449;

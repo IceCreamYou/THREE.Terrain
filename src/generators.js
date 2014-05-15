@@ -141,6 +141,7 @@ THREE.Terrain.PerlinDiamond = function(g, options) {
     THREE.Terrain.MultiPass(g, options, [
         { method: THREE.Terrain.Perlin },
         { method: THREE.Terrain.DiamondSquare, amplitude: 0.75 },
+        { method: function(g, o) { return THREE.Terrain.Smooth(g, o, 1); } },
     ]);
 };
 

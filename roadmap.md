@@ -1,7 +1,6 @@
 ## 1.2
 
-Add water and lens flare to the demo
-In the demo, combine the segments and size settings into just size
+In the demo, combine the segments and size settings into just size (and adjust edgeDistance appropriately)
 Fix minHeight not being properly applied
 Implement hill algorithm (feature picking). See http://www.stuffwithstuff.com/robot-frog/3d/hills/hill.html
 Support having a function passed for the maxHeight value that takes the slope at each vertex and returns a height
