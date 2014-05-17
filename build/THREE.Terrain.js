@@ -280,11 +280,10 @@ THREE.Terrain = function(options) {
     //options.unit = (options.xSize / (options.xSegments+1) + options.ySize / (options.ySegments+1)) * 0.5;
     options.material = options.material || new THREE.MeshBasicMaterial({ color: 0xee6633 });
 
-    // Using a scene instead of a mesh allows us to implement more complex
-    // features eventually, like adding the ability to randomly scatter plants
-    // across the terrain or having multiple meshes for optimization purposes.
+    // Encapsulating the terrain in a parent object allows us the flexibility
+    // to more easily have multiple meshes for optimization purposes.
     var scene = new THREE.Object3D();
-    // Planes are initialized on the XY plane, so rotate so Z is up.
+    // Planes are initialized on the XY plane, so rotate the plane to make it lie flat.
     scene.rotation.x = -0.5 * Math.PI;
 
     var mesh = new THREE.Mesh(
@@ -292,17 +291,43 @@ THREE.Terrain = function(options) {
         options.material
     );
 
-    var v = mesh.geometry.vertices;
     // It's actually possible to pass a canvas with heightmap data instead of an image.
     if (options.heightmap instanceof HTMLCanvasElement || options.heightmap instanceof Image) {
-        THREE.Terrain.fromHeightmap(v, options);
+        THREE.Terrain.fromHeightmap(mesh.geometry.vertices, options);
     }
     else if (typeof options.heightmap === 'function') {
-        options.heightmap(v, options);
+        options.heightmap(mesh.geometry.vertices, options);
     }
     else {
         console.warn('An invalid value was passed for `options.heightmap`: ' + options.heightmap);
     }
+    THREE.Terrain.Normalize(mesh, options);
+
+    if (options.useBufferGeometry) {
+        mesh.geometry = THREE.BufferGeometryUtils.fromGeometry(mesh.geometry);
+    }
+
+    // lod.addLevel(mesh, options.unit * 10 * Math.pow(2, lodLevel));
+
+    scene.add(mesh);
+    return scene;
+};
+
+/**
+ * Normalize the terrain after applying a heightmap or filter.
+ *
+ * This applies turbulence, steps, and height clamping; calls the `after`
+ * callback; updates normals and the bounding sphere; and marks vertices as
+ * dirty.
+ *
+ * @param {THREE.Mesh} mesh
+ *   The terrain mesh.
+ * @param {Object} options
+ *   A map of settings that control how the terrain is constructed and
+ *   displayed. Valid options are the same as for {@link THREE.Terrain}().
+ */
+THREE.Terrain.Normalize = function(mesh, options) {
+    var v = mesh.geometry.vertices;
     if (options.turbulent) {
         THREE.Terrain.Turbulence(v, options);
     }
@@ -322,15 +347,6 @@ THREE.Terrain = function(options) {
     mesh.geometry.computeBoundingSphere();
     mesh.geometry.computeFaceNormals();
     mesh.geometry.computeVertexNormals();
-
-    if (options.useBufferGeometry) {
-        mesh.geometry = THREE.BufferGeometryUtils.fromGeometry(mesh.geometry);
-    }
-
-    // lod.addLevel(mesh, options.unit * 10 * Math.pow(2, lodLevel));
-
-    scene.add(mesh);
-    return scene;
 };
 
 /**
@@ -350,6 +366,8 @@ THREE.Terrain = function(options) {
  * between neighbor edge vertices in order to match with the edge of the
  * lower-detail section. The number of sections should be around sqrt(segments)
  * along each axis. It's unclear how to make materials stretch across segments.
+ * Possible example (I haven't looked too much into it) at
+ * https://github.com/felixpalmer/lod-terrain/tree/master/js/shaders
  *
  * GEOCLIPMAP: The terrain should be composed of multiple donut-shaped sections
  * at decreasing resolution as the radius gets bigger. When the player moves,

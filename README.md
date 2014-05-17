@@ -1,4 +1,4 @@
-`THREE.Terrain` generates terrains either randomly or from image-based
+`THREE.Terrain` generates terrains either procedurally or from image-based
 heightmaps for use with the [Three.js](https://github.com/mrdoob/three.js) 3D
 graphics library for the web.
 
@@ -44,7 +44,7 @@ terrainScene.add(decoScene);
 ```
 
 All parameters are optional and thoroughly documented in the
-[source code](https://github.com/IceCreamYou/THREE.Terrain/blob/gh-pages/THREE.Terrain.js).
+[source code](https://github.com/IceCreamYou/THREE.Terrain/blob/gh-pages/build/THREE.Terrain.js).
 You can play around with some of the parameters and see what happens in the
 [demo](https://icecreamyou.github.io/THREE.Terrain/).
 

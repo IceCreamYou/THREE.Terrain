@@ -95,7 +95,7 @@ function setupControls() {
 function setupWorld() {
   THREE.ImageUtils.loadTexture('demo/img/sky1.jpg', undefined, function(t1) {
     skyDome = new THREE.Mesh(
-      new THREE.SphereGeometry(4096, 16, 16, 0, Math.PI*2, 0, Math.PI*0.5),
+      new THREE.SphereGeometry(8192, 16, 16, 0, Math.PI*2, 0, Math.PI*0.5),
       new THREE.MeshBasicMaterial({map: t1, side: THREE.BackSide, fog: false})
     );
     skyDome.position.y = -99;
@@ -103,7 +103,7 @@ function setupWorld() {
   });
 
   water = new THREE.Mesh(
-    new THREE.PlaneGeometry(8704, 8704, 8, 8),
+    new THREE.PlaneGeometry(16384+1024, 16384+1024, 16, 16),
     new THREE.MeshLambertMaterial({color: 0x006ba0, transparent: true, opacity: 0.6})
   );
   water.position.y = -99;
@@ -124,11 +124,12 @@ function setupDatGui() {
   function Settings() {
     var that = this;
     var mat = new THREE.MeshBasicMaterial({color: 0x5566aa, wireframe: true});
+    var gray = new THREE.MeshPhongMaterial({ color: 0x88aaaa, specular: 0x444455, shininess: 10 });
     var blend;
     THREE.ImageUtils.loadTexture('demo/img/sand1.jpg', undefined, function(t1) {
       t1.wrapS = t1.wrapT = THREE.RepeatWrapping;
       sand = new THREE.Mesh(
-        new THREE.PlaneGeometry(8704, 8704, 32, 32),
+        new THREE.PlaneGeometry(16384+1024, 16384+1024, 32, 32),
         new THREE.MeshLambertMaterial({map: t1})
       );
       sand.position.y = -101;
@@ -183,7 +184,7 @@ function setupDatGui() {
         after: that.after,
         easing: THREE.Terrain[that.easing],
         heightmap: h ? heightmapImage : THREE.Terrain[that.heightmap],
-        material: that.texture == 'Wireframe' ? mat : blend,
+        material: that.texture == 'Wireframe' ? mat : (that.texture == 'Blended' ? blend : gray),
         maxHeight: that.maxHeight - 100,
         minHeight: -100,
         steps: that.steps,
@@ -269,6 +270,9 @@ function setupDatGui() {
         if (that.texture == 'Wireframe') {
           decoScene.children[0].material = decoMat;
         }
+        else if (that.texture == 'Grayscale') {
+          decoScene.children[0].material = gray;
+        }
         terrainScene.add(decoScene);
       }
     };
@@ -283,7 +287,7 @@ function setupDatGui() {
   heightmapFolder.add(settings, 'turbulent').onFinishChange(settings.Regenerate);
   heightmapFolder.open();
   var decoFolder = gui.addFolder('Decoration');
-  decoFolder.add(settings, 'texture', ['Blended', 'Wireframe']).onFinishChange(settings.Regenerate);
+  decoFolder.add(settings, 'texture', ['Blended', 'Grayscale', 'Wireframe']).onFinishChange(settings.Regenerate);
   decoFolder.add(settings, 'scattering', ['Altitude', 'Linear', 'DiamondSquare', 'Perlin', 'PerlinAltitude', 'Simplex', 'Value', 'Weierstrass', 'Worley']).onFinishChange(settings['Scatter meshes']);
   decoFolder.add(settings, 'spread', 0, 100).step(1).onFinishChange(settings['Scatter meshes']);
   decoFolder.addColor(settings, 'Light color').onChange(function(val) {

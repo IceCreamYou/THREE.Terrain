@@ -1,22 +1,71 @@
 ## 1.2
 
 Fix artifacts in the value noise implementation when width:length ratio > 1. http://stackoverflow.com/q/23708306/843621
+Support an "influence" function which takes a location, radius, and a function that takes coordinates [0, 1] and returns a scaled height; and apply that feature to the terrain at the specified location, with intensity increasing as the radius decreases (similar to the edge filter).
 Implement hill algorithm (feature picking). See http://www.stuffwithstuff.com/robot-frog/3d/hills/hill.html
-Support having a function passed for the maxHeight value that takes the slope at each vertex and returns a height
-   Then use it to make slopes rougher than flats in multipass generation functions
 
 
 ## 1.3
 
+Phong lighting for generated textures
+Support having a function passed for the maxHeight value that takes the slope at each vertex and returns a height
+   Then use it to make slopes rougher than flats in multipass generation functions
 Add a method to get the terrain height at a given spatial location
 Make scattering be based on spatial distance, not faces
 Write documentation that's not in the code
 
 
-## 2.0
+## 1.4
 
 Try using the terrain with a physics library
+Support manually convolving terrain
+
+
+## 2.0
+
+Erosion
+    Clone the terrain
+    For each original face with a slope above the angle of repose
+        Reduce changes in elevation (by raising lower vertices and lowering higher vertices) to reach the angle of repose
+        Set those new elevations in the clone
+    Set the original to the clone
+    Repeat until no changes are made
+Flooding
+    Methods:
+        Sea level rise
+            Set a maximum flood height
+            For each point in the heightmap that hasn't been included in a flood-fill that doesn't touch an edge yet
+                Discard the point if it is above the max flood height
+                Flood-fill up to the point's height
+                Mark if the flood touches an edge
+                If a lower flood is encountered when flood-filling
+                    If the lower flood doesn't touch an edge, add it to the current flood and keep track of it
+                    Otherwise add it to the current flood, discard it, and mark the current flood as touching an edge
+                    If the higher flood ends up not touching an edge, delete the lower flood
+                    Otherwise delete the higher flood but not the lower flood
+            Walk over the flood-fills
+                Any flood-fill that doesn't touch an edge is a pond
+        Rain
+            Simulate units of water falling uniformly over the plane
+            Each drop of water flows toward the local minimum down the path of steepest descent and accumulates
+            Need to account for ponds overflowing
+        Minima
+            Find all the local minima, where a minimum is the lowest point in a flood-fill starting from that point with a given minimum area and the flood-fill doesn't touch the edge
+                To find, sort vertices by height, then test each one (discarding flooded vertices during the flood-fill phase)
+            For each minimum, find the lowest height that will spill to an edge by flood-filling at successive heights
+            For each minimum, flood up to a given percentage of the lowest spill point
+    When ponds are discovered, water planes need to be created for them
+River generation
+    Methods:
+        Pick random (high-elevation) origin locations and let particles flow downward
+        Use Brownian trees https://en.wikipedia.org/wiki/Brownian_tree
+    A nice shape for displacement around river paths is -e^(-(2x)^2): http://www.wolframalpha.com/input/?i=-e^%28-%282x%29^2%29+from+-1+to+1
+    Water planes need to be created to match river shapes
+    Account for ending in a pond instead of at an edge
+    Make rivers narrower and shallower at the top
+
+
+## 3.0
+
 Implement optimization types
 Support infinite terrain
-Add the ability to manually convolve terrain
-Add the ability to manually paint terrain
