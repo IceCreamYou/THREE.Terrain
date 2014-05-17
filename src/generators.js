@@ -68,10 +68,7 @@ THREE.Terrain.DiamondSquare = function(g, options) {
         xl = options.xSegments + 1,
         yl = options.ySegments + 1;
     for (i = 0; i <= segments; i++) {
-        heightmap[i] = [];
-        for (j = 0; j <= segments; j++) {
-            heightmap[i][j] = 0;
-        }
+        heightmap[i] = new Float32Array(segments+1);
     }
 
     // Generate heightmap

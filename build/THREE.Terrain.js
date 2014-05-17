@@ -630,7 +630,7 @@ THREE.Terrain.Edges = function(g, options, direction, distance, easing) {
  *   neighbors.
  */
 THREE.Terrain.Smooth = function(g, options, weight) {
-    var heightmap = new Array(g.length);
+    var heightmap = new Float32Array(g.length);
     for (var i = 0, xl = options.xSegments + 1; i < xl; i++) {
         for (var j = 0; j < options.ySegments + 1; j++) {
             var sum = 0, c = 0;
@@ -787,10 +787,7 @@ THREE.Terrain.DiamondSquare = function(g, options) {
         xl = options.xSegments + 1,
         yl = options.ySegments + 1;
     for (i = 0; i <= segments; i++) {
-        heightmap[i] = [];
-        for (j = 0; j <= segments; j++) {
-            heightmap[i][j] = 0;
-        }
+        heightmap[i] = new Float32Array(segments+1);
     }
 
     // Generate heightmap

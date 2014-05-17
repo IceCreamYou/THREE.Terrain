@@ -105,7 +105,7 @@ THREE.Terrain.Edges = function(g, options, direction, distance, easing) {
  *   neighbors.
  */
 THREE.Terrain.Smooth = function(g, options, weight) {
-    var heightmap = new Array(g.length);
+    var heightmap = new Float32Array(g.length);
     for (var i = 0, xl = options.xSegments + 1; i < xl; i++) {
         for (var j = 0; j < options.ySegments + 1; j++) {
             var sum = 0, c = 0;
