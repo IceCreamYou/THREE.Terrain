@@ -1,5 +1,5 @@
 /**
- * THREE.Terrain.js 1.1.0-15052014
+ * THREE.Terrain.js 1.1.0-17052014
  *
  * @author Isaac Sukin (http://www.isaacsukin.com/)
  * @license MIT
@@ -842,7 +842,7 @@ THREE.Terrain.DiamondSquare = function(g, options) {
  */
 THREE.Terrain.Perlin = function(g, options) {
     noise.seed(Math.random());
-    var range = options.maxHeight - options.minHeight * 0.5,
+    var range = (options.maxHeight - options.minHeight) * 0.5,
         divisor = (Math.min(options.xSegments, options.ySegments) + 1) / options.frequency;
     for (var i = 0, xl = options.xSegments + 1; i < xl; i++) {
         for (var j = 0, yl = options.ySegments + 1; j < yl; j++) {
@@ -913,47 +913,61 @@ THREE.Terrain.SimplexLayers = function(g, options) {
 };
 
 (function() {
-    // Store the array of white noise outside of the WhiteNoise function to
-    // avoid allocating a bunch of unnecessary arrays; we can just overwrite
-    // old data each time WhiteNoise() is called.
-    var data;
-
-    // Fill a random array of a smaller octave than the target
-    // then interpolate to get the higher-resolution result
-    function WhiteNoise(g, options, scale, segments, range) {
+    /**
+     * Generate a heightmap using white noise.
+     *
+     * @param {THREE.Vector3[]} g The terrain vertices.
+     * @param {Object} options Settings
+     * @param {Number} scale The resolution of the resulting heightmap.
+     * @param {Number} segments The width of the target heightmap.
+     * @param {Number} range The altitude of the noise.
+     * @param {Number[]} data The target heightmap.
+     */
+    function WhiteNoise(g, options, scale, segments, range, data) {
         if (scale > segments) return;
         var i = 0,
             j = 0,
-            xl = options.xSegments + 1,
-            yl = options.ySegments + 1,
+            xl = segments,
+            yl = segments,
             inc = Math.floor(segments / scale),
+            lastX = -inc,
+            lastY = -inc,
             k;
+        // Walk over the target. For a target of size W and a resolution of N,
+        // set every W/N points (in both directions).
         for (i = 0; i <= xl; i += inc) {
             for (j = 0; j <= yl; j += inc) {
                 k = j * xl + i;
                 data[k] = Math.random() * range;
-                if (k) {
-                    /* c b *
-                     * l t */
-                    var t = data[k],
-                        l = data[ j      * xl + (i-inc)] || t,
-                        b = data[(j-inc) * xl +  i     ] || t,
-                        c = data[(j-inc) * xl + (i-inc)] || t;
-                    for (var lastX = i-inc, x = lastX; x < i; x++) {
-                        for (var lastY = j-inc, y = lastY; y < j; y++) {
-                            if (x === lastX && y === lastY) continue;
-                            var px = ((x-lastX) / inc),
-                                py = ((y-lastY) / inc),
-                                r1 = px * b + (1-px) * c,
-                                r2 = px * t + (1-px) * l;
-                            data[y * xl + x] = py * r2 + (1-py) * r1;
-                        }
+                if (lastX < 0 && lastY < 0) continue;
+                /* c b *
+                 * l t */
+                var t = data[k],
+                    l = data[ j      * xl + (i-inc)] || t, // left
+                    b = data[(j-inc) * xl +  i     ] || t, // bottom
+                    c = data[(j-inc) * xl + (i-inc)] || t; // corner
+                // Interpolate between adjacent points to set the height of
+                // higher-resolution target data.
+                for (var x = lastX; x < i; x++) {
+                    for (var y = lastY; y < j; y++) {
+                        if (x === lastX && y === lastY) continue;
+                        var z = y * xl + x;
+                        if (z < 0) continue;
+                        var px = ((x-lastX) / inc),
+                            py = ((y-lastY) / inc),
+                            r1 = px * b + (1-px) * c,
+                            r2 = px * t + (1-px) * l;
+                        data[z] = py * r2 + (1-py) * r1;
                     }
                 }
+                lastY = j;
             }
+            lastX = i;
+            lastY = -inc;
         }
-        for (i = 0; i < xl; i++) {
-            for (j = 0; j < yl; j++) {
+        // Assign the temporary data back to the actual terrain heightmap.
+        for (i = 0, xl = options.xSegments + 1; i < xl; i++) {
+            for (j = 0, yl = options.ySegments + 1; j < yl; j++) {
                 k = j * xl + i;
                 g[k].z += data[k] || 0;
             }
@@ -962,6 +976,10 @@ THREE.Terrain.SimplexLayers = function(g, options) {
 
     /**
      * Generate random terrain using value noise.
+     *
+     * The basic approach of value noise is to generate white noise at a
+     * smaller octave than the target and then interpolate to get a higher-
+     * resolution result. This is then repeated at different resolutions.
      *
      * Parameters are the same as those for {@link THREE.Terrain.DiamondSquare}.
      */
@@ -972,11 +990,18 @@ THREE.Terrain.SimplexLayers = function(g, options) {
         for (n = 1; Math.pow(2, n) < segments; n++) {}
         segments = Math.pow(2, n);
 
-        data = new Array(segments*(segments+1));
+        // Store the array of white noise outside of the WhiteNoise function to
+        // avoid allocating a bunch of unnecessary arrays; we can just
+        // overwrite old data each time WhiteNoise() is called.
+        var data = new Array(segments*(segments+1));
+
+        // Layer white noise at different resolutions.
         var range = options.maxHeight - options.minHeight;
         for (var i = 2; i < 7; i++) {
-            WhiteNoise(g, options, Math.pow(2, i), segments, range * Math.pow(2, 2.4-i*1.2));
+            WhiteNoise(g, options, Math.pow(2, i), segments, range * Math.pow(2, 2.4-i*1.2), data);
         }
+
+        // White noise creates some weird artifacts; fix them.
         THREE.Terrain.Smooth(g, options);
         THREE.Terrain.Clamp(g, {
             maxHeight: options.maxHeight,
