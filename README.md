@@ -12,6 +12,12 @@ Include the script on your page (after the `three.js` library):
 <script src="THREE.Terrain.min.js"></script>
 ```
 
+Or with Bower (`bower install THREE.Terrain`):
+
+```html
+<script src="bower_components\THREE.Terrain\build\THREE.Terrain.min.js"></script>
+```
+
 Then, in your own script, generate a terrain and add it to your scene:
 
 ```javascript
