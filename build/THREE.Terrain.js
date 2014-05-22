@@ -1,5 +1,5 @@
 /**
- * THREE.Terrain.js 1.1.0-17052014
+ * THREE.Terrain.js 1.1.0-21052014
  *
  * @author Isaac Sukin (http://www.isaacsukin.com/)
  * @license MIT
@@ -202,7 +202,8 @@
  *     `THREE.Terrain` function.
  *   - `easing`: A function that affects the distribution of slopes by
  *     interpolating the height of each vertex along a curve. Valid values
- *     include `THREE.Terrain.Linear`, `THREE.Terrain.EaseInOut`,
+ *     include `THREE.Terrain.Linear`, `THREE.Terrain.EaseIn`,
+ *     `THREE.Terrain.EaseOut`, `THREE.Terrain.EaseInOut`,
  *     `THREE.Terrain.InEaseOut`, and any custom function that accepts a float
  *     between 0 and 1 and returns a float between 0 and 1.
  *   - `frequency`: For terrain generation methods that support it (Perlin,
@@ -596,6 +597,14 @@ THREE.Terrain.Clamp = function(g, options) {
  * @param {Number} distance
  *    The distance from the edge at which the edges should begin to be affected
  *    by this operation.
+ * @param {Number/Function} [e=THREE.Terrain.EaseInOut]
+ *   A function that determines how quickly the terrain will transition between
+ *   its current height and the edge shape as distance to the edge decreases.
+ *   It does this by interpolating the height of each vertex along a curve.
+ *   Valid values include `THREE.Terrain.Linear`, `THREE.Terrain.EaseIn`,
+ *   `THREE.Terrain.EaseOut`, `THREE.Terrain.EaseInOut`,
+ *   `THREE.Terrain.InEaseOut`, and any custom function that accepts a float
+ *   between 0 and 1 and returns a float between 0 and 1.
  */
 THREE.Terrain.Edges = function(g, options, direction, distance, easing) {
     var numXSegments = Math.floor(distance / (options.xSize / options.xSegments)) || 1,
@@ -946,13 +955,12 @@ THREE.Terrain.SimplexLayers = function(g, options) {
             yl = segments,
             inc = Math.floor(segments / scale),
             lastX = -inc,
-            lastY = -inc,
-            k;
+            lastY = -inc;
         // Walk over the target. For a target of size W and a resolution of N,
         // set every W/N points (in both directions).
         for (i = 0; i <= xl; i += inc) {
             for (j = 0; j <= yl; j += inc) {
-                k = j * xl + i;
+                var k = j * xl + i;
                 data[k] = Math.random() * range;
                 if (lastX < 0 && lastY < 0) continue;
                 /* c b *
@@ -983,8 +991,10 @@ THREE.Terrain.SimplexLayers = function(g, options) {
         // Assign the temporary data back to the actual terrain heightmap.
         for (i = 0, xl = options.xSegments + 1; i < xl; i++) {
             for (j = 0, yl = options.ySegments + 1; j < yl; j++) {
-                k = j * xl + i;
-                g[k].z += data[k] || 0;
+                // http://stackoverflow.com/q/23708306/843621
+                var kg = j * xl + i,
+                    kd = j * segments + i;
+                g[kg].z += data[kd] || 0;
             }
         }
     }

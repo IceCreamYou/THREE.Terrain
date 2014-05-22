@@ -16,7 +16,8 @@
  *     `THREE.Terrain` function.
  *   - `easing`: A function that affects the distribution of slopes by
  *     interpolating the height of each vertex along a curve. Valid values
- *     include `THREE.Terrain.Linear`, `THREE.Terrain.EaseInOut`,
+ *     include `THREE.Terrain.Linear`, `THREE.Terrain.EaseIn`,
+ *     `THREE.Terrain.EaseOut`, `THREE.Terrain.EaseInOut`,
  *     `THREE.Terrain.InEaseOut`, and any custom function that accepts a float
  *     between 0 and 1 and returns a float between 0 and 1.
  *   - `frequency`: For terrain generation methods that support it (Perlin,

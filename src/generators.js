@@ -209,13 +209,12 @@ THREE.Terrain.SimplexLayers = function(g, options) {
             yl = segments,
             inc = Math.floor(segments / scale),
             lastX = -inc,
-            lastY = -inc,
-            k;
+            lastY = -inc;
         // Walk over the target. For a target of size W and a resolution of N,
         // set every W/N points (in both directions).
         for (i = 0; i <= xl; i += inc) {
             for (j = 0; j <= yl; j += inc) {
-                k = j * xl + i;
+                var k = j * xl + i;
                 data[k] = Math.random() * range;
                 if (lastX < 0 && lastY < 0) continue;
                 /* c b *
@@ -246,8 +245,10 @@ THREE.Terrain.SimplexLayers = function(g, options) {
         // Assign the temporary data back to the actual terrain heightmap.
         for (i = 0, xl = options.xSegments + 1; i < xl; i++) {
             for (j = 0, yl = options.ySegments + 1; j < yl; j++) {
-                k = j * xl + i;
-                g[k].z += data[k] || 0;
+                // http://stackoverflow.com/q/23708306/843621
+                var kg = j * xl + i,
+                    kd = j * segments + i;
+                g[kg].z += data[kd] || 0;
             }
         }
     }

@@ -1,7 +1,7 @@
 ## 1.2
 
-Fix artifacts in the value noise implementation when width:length ratio > 1. http://stackoverflow.com/q/23708306/843621
-Support an "influence" function which takes a location, radius, and a function that takes coordinates [0, 1] and returns a scaled height; and apply that feature to the terrain at the specified location, with intensity increasing as the radius decreases (similar to the edge filter).
+Check for fencepost error in Value Noise algorithm http://stackoverflow.com/q/23708306/843621
+Add influences.js to Grunt, test it, and add to demo
 Implement hill algorithm (feature picking). See http://www.stuffwithstuff.com/robot-frog/3d/hills/hill.html
 
 
@@ -19,6 +19,7 @@ Write documentation that's not in the code
 
 Try using the terrain with a physics library
 Support manually convolving terrain
+Support random distortions for influences
 
 
 ## 2.0

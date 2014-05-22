@@ -129,7 +129,7 @@ function setupDatGui() {
     THREE.ImageUtils.loadTexture('demo/img/sand1.jpg', undefined, function(t1) {
       t1.wrapS = t1.wrapT = THREE.RepeatWrapping;
       sand = new THREE.Mesh(
-        new THREE.PlaneGeometry(16384+1024, 16384+1024, 32, 32),
+        new THREE.PlaneGeometry(16384+1024, 16384+1024, 64, 64),
         new THREE.MeshLambertMaterial({map: t1})
       );
       sand.position.y = -101;

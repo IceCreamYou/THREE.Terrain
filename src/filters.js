@@ -53,6 +53,14 @@ THREE.Terrain.Clamp = function(g, options) {
  * @param {Number} distance
  *    The distance from the edge at which the edges should begin to be affected
  *    by this operation.
+ * @param {Number/Function} [e=THREE.Terrain.EaseInOut]
+ *   A function that determines how quickly the terrain will transition between
+ *   its current height and the edge shape as distance to the edge decreases.
+ *   It does this by interpolating the height of each vertex along a curve.
+ *   Valid values include `THREE.Terrain.Linear`, `THREE.Terrain.EaseIn`,
+ *   `THREE.Terrain.EaseOut`, `THREE.Terrain.EaseInOut`,
+ *   `THREE.Terrain.InEaseOut`, and any custom function that accepts a float
+ *   between 0 and 1 and returns a float between 0 and 1.
  */
 THREE.Terrain.Edges = function(g, options, direction, distance, easing) {
     var numXSegments = Math.floor(distance / (options.xSize / options.xSegments)) || 1,
