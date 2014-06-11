@@ -56,10 +56,10 @@ All parameters are optional and thoroughly documented in the
 You can play around with some of the parameters and see what happens in the
 [demo](https://icecreamyou.github.io/THREE.Terrain/).
 
-Default methods for generating terrain procedurally include Diamond-Square (a
-better version of Midpoint Displacement), Perlin and Simplex noise, Value
-noise, Weierstrass functions, Worley noise (aka Cell or Voronoi noise), and
-various combinations of those.
+Methods for generating terrain procedurally that are available by default
+include Diamond-Square (a better version of Midpoint Displacement), Perlin and
+Simplex noise, Value noise, Weierstrass functions, Worley noise (aka Cell or
+Voronoi noise), and various combinations of those.
 
 ### Exporting and Importing
 
@@ -76,15 +76,20 @@ var canvas = THREE.Terrain.toHeightmap(
 );
 ```
 
-Of course, the easy way to generate a heightmap if all you need is a static
-terrain is to use the [demo](https://icecreamyou.github.io/THREE.Terrain/) and
+The result will look something like this:
+
+![Heightmap](https://raw.githubusercontent.com/IceCreamYou/THREE.Terrain/gh-pages/demo/img/heightmap.png)
+
+Of course, the easy way to generate a heightmap (if all you need is a static
+terrain) is to use the [demo](https://icecreamyou.github.io/THREE.Terrain/) and
 save the generated heightmap that appears in the upper-left corner. However,
 if you want to perform custom manipulations on the terrain first you will need
 to export the heightmap yourself.
 
 To import a heightmap, create a terrain as explained above, but pass the loaded
 heightmap image (or a canvas containing a heightmap) to the `heightmap` option
-for the `THREE.Terrain()` function.
+for the `THREE.Terrain()` function (instead of passing a procedural generation
+function).
 
 If you want to export and import the scattered foliage with the terrain or if
 you want to export/import the whole scene, you can do this the usual Three.js
