@@ -1,5 +1,5 @@
 /**
- * THREE.Terrain.js 1.1.0-21052014
+ * THREE.Terrain.js 1.1.0-10062014
  *
  * @author Isaac Sukin (http://www.isaacsukin.com/)
  * @license MIT
@@ -994,7 +994,7 @@ THREE.Terrain.SimplexLayers = function(g, options) {
                 // http://stackoverflow.com/q/23708306/843621
                 var kg = j * xl + i,
                     kd = j * segments + i;
-                g[kg].z += data[kd] || 0;
+                g[kg].z += data[kd];
             }
         }
     }
@@ -1018,7 +1018,7 @@ THREE.Terrain.SimplexLayers = function(g, options) {
         // Store the array of white noise outside of the WhiteNoise function to
         // avoid allocating a bunch of unnecessary arrays; we can just
         // overwrite old data each time WhiteNoise() is called.
-        var data = new Array(segments*(segments+1));
+        var data = new Float32Array((segments+1)*(segments+1));
 
         // Layer white noise at different resolutions.
         var range = options.maxHeight - options.minHeight;
@@ -1271,6 +1271,9 @@ THREE.Terrain.generateBlendedMaterial = function(textures) {
  *   - `maxSlope`: The angle in radians between the normal of a face of the
  *     terrain and the "up" vector above which no mesh will be placed on the
  *     related face. Defaults to ~0.63, which is 36 degrees.
+ *   - `maxTilt`: The maximum angle in radians a mesh can be tilted away from
+ *     the "up" vector (towards the normal vector of the face of the terrain).
+ *     Defaults to Infinity (meshes will point towards the normal).
  *   - `w`: The number of horizontal segments of the terrain.
  *   - `h`: The number of vertical segments of the terrain.
  *
@@ -1298,6 +1301,7 @@ THREE.Terrain.ScatterMeshes = function(geometry, options) {
         sizeVariance: 0.1,
         randomness: Math.random,
         maxSlope: 0.6283185307179586, // 36deg or 36 / 180 * Math.PI, about the angle of repose of earth
+        maxTilt: Infinity,
         w: 0,
         h: 0,
     };
@@ -1349,8 +1353,17 @@ THREE.Terrain.ScatterMeshes = function(geometry, options) {
                 //mesh.geometry.computeBoundingBox();
                 mesh.position.copy(v[f.a]).add(v[f.b]).add(v[f.c]).divideScalar(3);
                 //mesh.translateZ((mesh.geometry.boundingBox.max.z - mesh.geometry.boundingBox.min.z) * 0.5);
-                var normal = mesh.position.clone().add(f.normal);
-                mesh.lookAt(normal);
+                if (options.maxTilt > 0) {
+                    var normal = mesh.position.clone().add(f.normal);
+                    mesh.lookAt(normal);
+                    var tiltAngle = f.normal.angleTo(up);
+                    if (tiltAngle > options.maxTilt) {
+                        var ratio = options.maxTilt / tiltAngle;
+                        mesh.rotation.x *= ratio;
+                        mesh.rotation.y *= ratio;
+                        mesh.rotation.z *= ratio;
+                    }
+                }
                 mesh.rotation.x += 90 / 180 * Math.PI;
                 mesh.rotateY(Math.random() * 2 * Math.PI);
                 if (options.sizeVariance) {

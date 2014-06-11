@@ -248,7 +248,7 @@ THREE.Terrain.SimplexLayers = function(g, options) {
                 // http://stackoverflow.com/q/23708306/843621
                 var kg = j * xl + i,
                     kd = j * segments + i;
-                g[kg].z += data[kd] || 0;
+                g[kg].z += data[kd];
             }
         }
     }
@@ -272,7 +272,7 @@ THREE.Terrain.SimplexLayers = function(g, options) {
         // Store the array of white noise outside of the WhiteNoise function to
         // avoid allocating a bunch of unnecessary arrays; we can just
         // overwrite old data each time WhiteNoise() is called.
-        var data = new Array(segments*(segments+1));
+        var data = new Float32Array((segments+1)*(segments+1));
 
         // Layer white noise at different resolutions.
         var range = options.maxHeight - options.minHeight;

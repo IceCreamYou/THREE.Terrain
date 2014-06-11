@@ -1,8 +1,8 @@
 ## 1.2
 
-Check for fencepost error in Value Noise algorithm http://stackoverflow.com/q/23708306/843621
 Add influences.js to Grunt, test it, and add to demo
 Implement hill algorithm (feature picking). See http://www.stuffwithstuff.com/robot-frog/3d/hills/hill.html
+Document importing vs building
 
 
 ## 1.3

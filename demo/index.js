@@ -265,6 +265,8 @@ function setupDatGui() {
         spread: spread,
         smoothSpread: that.scattering === 'Linear' ? 0 : 0.2,
         randomness: randomness,
+        maxSlope: 0.6283185307179586, // 36deg or 36 / 180 * Math.PI, about the angle of repose of earth
+        maxTilt: 0.15707963267948966, //  9deg or  9 / 180 * Math.PI. Trees grow up regardless of slope but we can allow a small variation
       });
       if (decoScene) {
         if (that.texture == 'Wireframe') {
