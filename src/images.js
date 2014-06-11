@@ -44,6 +44,20 @@ THREE.Terrain.fromHeightmap = function(g, options) {
  *   A canvas with the relevant heightmap painted on it.
  */
 THREE.Terrain.toHeightmap = function(g, options) {
+    var hasMax = typeof options.maxHeight === 'undefined',
+        hasMin = typeof options.minHeight === 'undefined',
+        max = hasMax ? options.maxHeight : -Infinity,
+        min = hasMin ? options.minHeight :  Infinity;
+    if (!hasMax || !hasMin) {
+        var max2 = max,
+            min2 = min;
+        for (var k = 0, l = g.length; k < l; k++) {
+            if (g[k].z > max2) max2 = g[k].z;
+            if (g[k].z < min2) min2 = g[k].z;
+        }
+        if (!hasMax) max = max2;
+        if (!hasMin) min = min2;
+    }
     var canvas = options.heightmap instanceof HTMLCanvasElement ? options.heightmap : document.createElement('canvas'),
         context = canvas.getContext('2d'),
         rows = options.ySegments + 1,

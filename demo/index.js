@@ -144,7 +144,7 @@ function setupDatGui() {
               {texture: t3, levels: [20, 50, 60, 85]},
               {texture: t4, glsl: '1.0 - smoothstep(65.0 + smoothstep(-256.0, 256.0, vPosition.x) * 10.0, 80.0, vPosition.z)'},
               {texture: t3, glsl: 'slope > 0.7853981633974483 ? 0.2 : 1.0 - smoothstep(0.47123889803846897, 0.7853981633974483, slope) + 0.2'}, // between 27 and 45 degrees
-            ], scene);
+            ]);
             that.Regenerate();
           });
         });

@@ -10,13 +10,13 @@
  *   - `after`: A function to run after other transformations on the terrain
  *     produce the highest-detail heightmap, but before optimizations and
  *     visual properties are applied. Takes two parameters, which are the same
- *     as those for {@link THREE.Terrain.DiamondSquare}: an array of `THREE.Vector3`
- *     objects representing the vertices of the terrain, and a map of options
- *     with the same available properties as the `options` parameter for the
- *     `THREE.Terrain` function.
+ *     as those for {@link THREE.Terrain.DiamondSquare}: an array of
+ *     `THREE.Vector3` objects representing the vertices of the terrain, and a
+ *     map of options with the same available properties as the `options`
+ *     parameter for the `THREE.Terrain` function.
  *   - `easing`: A function that affects the distribution of slopes by
  *     interpolating the height of each vertex along a curve. Valid values
- *     include `THREE.Terrain.Linear`, `THREE.Terrain.EaseIn`,
+ *     include `THREE.Terrain.Linear` (the default), `THREE.Terrain.EaseIn`,
  *     `THREE.Terrain.EaseOut`, `THREE.Terrain.EaseInOut`,
  *     `THREE.Terrain.InEaseOut`, and any custom function that accepts a float
  *     between 0 and 1 and returns a float between 0 and 1.
@@ -31,14 +31,13 @@
  *   - `heightmap`: Either a pre-loaded image (from the same domain as the
  *     webpage or served with a CORS-friendly header) representing terrain
  *     height data (lighter pixels are higher); or a function used to generate
- *     random height data for the terrain. Valid random functions include
- *     `THREE.Terrain.DiamondSquare` (the default), `THREE.Terrain.Perlin`,
- *     `THREE.Terrain.Simplex`, `THREE.Terrain.PerlinDiamond`, or a custom
- *     function with the same signature. (Ideally heightmap images have the
- *     same number of pixels as the terrain has vertices, as determined by the
- *     `xSegments` and `ySegments` options, but this is not required: if the
- *     heightmap is a different size, vertex height values will be
- *     interpolated.)
+ *     random height data for the terrain. Valid random functions are specified
+ *     in `generators.js` (or custom functions with the same signature).
+ *     (Ideally heightmap images have the same number of pixels as the terrain
+ *     has vertices, as determined by the `xSegments` and `ySegments` options,
+ *     but this is not required: if the heightmap is a different size, vertex
+ *     height values will be interpolated.) Defaults to
+ *     `THREE.Terrain.DiamondSquare`.
  *   - `material`: a THREE.Material instance used to display the terrain.
  *     Defaults to `new THREE.MeshBasicMaterial({color: 0xee6633})`.
  *   - `maxHeight`: the highest point, in Three.js units, that a peak should
@@ -46,14 +45,16 @@
  *   - `minHeight`: the lowest point, in Three.js units, that a valley should
  *     reach. Defaults to -100.
  *   - `steps`: If this is a number above 1, the terrain will be paritioned
- *     into that many flat "steps," resulting in a blocky appearance.
+ *     into that many flat "steps," resulting in a blocky appearance. Defaults
+ *     to 1.
  *   - `stretch`: Determines whether to stretch the heightmap across the
  *     maximum and minimum height range if the height range produced by the
  *     `heightmap` property is smaller. Defaults to true.
- *   - `turbulent`: Whether to perform a turbulence transformation.
+ *   - `turbulent`: Whether to perform a turbulence transformation. Defaults to
+ *     false.
  *   - `useBufferGeometry`: a Boolean indicating whether to use
  *     THREE.BufferGeometry instead of THREE.Geometry for the Terrain plane.
- *     Defaults to `true`.
+ *     Defaults to `false`.
  *   - `xSegments`: The number of segments (rows) to divide the terrain plane
  *     into. (This basically determines how detailed the terrain is.) Defaults
  *     to 63.
@@ -80,7 +81,7 @@ THREE.Terrain = function(options) {
         steps: 1,
         stretch: true,
         turbulent: false,
-        useBufferGeometry: true,
+        useBufferGeometry: false,
         xSegments: 63,
         xSize: 1024,
         ySegments: 63,
