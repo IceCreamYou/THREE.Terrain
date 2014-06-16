@@ -53,10 +53,10 @@ THREE.Terrain.Influences = {
  *   The height of the feature.
  * @param {String} [t]
  *   Determines how to layer the feature on top of the existing terrain. Valid
- *   values include `THREE.AdditiveBlending`, `THREE.SubtractiveBlending`,
- *   `THREE.MultiplyBlending`, `THREE.NoBlending`, and any function that takes
- *   the terrain's current height and the feature's displacement at a vertex
- *   and returns the new height for that vertex.
+ *   values include `THREE.AdditiveBlending` (the default),
+ *   `THREE.SubtractiveBlending`, `THREE.MultiplyBlending`, `THREE.NoBlending`,
+ *   and any function that takes the terrain's current height and the feature's
+ *   displacement at a vertex and returns the new height for that vertex.
  * @param {Number/Function} [e=THREE.Terrain.Linear]
  *   A function that determines the "falloff" of the feature, i.e. how quickly
  *   the terrain will get close to its height before the feature was applied as
@@ -68,40 +68,39 @@ THREE.Terrain.Influences = {
  *   between 0 and 1 and returns a float between 0 and 1.
  */
 THREE.Terrain.Influence = function(g, options, f, x, y, r, h, t, e) {
-    f = f || THREE.Terrain.Influences.Hill;
-    x = typeof x === 'undefined' ? 0.5 : x;
-    y = typeof y === 'undefined' ? 0.5 : y;
-    r = typeof r === 'undefined' ? 64  : r;
-    h = typeof h === 'undefined' ? 64  : h;
-    t = typeof t === 'undefined' ? THREE.AdditiveBlending : t;
-    e = e || THREE.Terrain.Linear;
+    f = f || THREE.Terrain.Influences.Hill; // feature shape
+    x = typeof x === 'undefined' ? 0.5 : x; // x-location %
+    y = typeof y === 'undefined' ? 0.5 : y; // y-location %
+    r = typeof r === 'undefined' ? 64  : r; // radius
+    h = typeof h === 'undefined' ? 64  : h; // height
+    t = typeof t === 'undefined' ? THREE.AdditiveBlending : t; // blending
+    e = e || THREE.Terrain.Linear; // falloff
     // Find the vertex location of the feature origin
-    var xl = options.xSegments + 1,
-        yl = options.ySegments + 1,
-        vx = xl * x,
-        vy = yl * y,
-        rx = r / (options.xSize / options.xSegments),
-        ry = r / (options.ySize / options.ySegments),
-        xs = Math.ceil(vx - rx),
-        xe = Math.floor(vx + rx),
-        yx = Math.ceil(vy - ry),
-        ye = Math.floor(vy + ry),
-        r1 = 1 / r;
+    var xl = options.xSegments + 1, // # x-vertices
+        yl = options.ySegments + 1, // # y-vertices
+        vx = xl * x, // vertex x-location
+        vy = yl * y, // vertex y-location
+        rx = r / (options.xSize / options.xSegments), // radius of the feature in vertices on the x-axis
+        ry = r / (options.ySize / options.ySegments), // radius of the feature in vertices on the y-axis
+        xs = Math.ceil(vx - rx),  // starting x-vertex index
+        xe = Math.floor(vx + rx), // ending x-vertex index
+        ys = Math.ceil(vy - ry),  // starting y-vertex index
+        ye = Math.floor(vy + ry); // ending y-vertex index
     // Walk over the vertices within radius of origin
     for (var i = xs; i < xe; i++) {
         for (var j = ys; j < ye; j++) {
             var k = j * xl + i,
                 // The feature coordinates [-1, 1]
-                xf = (i - vx) * r1,
-                yf = (j - vy) * r1,
+                xf = (i - vx) / rx,
+                yf = (j - vy) / ry,
                 // Get the displacement according to f, interpolate using e,
                 // multiply it by h, then blend according to t.
                 d = e(f(xf, yf)) * h;
-            if      (t === THREE.AdditiveBlending)    g[k] += d;
-            else if (t === THREE.SubtractiveBlending) g[k] -= d;
-            else if (t === THREE.MultiplyBlending)    g[k] *= d;
-            else if (t === THREE.NoBlending)          g[k]  = d;
-            else if (typeof t === 'function')         g[k]  = t(g[k], d);
+            if      (t === THREE.AdditiveBlending)    g[k].z += d;
+            else if (t === THREE.SubtractiveBlending) g[k].z -= d;
+            else if (t === THREE.MultiplyBlending)    g[k].z *= d;
+            else if (t === THREE.NoBlending)          g[k].z  = d;
+            else if (typeof t === 'function')         g[k].z  = t(g[k], d);
         }
     }
 };

@@ -1,6 +1,11 @@
 ## 1.2
 
-Add influences.js to Grunt, test it, and add to demo
+Influences should interpolate to existing terrain, not based on their own height
+    Actually, what we really want is for the influence functions to be 2D: take a distance from the origin and return the corresponding height.
+    Then for each vertex, calculate the distance to the feature origin and pass it to the influence function.
+    Then calculate a weight based on that distance: 1 - falloff(distance / radius). Multiply by the calculated height.
+    Default falloff should be EaseInOut.
+Add influences to demo
 Implement hill algorithm (feature picking). See http://www.stuffwithstuff.com/robot-frog/3d/hills/hill.html
 
 
