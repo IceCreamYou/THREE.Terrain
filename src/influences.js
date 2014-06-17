@@ -7,15 +7,19 @@
  * Equations describing geographic features.
  */
 THREE.Terrain.Influences = {
-    // Subtractive version looks like a hole
     Mesa: function(x) {
         return 1.25 * Math.min(0.8, Math.exp(-(x*x)));
     },
-    // Subtractive version looks like a valley/basin
+    Hole: function(x) {
+        return -THREE.Terrain.Influences.Mesa(x);
+    },
     Hill: function(x) {
         return Math.exp(-(x*x));
     },
-    // Only meaningful in NoBlending or MultiplyBlending mode
+    Valley: function(x) {
+        return -THREE.Terrain.Influences.Hill(x);
+    },
+    // Not meaningful in Additive or Subtractive mode
     Flat: function(x) {
         return 0;
     },
