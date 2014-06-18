@@ -442,7 +442,7 @@ function customInfluences(g, options) {
   clonedOptions.minHeight = options.minHeight * 0.67;
   THREE.Terrain.DiamondSquare(g, clonedOptions);
 
-  var radius = Math.min(options.xSize, options.ySize) * 0.25,
+  var radius = Math.min(options.xSize, options.ySize) * 0.21,
       height = options.maxHeight * 0.8;
   THREE.Terrain.Influence(
     g, options,
@@ -458,7 +458,7 @@ function customInfluences(g, options) {
     0.75, 0.75,
     radius, height,
     THREE.SubtractiveBlending,
-    THREE.Terrain.EaseIn
+    THREE.Terrain.EaseInStrong
   );
   THREE.Terrain.Influence(
     g, options,
@@ -473,7 +473,7 @@ function customInfluences(g, options) {
     THREE.Terrain.Influences.Volcano,
     0.25, 0.75,
     radius, options.maxHeight,
-    THREE.NoBlending,
-    THREE.Terrain.EaseInOut
+    THREE.NormalBlending,
+    THREE.Terrain.EaseInStrong
   );
 }

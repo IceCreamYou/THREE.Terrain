@@ -476,6 +476,11 @@ THREE.Terrain.InEaseOut = function(x) {
     return 0.5 * y*y*y + 0.5;
 };
 
+// x = [0, 1], x^7
+THREE.Terrain.EaseInStrong = function(x) {
+    return x*x*x*x*x*x*x;
+};
+
 /**
  * Convert an image-based heightmap into vertex-based height data.
  *
