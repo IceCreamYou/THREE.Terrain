@@ -1,7 +1,9 @@
 ## 1.2
 
-Add influences to demo
 Implement hill algorithm (feature picking). See http://www.stuffwithstuff.com/robot-frog/3d/hills/hill.html
+    Allow picking what feature to use
+    Additively place a bunch of features at random locations with random radii/heights
+Make the Edge filter support working by radial distance from the center rather than distance from the edges
 
 
 ## 1.3

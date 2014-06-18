@@ -183,7 +183,7 @@ function setupDatGui() {
       var o = {
         after: that.after,
         easing: THREE.Terrain[that.easing],
-        heightmap: h ? heightmapImage : THREE.Terrain[that.heightmap],
+        heightmap: h ? heightmapImage : (that.heightmap === 'influences' ? customInfluences : THREE.Terrain[that.heightmap]),
         material: that.texture == 'Wireframe' ? mat : (that.texture == 'Blended' ? blend : gray),
         maxHeight: that.maxHeight - 100,
         minHeight: -100,
@@ -282,7 +282,7 @@ function setupDatGui() {
   var gui = new dat.GUI();
   var settings = new Settings();
   var heightmapFolder = gui.addFolder('Heightmap');
-  heightmapFolder.add(settings, 'heightmap', ['DiamondSquare', 'heightmap.png', 'Perlin', 'PerlinDiamond', 'PerlinLayers', 'Simplex', 'SimplexLayers', 'Value', 'Weierstrass', 'Worley']).onFinishChange(settings.Regenerate);
+  heightmapFolder.add(settings, 'heightmap', ['DiamondSquare', 'heightmap.png', 'influences', 'Perlin', 'PerlinDiamond', 'PerlinLayers', 'Simplex', 'SimplexLayers', 'Value', 'Weierstrass', 'Worley']).onFinishChange(settings.Regenerate);
   heightmapFolder.add(settings, 'easing', ['Linear', 'EaseIn', 'EaseOut', 'EaseInOut', 'InEaseOut']).onFinishChange(settings.Regenerate);
   heightmapFolder.add(settings, 'segments', 7, 127).step(1).onFinishChange(settings.Regenerate);
   heightmapFolder.add(settings, 'steps', 1, 8).step(1).onFinishChange(settings.Regenerate);
@@ -429,4 +429,51 @@ function buildTree() {
   m.scale.x = m.scale.z = 5;
   m.scale.y = 1.25;
   return m;
+}
+
+function customInfluences(g, options) {
+  var clonedOptions = {};
+  for (var opt in options) {
+      if (options.hasOwnProperty(opt)) {
+          clonedOptions[opt] = options[opt];
+      }
+  }
+  clonedOptions.maxHeight = options.maxHeight * 0.67;
+  clonedOptions.minHeight = options.minHeight * 0.67;
+  THREE.Terrain.DiamondSquare(g, clonedOptions);
+
+  var radius = Math.min(options.xSize, options.ySize) * 0.25,
+      height = options.maxHeight * 0.8;
+  THREE.Terrain.Influence(
+    g, options,
+    THREE.Terrain.Influences.Hill,
+    0.25, 0.25,
+    radius, height,
+    THREE.AdditiveBlending,
+    THREE.Terrain.Linear
+  );
+  THREE.Terrain.Influence(
+    g, options,
+    THREE.Terrain.Influences.Mesa,
+    0.75, 0.75,
+    radius, height,
+    THREE.SubtractiveBlending,
+    THREE.Terrain.EaseIn
+  );
+  THREE.Terrain.Influence(
+    g, options,
+    THREE.Terrain.Influences.Flat,
+    0.75, 0.25,
+    radius, options.maxHeight,
+    THREE.NormalBlending,
+    THREE.Terrain.EaseIn
+  );
+  THREE.Terrain.Influence(
+    g, options,
+    THREE.Terrain.Influences.Volcano,
+    0.25, 0.75,
+    radius, options.maxHeight,
+    THREE.NoBlending,
+    THREE.Terrain.EaseInOut
+  );
 }

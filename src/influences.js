@@ -24,7 +24,7 @@ THREE.Terrain.Influences = {
         return 0;
     },
     Volcano: function(x) {
-        return 1 - 0.5 * (Math.abs(2 * x) + Math.cos(1.5 * Math.PI * x));
+        return 0.94 - 0.32 * (Math.abs(2 * x) + Math.cos(2 * Math.PI * Math.abs(x) + 0.4));
     },
 };
 
