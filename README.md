@@ -57,9 +57,10 @@ You can play around with some of the parameters and see what happens in the
 [demo](https://icecreamyou.github.io/THREE.Terrain/).
 
 Methods for generating terrain procedurally that are available by default
-include Diamond-Square (a better version of Midpoint Displacement), Perlin and
-Simplex noise, Value noise, Weierstrass functions, Worley noise (aka Cell or
-Voronoi noise), and various combinations of those.
+include Cosine, Diamond-Square (a better version of Midpoint Displacement),
+Fault lines, Feature picking, Particle deposition, Perlin and Simplex noise,
+Value noise, Weierstrass functions, Worley noise (aka Cell or Voronoi noise),
+and various combinations of those.
 
 ### Exporting and Importing
 
@@ -128,10 +129,10 @@ var material = THREE.Terrain.generateBlendedMaterial([
 ### More
 
 Many other utilities are provided, for example for compositing different
-terrain generation methods; creating islands, cliffs, and plateaus; manually
-influencing the terrain's shape at different locations; and more. These will
-be documented online soon. In the mean time, these features are all fully
-documented in the
+terrain generation methods; creating islands, cliffs, canyonjs, and plateaus;
+manually influencing the terrain's shape at different locations; different
+kinds of smoothing; and more. These will be documented online soon. In the mean
+time, these features are all fully documented in the
 [source code](https://github.com/IceCreamYou/THREE.Terrain/blob/gh-pages/build/THREE.Terrain.js).
 Additionally, you can create custom methods for generating terrain or affecting
 other processes. How to do so will also be documented soon. A writeup on how it

@@ -14,10 +14,15 @@ THREE.Terrain.Influences = {
         return -THREE.Terrain.Influences.Mesa(x);
     },
     Hill: function(x) {
-        return Math.exp(-(x*x));
+        // Same curve as EaseInOut, but mirrored and translated.
+        return x < 0 ? (x+1)*(x+1)*(3-2*(x+1)) : 1-x*x*(3-2*x);
     },
     Valley: function(x) {
         return -THREE.Terrain.Influences.Hill(x);
+    },
+    Dome: function(x) {
+        // Parabola
+        return -(x+1)*(x-1);
     },
     // Not meaningful in Additive or Subtractive mode
     Flat: function(x) {
@@ -49,10 +54,10 @@ THREE.Terrain.Influences = {
  *   purpose.
  * @param {Number} [x=0.5]
  *   How far across the terrain the feature should be placed on the X-axis, in
- *   percent (as a decimal) of the size of the terrain on that axis.
+ *   PERCENT (as a decimal) of the size of the terrain on that axis.
  * @param {Number} [y=0.5]
  *   How far across the terrain the feature should be placed on the Y-axis, in
- *   percent (as a decimal) of the size of the terrain on that axis.
+ *   PERCENT (as a decimal) of the size of the terrain on that axis.
  * @param {Number} [r=64]
  *   The radius of the feature.
  * @param {Number} [h=64]
@@ -115,7 +120,7 @@ THREE.Terrain.Influence = function(g, options, f, x, y, r, h, t, e) {
                 // Get the displacement according to f, multiply it by h,
                 // interpolate using e, then blend according to t.
                 d = f(fdr, fdxr, fdyr) * h * (1 - e(fdr, fdxr, fdyr));
-            if (fd > r) continue;
+            if (fd > r || typeof g[k] == 'undefined') continue;
             if      (t === THREE.AdditiveBlending)    g[k].z += d;
             else if (t === THREE.SubtractiveBlending) g[k].z -= d;
             else if (t === THREE.MultiplyBlending)    g[k].z *= d;

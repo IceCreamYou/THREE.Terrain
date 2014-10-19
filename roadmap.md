@@ -1,13 +1,7 @@
 ## 1.2
 
-Implement hill algorithm (feature picking). See http://www.stuffwithstuff.com/robot-frog/3d/hills/hill.html
-    Allow picking what feature to use
-    Additively place a bunch of features at random locations with random radii/heights
-Investigate smoothed white noise with different kernels
-    http://www.giantbomb.com/forums/general-discussion-30/graphics-blog-fast-fourier-terrain-generation-1480560/
-    http://homepages.inf.ed.ac.uk/rbf/HIPR2/gsmooth.htm
-    http://www.gamasutra.com/view/feature/131583/using_bitmaps_for_automatic_.php?print=1
-    http://www.keithlantz.net/2011/11/using-fourier-synthesis-to-generate-a-fractional-brownian-motion-surface/
+Read http://pcgbook.com/ and see if I get any fun ideas!
+Implement Gaussian smoothing? Could work well with Value Noise
 
 
 ## 1.3
@@ -15,7 +9,8 @@ Investigate smoothed white noise with different kernels
 Make the Edge filter support working by radial distance from the center rather than distance from the edges
 Phong lighting for generated textures
 Allow making slopes rougher than flats
-    Create a filter that supports compositing another heightmap / the result of a procedural function over the terrain at different intensities depending on the existing slope at each vertex
+    Create modified smoothing functions that apply at different intensities depending on the slope
+    Create a filter that supports compositing another heightmap / the result of a procedural function over the terrain at different intensities depending on the existing slope at each vertex (a generalization of the above)
     Or create a procedural function that randomly adjusts the height of vertices with different amplitude based on their slopes
 Add a method to get the terrain height at a given spatial location
     The best way to do this is probably with a raycaster
@@ -79,3 +74,4 @@ River generation
 
 Implement optimization types
 Support infinite terrain
+Try IFFT(LowPassFilter(FFT(WhiteNoise()))) again as a procedural generation method

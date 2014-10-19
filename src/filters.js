@@ -137,6 +137,78 @@ THREE.Terrain.Smooth = function(g, options, weight) {
 };
 
 /**
+ * Smooth the terrain by setting each point to the median of its neighborhood.
+ *
+ * Parameters are the same as those for {@link THREE.Terrain.DiamondSquare}.
+ */
+THREE.Terrain.SmoothMedian = function(g, options) {
+    var heightmap = new Float32Array(g.length),
+        neighborValues = [],
+        neighborKeys = [],
+        sortByValue = function(a, b) {
+            return neighborValues[a] - neighborValues[b];
+        };
+    for (var i = 0, xl = options.xSegments + 1; i < xl; i++) {
+        for (var j = 0; j < options.ySegments + 1; j++) {
+            neighborValues.length = 0;
+            neighborKeys.length = 0;
+            for (var n = -1; n <= 1; n++) {
+                for (var m = -1; m <= 1; m++) {
+                    var key = (j+n)*xl + i + m;
+                    if (typeof g[key] !== 'undefined') {
+                        neighborValues.push(g[key].z);
+                        neighborKeys.push(key);
+                    }
+                }
+            }
+            neighborKeys.sort(sortByValue);
+            var halfKey = Math.floor(neighborKeys.length*0.5),
+                median;
+            if (neighborKeys.length % 2 === 1) {
+                median = g[neighborKeys[halfKey]].z;
+            }
+            else {
+                median = (g[neighborKeys[halfKey-1]].z + g[neighborKeys[halfKey]].z) * 0.5;
+            }
+            heightmap[j*xl + i] = median;
+        }
+    }
+    for (var k = 0, l = g.length; k < l; k++) {
+        g[k].z = heightmap[k];
+    }
+};
+
+/**
+ * Smooth the terrain by clamping each point within its neighbors' extremes.
+ *
+ * Parameters are the same as those for {@link THREE.Terrain.DiamondSquare}.
+ */
+THREE.Terrain.SmoothConservative = function(g, options) {
+    var heightmap = new Float32Array(g.length);
+    for (var i = 0, xl = options.xSegments + 1; i < xl; i++) {
+        for (var j = 0; j < options.ySegments + 1; j++) {
+            var max = -Infinity,
+                min = Infinity;
+            for (var n = -1; n <= 1; n++) {
+                for (var m = -1; m <= 1; m++) {
+                    var key = (j+n)*xl + i + m;
+                    if (typeof g[key] !== 'undefined' && n && m) {
+                        if (g[key].z < min) min = g[key].z;
+                        else if (g[key].z > max) max = g[key].z;
+                    }
+                }
+            }
+            var kk = j*xl + i;
+            heightmap[kk] = g[kk].z > max ? max : (g[kk].z < min ? min : g[kk].z);
+            if (heightmap[kk] === Infinity || heightmap[kk] === -Infinity) heightmap[kk] = g[kk].z;
+        }
+    }
+    for (var k = 0, l = g.length; k < l; k++) {
+        g[k].z = heightmap[k];
+    }
+};
+
+/**
  * Partition a terrain into flat steps.
  *
  * @param {THREE.Vector3[]} g
