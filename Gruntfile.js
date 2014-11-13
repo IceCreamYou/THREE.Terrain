@@ -1,6 +1,6 @@
 module.exports = function(grunt) {
   var banner = '/**\n' +
-               ' * THREE.Terrain.js <%= pkg.version %>-<%= grunt.template.today("ddmmyyyy") %>\n' +
+               ' * THREE.Terrain.js <%= pkg.version %>-<%= grunt.template.today("yyyymmdd") %>\n' +
                ' *\n' +
                ' * @author <%= pkg.author %>\n' +
                ' * @license <%= pkg.license %>\n' +
@@ -18,6 +18,7 @@ module.exports = function(grunt) {
           'src/core.js',
           'src/images.js',
           'src/filters.js',
+          //'src/gaussian.js',
           'src/generators.js',
           'src/materials.js',
           'src/scatter.js',
@@ -59,6 +60,7 @@ module.exports = function(grunt) {
           'src/core.js',
           'src/images.js',
           'src/filters.js',
+          'src/gaussian.js',
           'src/generators.js',
           'src/materials.js',
           'src/scatter.js',
@@ -78,6 +80,7 @@ module.exports = function(grunt) {
         'src/core.js',
         'src/images.js',
         'src/filters.js',
+        'src/gaussian.js',
         'src/generators.js',
         'src/materials.js',
         'src/scatter.js',
@@ -92,6 +95,7 @@ module.exports = function(grunt) {
         'src/core.js',
         'src/images.js',
         'src/filters.js',
+        'src/gaussian.js',
         'src/generators.js',
         'src/materials.js',
         'src/scatter.js',

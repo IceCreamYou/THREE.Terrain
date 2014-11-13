@@ -1,11 +1,12 @@
 ## 1.2
 
 Read http://pcgbook.com/ and see if I get any fun ideas!
-Implement Gaussian smoothing? Could work well with Value Noise
+Fix the edge that ends up weird in Gaussian blurs
 
 
 ## 1.3
 
+Implement helper functions to convert from a 1D Vector3 array to/from a 1D and 2D float array, and convert the generator and filter functions to operate on those
 Make the Edge filter support working by radial distance from the center rather than distance from the edges
 Phong lighting for generated textures
 Allow making slopes rougher than flats

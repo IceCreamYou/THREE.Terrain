@@ -224,6 +224,94 @@ THREE.Terrain.GEOCLIPMAP = 2;
 THREE.Terrain.POLYGONREDUCTION = 3;
 
 /**
+ * Get a 2D array of heightmap values from a 1D array of plane vertices.
+ *
+ * @param {THREE.Vector3[]} vertices
+ *   A 1D array containing the vertices of the plane geometry representing the
+ *   terrain, where the z-value of the vertices represent the terrain's
+ *   heightmap.
+ * @param {Object} options
+ *   A map of settings defining properties of the terrain. The only properties
+ *   that matter here are `xSegments` and `ySegments`, which represent how many
+ *   vertices wide and deep the terrain plane is, respectively (and therefore
+ *   also the dimensions of the returned array).
+ *
+ * @return {Number[][]}
+ *   A 2D array representing the terrain's heightmap.
+ */
+THREE.Terrain.toArray2D = function(vertices, options) {
+    var tgt = new Array(options.xSegments),
+        xl = options.xSegments + 1,
+        yl = options.ySegments + 1,
+        i, j;
+    for (i = 0; i < xl; i++) {
+        tgt[i] = new Float64Array(options.ySegments);
+        for (j = 0; j < yl; j++) {
+            tgt[i][j] = vertices[j * xl + i].z;
+        }
+    }
+    return tgt;
+};
+
+/**
+ * Set the height of plane vertices from a 2D array of heightmap values.
+ *
+ * @param {THREE.Vector3[]} vertices
+ *   A 1D array containing the vertices of the plane geometry representing the
+ *   terrain, where the z-value of the vertices represent the terrain's
+ *   heightmap.
+ * @param {Number[][]} src
+ *   A 2D array representing a heightmap to apply to the terrain.
+ */
+THREE.Terrain.fromArray2D = function(vertices, src) {
+    for (var i = 0, xl = src.length; i < xl; i++) {
+        for (var j = 0, yl = src[i].length; j < yl; j++) {
+            vertices[j * xl + i].z = src[i][j];
+        }
+    }
+};
+
+/**
+ * Get a 1D array of heightmap values from a 1D array of plane vertices.
+ *
+ * @param {THREE.Vector3[]} vertices
+ *   A 1D array containing the vertices of the plane geometry representing the
+ *   terrain, where the z-value of the vertices represent the terrain's
+ *   heightmap.
+ * @param {Object} options
+ *   A map of settings defining properties of the terrain. The only properties
+ *   that matter here are `xSegments` and `ySegments`, which represent how many
+ *   vertices wide and deep the terrain plane is, respectively (and therefore
+ *   also the dimensions of the returned array).
+ *
+ * @return {Number[]}
+ *   A 1D array representing the terrain's heightmap.
+ */
+THREE.Terrain.toArray1D = function(vertices) {
+    var tgt = new Float64Array(vertices.length);
+    for (var i = 0, l = tgt.length; i < l; i++) {
+        tgt[i] = vertices[i].z;
+    }
+    return tgt;
+};
+
+/**
+ * Set the height of plane vertices from a 1D array of heightmap values.
+ *
+ * @param {THREE.Vector3[]} vertices
+ *   A 1D array containing the vertices of the plane geometry representing the
+ *   terrain, where the z-value of the vertices represent the terrain's
+ *   heightmap.
+ * @param {Number[]} src
+ *   A 1D array representing a heightmap to apply to the terrain.
+ */
+THREE.Terrain.fromArray1D = function(vertices, src) {
+    for (var i = 0, l = Math.min(vertices.length, src.length); i < l; i++) {
+        vertices[i].z = src[i];
+    }
+};
+
+/**
  * Generate a 1D array containing random heightmap data.
  *
  * This is like {@link THREE.Terrain.toHeightmap} except that instead of
