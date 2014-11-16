@@ -1,5 +1,5 @@
 /**
- * THREE.Terrain.js 1.1.0-20141113
+ * THREE.Terrain.js 1.1.0-20141116
  *
  * @author Isaac Sukin (http://www.isaacsukin.com/)
  * @license MIT
@@ -765,9 +765,9 @@ THREE.Terrain.Edges = function(g, options, direction, distance, easing) {
  *   neighbors.
  */
 THREE.Terrain.Smooth = function(g, options, weight) {
-    var heightmap = new Float32Array(g.length);
-    for (var i = 0, xl = options.xSegments + 1; i < xl; i++) {
-        for (var j = 0; j < options.ySegments + 1; j++) {
+    var heightmap = new Float64Array(g.length);
+    for (var i = 0, xl = options.xSegments + 1, yl = options.ySegments + 1; i < xl; i++) {
+        for (var j = 0; j < yl; j++) {
             var sum = 0, c = 0;
             for (var n = -1; n <= 1; n++) {
                 for (var m = -1; m <= 1; m++) {
@@ -794,14 +794,14 @@ THREE.Terrain.Smooth = function(g, options, weight) {
  * Parameters are the same as those for {@link THREE.Terrain.DiamondSquare}.
  */
 THREE.Terrain.SmoothMedian = function(g, options) {
-    var heightmap = new Float32Array(g.length),
+    var heightmap = new Float64Array(g.length),
         neighborValues = [],
         neighborKeys = [],
         sortByValue = function(a, b) {
             return neighborValues[a] - neighborValues[b];
         };
-    for (var i = 0, xl = options.xSegments + 1; i < xl; i++) {
-        for (var j = 0; j < options.ySegments + 1; j++) {
+    for (var i = 0, xl = options.xSegments + 1, yl = options.ySegments + 1; i < xl; i++) {
+        for (var j = 0; j < yl; j++) {
             neighborValues.length = 0;
             neighborKeys.length = 0;
             for (var n = -1; n <= 1; n++) {
@@ -833,12 +833,23 @@ THREE.Terrain.SmoothMedian = function(g, options) {
 /**
  * Smooth the terrain by clamping each point within its neighbors' extremes.
  *
- * Parameters are the same as those for {@link THREE.Terrain.DiamondSquare}.
+ * @param {THREE.Vector3[]} g
+ *   The vertex array for plane geometry to modify with heightmap data. This
+ *   method sets the `z` property of each vertex.
+ * @param {Object} options
+ *   A map of settings that control how the terrain is constructed and
+ *   displayed. Valid values are the same as those for the `options` parameter
+ *   of {@link THREE.Terrain}().
+ * @param {Number} [multiplier=1]
+ *   By default, this filter clamps each point within the highest and lowest
+ *   value of its neighbors. This parameter is a multiplier for the range
+ *   outside of which the point will be clamped. Higher values mean that the
+ *   point can be farther outside the range of its neighbors.
  */
-THREE.Terrain.SmoothConservative = function(g, options) {
-    var heightmap = new Float32Array(g.length);
-    for (var i = 0, xl = options.xSegments + 1; i < xl; i++) {
-        for (var j = 0; j < options.ySegments + 1; j++) {
+THREE.Terrain.SmoothConservative = function(g, options, multiplier) {
+    var heightmap = new Float64Array(g.length);
+    for (var i = 0, xl = options.xSegments + 1, yl = options.ySegments + 1; i < xl; i++) {
+        for (var j = 0; j < yl; j++) {
             var max = -Infinity,
                 min = Infinity;
             for (var n = -1; n <= 1; n++) {
@@ -846,13 +857,18 @@ THREE.Terrain.SmoothConservative = function(g, options) {
                     var key = (j+n)*xl + i + m;
                     if (typeof g[key] !== 'undefined' && n && m) {
                         if (g[key].z < min) min = g[key].z;
-                        else if (g[key].z > max) max = g[key].z;
+                        if (g[key].z > max) max = g[key].z;
                     }
                 }
             }
             var kk = j*xl + i;
+            if (typeof multiplier === 'number') {
+                var halfdiff = (max - min) * 0.5,
+                    middle = min + halfdiff;
+                max = middle + halfdiff * multiplier;
+                min = middle - halfdiff * multiplier;
+            }
             heightmap[kk] = g[kk].z > max ? max : (g[kk].z < min ? min : g[kk].z);
-            if (heightmap[kk] === Infinity || heightmap[kk] === -Infinity) heightmap[kk] = g[kk].z;
         }
     }
     for (var k = 0, l = g.length; k < l; k++) {
@@ -1024,7 +1040,7 @@ THREE.Terrain.DiamondSquare = function(g, options) {
         xl = options.xSegments + 1,
         yl = options.ySegments + 1;
     for (i = 0; i <= segments; i++) {
-        heightmap[i] = new Float32Array(segments+1);
+        heightmap[i] = new Float64Array(segments+1);
     }
 
     // Generate heightmap
@@ -1068,7 +1084,7 @@ THREE.Terrain.DiamondSquare = function(g, options) {
         }
     }
 
-    THREE.Terrain.SmoothConservative(g, options);
+    //THREE.Terrain.SmoothConservative(g, options);
 };
 
 /**
@@ -1106,7 +1122,7 @@ THREE.Terrain.Fault = function(g, options) {
             }
         }
     }
-    THREE.Terrain.Smooth(g, options);
+    //THREE.Terrain.Smooth(g, options);
 };
 
 /**
@@ -1278,7 +1294,7 @@ THREE.Terrain.HillIsland = (function() {
                 j = Math.floor(options.ySegments*(0.5+yDeviation) + Math.sin(d) * Math.random() * options.ySegments*(0.5-Math.abs(yDeviation)));
             }
         }
-        THREE.Terrain.Smooth(g, options, 3);
+        //THREE.Terrain.Smooth(g, options, 3);
     };
 })();
 
@@ -1441,7 +1457,7 @@ THREE.Terrain.SimplexLayers = function(g, options) {
         // Store the array of white noise outside of the WhiteNoise function to
         // avoid allocating a bunch of unnecessary arrays; we can just
         // overwrite old data each time WhiteNoise() is called.
-        var data = new Float32Array((segments+1)*(segments+1));
+        var data = new Float64Array((segments+1)*(segments+1));
 
         // Layer white noise at different resolutions.
         var range = options.maxHeight - options.minHeight;
@@ -1450,7 +1466,7 @@ THREE.Terrain.SimplexLayers = function(g, options) {
         }
 
         // White noise creates some weird artifacts; fix them.
-        THREE.Terrain.Smooth(g, options, 1);
+        //THREE.Terrain.Smooth(g, options, 1);
         THREE.Terrain.Clamp(g, {
             maxHeight: options.maxHeight,
             minHeight: options.minHeight,

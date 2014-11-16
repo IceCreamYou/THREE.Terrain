@@ -14,7 +14,7 @@ if (/&?webgl=0\b/g.test(location.hash)) {
 // Workaround: in Chrome, if a page is opened with window.open(), window.innerWidth and window.innerHeight will be zero.
 if ( window.innerWidth === 0 ) { window.innerWidth = parent.innerWidth; window.innerHeight = parent.innerHeight; }
 
-var camera, scene, renderer, clock, player, terrainScene, decoScene, controls = {}, fpsCamera, skyDome, skyLight, sand, water;
+var camera, scene, renderer, clock, player, terrainScene, decoScene, lastOptions, controls = {}, fpsCamera, skyDome, skyLight, sand, water;
 var INV_MAX_FPS = 1 / 100,
     frameDelta = 0,
     paused = true,
@@ -152,6 +152,7 @@ function setupDatGui() {
     });
     this.easing = 'Linear';
     this.heightmap = 'PerlinDiamond';
+    this.smoothing = 'None';
     this.maxHeight = 200;
     this.segments = webglExists ? 63 : 31;
     this.steps = 1;
@@ -198,6 +199,7 @@ function setupDatGui() {
       };
       scene.remove(terrainScene);
       terrainScene = THREE.Terrain(o);
+      applySmoothing(that.smoothing, o);
       scene.add(terrainScene);
       skyDome.visible = sand.visible = water.visible = that.texture != 'Wireframe';
       var he = document.getElementById('heightmap');
@@ -206,6 +208,7 @@ function setupDatGui() {
         THREE.Terrain.toHeightmap(terrainScene.children[0].geometry.vertices, o);
       }
       that['Scatter meshes']();
+      lastOptions = o;
     };
     function altitudeProbability(z) {
       if (z > -80 && z < -50) return THREE.Terrain.EaseInOut((z + 80) / (-50 + 80)) * that.spread * 0.002;
@@ -284,6 +287,13 @@ function setupDatGui() {
   var heightmapFolder = gui.addFolder('Heightmap');
   heightmapFolder.add(settings, 'heightmap', ['Cosine', 'CosineLayers', 'DiamondSquare', 'Fault', 'heightmap.png', 'Hill', 'HillIsland', 'influences', 'Particles', 'Perlin', 'PerlinDiamond', 'PerlinLayers', 'Simplex', 'SimplexLayers', 'Value', 'Weierstrass', 'Worley']).onFinishChange(settings.Regenerate);
   heightmapFolder.add(settings, 'easing', ['Linear', 'EaseIn', 'EaseOut', 'EaseInOut', 'InEaseOut']).onFinishChange(settings.Regenerate);
+  heightmapFolder.add(settings, 'smoothing', ['Conservative (0.5)', 'Conservative (1)', 'Conservative (10)', 'Gaussian (0.5, 7)', 'Gaussian (1.0, 7)', 'Gaussian (1.5, 7)', 'Gaussian (1.0, 5)', 'Gaussian (1.0, 11)', 'GaussianBox', 'Mean (0)', 'Mean (1)', 'Mean (8)', 'Median', 'None']).onChange(function (val) {
+    applySmoothing(val, lastOptions);
+    settings['Scatter meshes']();
+    if (lastOptions.heightmap) {
+      THREE.Terrain.toHeightmap(terrainScene.children[0].geometry.vertices, lastOptions);
+    }
+  });
   heightmapFolder.add(settings, 'segments', 7, 127).step(1).onFinishChange(settings.Regenerate);
   heightmapFolder.add(settings, 'steps', 1, 8).step(1).onFinishChange(settings.Regenerate);
   heightmapFolder.add(settings, 'turbulent').onFinishChange(settings.Regenerate);
@@ -392,6 +402,25 @@ function __printCameraData() {
   s += 'controls.lat = ' + Math.round(controls.lat) + ';\n';
   s += 'controls.lon = ' + Math.round(controls.lon) + ';\n';
   console.log(s);
+}
+
+function applySmoothing(smoothing, o) {
+  var m = terrainScene.children[0];
+  var g = m.geometry.vertices;
+  if (smoothing === 'Conservative (0.5)') THREE.Terrain.SmoothConservative(g, o, 0.5);
+  if (smoothing === 'Conservative (1)') THREE.Terrain.SmoothConservative(g, o, 1);
+  if (smoothing === 'Conservative (10)') THREE.Terrain.SmoothConservative(g, o, 10);
+  else if (smoothing === 'Gaussian (0.5, 7)') THREE.Terrain.Gaussian(g, o, 0.5, 7);
+  else if (smoothing === 'Gaussian (1.0, 7)') THREE.Terrain.Gaussian(g, o, 1, 7);
+  else if (smoothing === 'Gaussian (1.5, 7)') THREE.Terrain.Gaussian(g, o, 1.5, 7);
+  else if (smoothing === 'Gaussian (1.0, 5)') THREE.Terrain.Gaussian(g, o, 1, 5);
+  else if (smoothing === 'Gaussian (1.0, 11)') THREE.Terrain.Gaussian(g, o, 1, 11);
+  else if (smoothing === 'GaussianBox') THREE.Terrain.GaussianBoxBlur(g, o, 1, 3);
+  else if (smoothing === 'Mean (0)') THREE.Terrain.Smooth(g, o, 0);
+  else if (smoothing === 'Mean (1)') THREE.Terrain.Smooth(g, o, 1);
+  else if (smoothing === 'Mean (8)') THREE.Terrain.Smooth(g, o, 8);
+  else if (smoothing === 'Median') THREE.Terrain.SmoothMedian(g, o);
+  THREE.Terrain.Normalize(m, o);
 }
 
 function buildTree() {

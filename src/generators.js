@@ -98,7 +98,7 @@ THREE.Terrain.DiamondSquare = function(g, options) {
         xl = options.xSegments + 1,
         yl = options.ySegments + 1;
     for (i = 0; i <= segments; i++) {
-        heightmap[i] = new Float32Array(segments+1);
+        heightmap[i] = new Float64Array(segments+1);
     }
 
     // Generate heightmap
@@ -142,7 +142,7 @@ THREE.Terrain.DiamondSquare = function(g, options) {
         }
     }
 
-    THREE.Terrain.SmoothConservative(g, options);
+    //THREE.Terrain.SmoothConservative(g, options);
 };
 
 /**
@@ -180,7 +180,7 @@ THREE.Terrain.Fault = function(g, options) {
             }
         }
     }
-    THREE.Terrain.Smooth(g, options);
+    //THREE.Terrain.Smooth(g, options);
 };
 
 /**
@@ -352,7 +352,7 @@ THREE.Terrain.HillIsland = (function() {
                 j = Math.floor(options.ySegments*(0.5+yDeviation) + Math.sin(d) * Math.random() * options.ySegments*(0.5-Math.abs(yDeviation)));
             }
         }
-        THREE.Terrain.Smooth(g, options, 3);
+        //THREE.Terrain.Smooth(g, options, 3);
     };
 })();
 
@@ -515,7 +515,7 @@ THREE.Terrain.SimplexLayers = function(g, options) {
         // Store the array of white noise outside of the WhiteNoise function to
         // avoid allocating a bunch of unnecessary arrays; we can just
         // overwrite old data each time WhiteNoise() is called.
-        var data = new Float32Array((segments+1)*(segments+1));
+        var data = new Float64Array((segments+1)*(segments+1));
 
         // Layer white noise at different resolutions.
         var range = options.maxHeight - options.minHeight;
@@ -524,7 +524,7 @@ THREE.Terrain.SimplexLayers = function(g, options) {
         }
 
         // White noise creates some weird artifacts; fix them.
-        THREE.Terrain.Smooth(g, options, 1);
+        //THREE.Terrain.Smooth(g, options, 1);
         THREE.Terrain.Clamp(g, {
             maxHeight: options.maxHeight,
             minHeight: options.minHeight,

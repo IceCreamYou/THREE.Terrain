@@ -1,13 +1,3 @@
-/**
- * Gaussian smoothing is not used in the demo because it's a little aggressive,
- * producing terrains that are perhaps unrealistically smooth. However, you can
- * try it by running code like this in your browser console:
-var m = terrainScene.children[0];
-var g = m.geometry.vertices;
-var o = {xSegments: 63, ySegments: 63, maxHeight: 100, minHeight: -100};
-THREE.Terrain.Gaussian(g, o, 1, 7); // Fiddle with the last two parameters
-THREE.Terrain.Normalize(m, o);
- */
 (function() {
 
 /**

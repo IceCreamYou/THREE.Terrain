@@ -1,11 +1,11 @@
 ## 1.2
 
 Read http://pcgbook.com/ and see if I get any fun ideas!
-Fix the edge that ends up weird in Gaussian blurs
 
 
 ## 1.3
 
+Fix Smoothing to use a smoothing factor (a multiplier for how close the point should move to the average) instead of a weight for the target point
 Implement helper functions to convert from a 1D Vector3 array to/from a 1D and 2D float array, and convert the generator and filter functions to operate on those
 Make the Edge filter support working by radial distance from the center rather than distance from the edges
 Phong lighting for generated textures
@@ -76,3 +76,8 @@ River generation
 Implement optimization types
 Support infinite terrain
 Try IFFT(LowPassFilter(FFT(WhiteNoise()))) again as a procedural generation method
+
+
+## Known bugs
+
+THREE.Terrain.Gaussian() fails to smooth one edge of the terrain, resulting in some weird artifacts.
