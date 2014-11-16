@@ -1,13 +1,10 @@
-## 1.2
-
-Read http://pcgbook.com/ and see if I get any fun ideas!
-
-
 ## 1.3
 
+Write documentation that's not in the code
 Fix Smoothing to use a smoothing factor (a multiplier for how close the point should move to the average) instead of a weight for the target point
 Implement helper functions to convert from a 1D Vector3 array to/from a 1D and 2D float array, and convert the generator and filter functions to operate on those
 Make the Edge filter support working by radial distance from the center rather than distance from the edges
+Make the API more consistent
 Phong lighting for generated textures
 Allow making slopes rougher than flats
     Create modified smoothing functions that apply at different intensities depending on the slope
@@ -17,7 +14,6 @@ Add a method to get the terrain height at a given spatial location
     The best way to do this is probably with a raycaster
 Make scattering be based on spatial distance, not faces
     This probably looks something like Voronoi cells
-Write documentation that's not in the code
 
 
 ## 1.4
@@ -25,6 +21,10 @@ Write documentation that's not in the code
 Try using the terrain with a physics library
 Support morphing over time between two heightmaps
 Support manually sculpting (raising/lowering) terrain
+Look into writing a space partitioning algorithm (like the way procedural dungeons are often built) and shape a terrain around that
+Investigate search-based and agent-based terrain generation http://pcgbook.com/wp-content/uploads/chapter04.pdf
+    Provide some sort of grammar for to guide terrain generation based on objectives?
+    Provide some mechanism for evolution towards finding a terrain that most closely meets a set of rules?
 
 
 ## 2.0
