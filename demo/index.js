@@ -161,6 +161,7 @@ function setupDatGui() {
     this.sky = true;
     this.texture = webglExists ? 'Blended' : 'Wireframe';
     this.edgeDirection = 'Normal';
+    this.edgeType = 'Box';
     this.edgeDistance = 256;
     this.edgeCurve = 'EaseInOut';
     this['width:length ratio'] = 1.0;
@@ -170,7 +171,7 @@ function setupDatGui() {
     this.scattering = 'PerlinAltitude';
     this.after = function(vertices, options) {
       if (that.edgeDirection === 'Normal') return;
-      THREE.Terrain.Edges(
+      (that.edgeType === 'Box' ? THREE.Terrain.Edges : THREE.Terrain.RadialEdges)(
         vertices,
         options,
         that.edgeDirection === 'Up' ? true : false,
@@ -310,6 +311,7 @@ function setupDatGui() {
   sizeFolder.add(settings, 'maxHeight', 2, 300).step(2).onFinishChange(settings.Regenerate);
   sizeFolder.add(settings, 'width:length ratio', 0.2, 2).step(0.05).onFinishChange(settings.Regenerate);
   var edgesFolder = gui.addFolder('Edges');
+  edgesFolder.add(settings, 'edgeType', ['Box', 'Radial']).onFinishChange(settings.Regenerate);
   edgesFolder.add(settings, 'edgeDirection', ['Normal', 'Up', 'Down']).onFinishChange(settings.Regenerate);
   edgesFolder.add(settings, 'edgeCurve', ['Linear', 'EaseIn', 'EaseOut', 'EaseInOut']).onFinishChange(settings.Regenerate);
   edgesFolder.add(settings, 'edgeDistance', 0, 512).step(32).onFinishChange(settings.Regenerate);

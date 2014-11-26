@@ -1,5 +1,5 @@
 /**
- * THREE.Terrain.js 1.1.0-20141116
+ * THREE.Terrain.js 1.2.0-20141126
  *
  * @author Isaac Sukin (http://www.isaacsukin.com/)
  * @license MIT
@@ -688,7 +688,7 @@ THREE.Terrain.Clamp = function(g, options) {
 };
 
 /**
- * Move the edges of the terrain up or down.
+ * Move the edges of the terrain up or down based on distance from the edge.
  *
  * Useful to make islands or enclosing walls/cliffs.
  *
@@ -700,11 +700,87 @@ THREE.Terrain.Clamp = function(g, options) {
  *   displayed. Valid values are the same as those for the `options` parameter
  *   of {@link THREE.Terrain}().
  * @param {Boolean} direction
- *    `true` if the edges should be turned up; `false` if they should be turned
- *    down.
+ *   `true` if the edges should be turned up; `false` if they should be turned
+ *   down.
  * @param {Number} distance
- *    The distance from the edge at which the edges should begin to be affected
- *    by this operation.
+ *   The distance from the edge at which the edges should begin to be affected
+ *   by this operation.
+ * @param {Number/Function} [e=THREE.Terrain.EaseInOut]
+ *   A function that determines how quickly the terrain will transition between
+ *   its current height and the edge shape as distance to the edge decreases.
+ *   It does this by interpolating the height of each vertex along a curve.
+ *   Valid values include `THREE.Terrain.Linear`, `THREE.Terrain.EaseIn`,
+ *   `THREE.Terrain.EaseOut`, `THREE.Terrain.EaseInOut`,
+ *   `THREE.Terrain.InEaseOut`, and any custom function that accepts a float
+ *   between 0 and 1 and returns a float between 0 and 1.
+ * @param {Object} [edges={top: true, bottom: true, left: true, right: true}]
+ *   Determines which edges should be affected by this function. Defaults to
+ *   all edges. If passed, should be an object with `top`, `bottom`, `left`,
+ *   and `right` Boolean properties specifying which edges to affect.
+ */
+THREE.Terrain.Edges = function(g, options, direction, distance, easing, edges) {
+    var numXSegments = Math.floor(distance / (options.xSize / options.xSegments)) || 1,
+        numYSegments = Math.floor(distance / (options.ySize / options.ySegments)) || 1,
+        peak = direction ? options.maxHeight : options.minHeight,
+        max = direction ? Math.max : Math.min,
+        xl = options.xSegments + 1,
+        yl = options.ySegments + 1,
+        i, j, multiplier, k1, k2;
+    easing = easing || THREE.Terrain.EaseInOut;
+    if (typeof edges !== 'object') {
+        edges = {top: true, bottom: true, left: true, right: true};
+    }
+    for (i = 0; i < xl; i++) {
+        for (j = 0; j < numYSegments; j++) {
+            multiplier = easing(1 - j / numYSegments);
+            k1 = j*xl + i;
+            k2 = (options.ySegments-j)*xl + i;
+            if (edges.top) {
+                g[k1].z = max(g[k1].z, (peak - g[k1].z) * multiplier + g[k1].z);
+            }
+            if (edges.bottom) {
+                g[k2].z = max(g[k2].z, (peak - g[k2].z) * multiplier + g[k2].z);
+            }
+        }
+    }
+    for (i = 0; i < yl; i++) {
+        for (j = 0; j < numXSegments; j++) {
+            multiplier = easing(1 - j / numXSegments);
+            k1 = i*xl+j;
+            k2 = (options.ySegments-i)*xl + (options.xSegments-j);
+            if (edges.left) {
+                g[k1].z = max(g[k1].z, (peak - g[k1].z) * multiplier + g[k1].z);
+            }
+            if (edges.right) {
+                g[k2].z = max(g[k2].z, (peak - g[k2].z) * multiplier + g[k2].z);
+            }
+        }
+    }
+    THREE.Terrain.Clamp(g, {
+        maxHeight: options.maxHeight,
+        minHeight: options.minHeight,
+        stretch: true,
+    });
+};
+
+/**
+ * Move the edges of the terrain up or down based on distance from the center.
+ *
+ * Useful to make islands or enclosing walls/cliffs.
+ *
+ * @param {THREE.Vector3[]} g
+ *   The vertex array for plane geometry to modify with heightmap data. This
+ *   method sets the `z` property of each vertex.
+ * @param {Object} options
+ *   A map of settings that control how the terrain is constructed and
+ *   displayed. Valid values are the same as those for the `options` parameter
+ *   of {@link THREE.Terrain}().
+ * @param {Boolean} direction
+ *   `true` if the edges should be turned up; `false` if they should be turned
+ *   down.
+ * @param {Number} distance
+ *   The distance from the center at which the edges should begin to be
+ *   affected by this operation.
  * @param {Number/Function} [e=THREE.Terrain.EaseInOut]
  *   A function that determines how quickly the terrain will transition between
  *   its current height and the edge shape as distance to the edge decreases.
@@ -714,40 +790,29 @@ THREE.Terrain.Clamp = function(g, options) {
  *   `THREE.Terrain.InEaseOut`, and any custom function that accepts a float
  *   between 0 and 1 and returns a float between 0 and 1.
  */
-THREE.Terrain.Edges = function(g, options, direction, distance, easing) {
-    var numXSegments = Math.floor(distance / (options.xSize / options.xSegments)) || 1,
-        numYSegments = Math.floor(distance / (options.ySize / options.ySegments)) || 1,
-        peak = direction ? options.maxHeight : options.minHeight,
+THREE.Terrain.RadialEdges = function(g, options, direction, distance, easing) {
+    var peak = direction ? options.maxHeight : options.minHeight,
         max = direction ? Math.max : Math.min,
-        xl = options.xSegments + 1,
-        yl = options.ySegments + 1,
-        i, j, multiplier, target, k1, k2;
-    easing = easing || THREE.Terrain.EaseInOut;
+        xl = (options.xSegments + 1),
+        yl = (options.ySegments + 1),
+        xl2 = xl * 0.5,
+        yl2 = yl * 0.5,
+        xSegmentSize = options.xSize / options.xSegments,
+        ySegmentSize = options.ySize / options.ySegments,
+        edgeRadius = Math.min(options.xSize, options.ySize) * 0.5 - distance,//Math.sqrt(options.xSize * options.xSize + options.ySize * options.ySize) - distance,
+        i, j, multiplier, k, vertexDistance;
     for (i = 0; i < xl; i++) {
-        for (j = 0; j < numYSegments; j++) {
-            multiplier = easing(1 - j / numYSegments);
-            target = peak * multiplier;
-            k1 = j*xl+i;
-            k2 = (options.ySegments-j)*xl + i;
-            g[k1].z = max(g[k1].z, (peak - g[k1].z) * multiplier + g[k1].z);
-            g[k2].z = max(g[k2].z, (peak - g[k2].z) * multiplier + g[k2].z);
+        for (j = 0; j < yl2; j++) {
+            k = j*xl + i;
+            vertexDistance = Math.min(edgeRadius, Math.sqrt((xl2-i)*xSegmentSize*(xl2-i)*xSegmentSize + (yl2-j)*ySegmentSize*(yl2-j)*ySegmentSize) - distance);
+            if (vertexDistance < 0) continue;
+            multiplier = easing(vertexDistance / edgeRadius);
+            g[k].z = max(g[k].z, (peak - g[k].z) * multiplier + g[k].z);
+            // Use symmetry to reduce the number of iterations.
+            k = (options.ySegments-j)*xl + i;
+            g[k].z = max(g[k].z, (peak - g[k].z) * multiplier + g[k].z);
         }
     }
-    for (i = 0; i < yl; i++) {
-        for (j = 0; j < numXSegments; j++) {
-            multiplier = easing(1 - j / numXSegments);
-            target = peak * multiplier;
-            k1 = i*xl+j;
-            k2 = (options.ySegments-i)*xl + (options.xSegments-j);
-            g[k1].z = max(g[k1].z, (peak - g[k1].z) * multiplier + g[k1].z);
-            g[k2].z = max(g[k2].z, (peak - g[k2].z) * multiplier + g[k2].z);
-        }
-    }
-    THREE.Terrain.Clamp(g, {
-        maxHeight: options.maxHeight,
-        minHeight: options.minHeight,
-        stretch: true,
-    });
 };
 
 /**
