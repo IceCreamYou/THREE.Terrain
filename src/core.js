@@ -73,6 +73,8 @@
  *   - `ySize`: The length of the terrain in Three.js units. Defaults to 1024.
  *     Rendering might be slightly faster if this is a multiple of
  *     `options.ySegments + 1`.
+ *   - `clamp`: Whether to clamp the heightmap to the interval of minHeight to
+ *     maxHeight. Default is true.
  */
 THREE.Terrain = function(options) {
     var defaultOptions = {
@@ -92,6 +94,7 @@ THREE.Terrain = function(options) {
         xSize: 1024,
         ySegments: 63,
         ySize: 1024,
+        clamp: true
     };
     options = options || {};
     for (var opt in defaultOptions) {
@@ -157,8 +160,10 @@ THREE.Terrain.Normalize = function(mesh, options) {
         THREE.Terrain.Step(v, options.steps);
         THREE.Terrain.Smooth(v, options);
     }
-    // Keep the terrain within the allotted height range if necessary, and do easing.
-    THREE.Terrain.Clamp(v, options);
+    if (options.clamp) {
+        // Keep the terrain within the allotted height range if necessary, and do easing.
+        THREE.Terrain.Clamp(v, options);
+    }
     // Call the "after" callback
     if (typeof options.after === 'function') {
         options.after(v, options);
