@@ -1,5 +1,6 @@
 ## 1.3
 
+Make the custom shader(s) scalable https://twitter.com/VMA3D/status/562631211752112128
 Write documentation that's not in the code
 Fix Smoothing to use a smoothing factor (a multiplier for how close the point should move to the average) instead of a weight for the target point
 Implement helper functions to convert from a 1D Vector3 array to/from a 1D and 2D float array, and convert the generator and filter functions to operate on those

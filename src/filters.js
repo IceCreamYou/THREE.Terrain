@@ -21,8 +21,8 @@ THREE.Terrain.Clamp = function(g, options) {
         if (g[i].z > max) max = g[i].z;
     }
     var actualRange = max - min,
-        optMax = typeof options.maxHeight === 'undefined' ? max : options.maxHeight,
-        optMin = typeof options.minHeight === 'undefined' ? min : options.minHeight,
+        optMax = typeof options.maxHeight !== 'number' ? max : options.maxHeight,
+        optMin = typeof options.minHeight !== 'number' ? min : options.minHeight,
         targetMax = options.stretch ? optMax : (max < optMax ? max : optMax),
         targetMin = options.stretch ? optMin : (min > optMin ? min : optMin),
         range = targetMax - targetMin;

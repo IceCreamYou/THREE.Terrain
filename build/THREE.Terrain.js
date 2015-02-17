@@ -1,5 +1,5 @@
 /**
- * THREE.Terrain.js 1.2.0-20141126
+ * THREE.Terrain.js 1.2.0-20150217
  *
  * @author Isaac Sukin (http://www.isaacsukin.com/)
  * @license MIT
@@ -227,9 +227,15 @@
  *   - `material`: a THREE.Material instance used to display the terrain.
  *     Defaults to `new THREE.MeshBasicMaterial({color: 0xee6633})`.
  *   - `maxHeight`: the highest point, in Three.js units, that a peak should
- *     reach. Defaults to 100.
+ *     reach. Defaults to 100. Setting to `undefined`, `null`, or `Infinity`
+ *     removes the cap, but this is generally not recommended because many
+ *     generators and filters require a vertical range. Instead, consider
+ *     setting the `stretch` option to `false`.
  *   - `minHeight`: the lowest point, in Three.js units, that a valley should
- *     reach. Defaults to -100.
+ *     reach. Defaults to -100. Setting to `undefined`, `null`, or `-Infinity`
+ *     removes the cap, but this is generally not recommended because many
+ *     generators and filters require a vertical range. Instead, consider
+ *     setting the `stretch` option to `false`.
  *   - `steps`: If this is a number above 1, the terrain will be paritioned
  *     into that many flat "steps," resulting in a blocky appearance. Defaults
  *     to 1.
@@ -673,8 +679,8 @@ THREE.Terrain.Clamp = function(g, options) {
         if (g[i].z > max) max = g[i].z;
     }
     var actualRange = max - min,
-        optMax = typeof options.maxHeight === 'undefined' ? max : options.maxHeight,
-        optMin = typeof options.minHeight === 'undefined' ? min : options.minHeight,
+        optMax = typeof options.maxHeight !== 'number' ? max : options.maxHeight,
+        optMin = typeof options.minHeight !== 'number' ? min : options.minHeight,
         targetMax = options.stretch ? optMax : (max < optMax ? max : optMax),
         targetMin = options.stretch ? optMin : (min > optMin ? min : optMin),
         range = targetMax - targetMin;
