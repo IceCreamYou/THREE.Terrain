@@ -77,6 +77,8 @@ River generation
 Implement optimization types
 Support infinite terrain
 Try IFFT(LowPassFilter(FFT(WhiteNoise()))) again as a procedural generation method
+Try simulating techtonic plates as a procedural generation method as described at https://webcache.googleusercontent.com/search?q=cache:http://experilous.com/1/blog/post/procedural-planet-generation
+Try implementing spherical (planet) generation with biomes
 
 
 ## Known bugs
