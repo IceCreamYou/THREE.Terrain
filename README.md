@@ -17,6 +17,11 @@ Or with Bower (`bower install THREE.Terrain`):
 <script src="bower_components\THREE.Terrain\build\THREE.Terrain.min.js"></script>
 ```
 
+Tested with three.js
+[r71](https://github.com/mrdoob/three.js/releases/tag/r71). Use the
+[1.2.0](https://github.com/IceCreamYou/THREE.Terrain/releases/tag/1.2.0)
+release of this project with three.js r67 - r70.
+
 ### Procedurally Generate a Terrain
 
 In your own script, generate a terrain and add it to your scene:
