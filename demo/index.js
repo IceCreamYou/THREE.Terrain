@@ -94,6 +94,7 @@ function setupControls() {
 
 function setupWorld() {
   THREE.ImageUtils.loadTexture('demo/img/sky1.jpg', undefined, function(t1) {
+    t1.minFilter = THREE.LinearFilter; // Texture is not a power-of-two size; use smoother interpolation.
     skyDome = new THREE.Mesh(
       new THREE.SphereGeometry(8192, 16, 16, 0, Math.PI*2, 0, Math.PI*0.5),
       new THREE.MeshBasicMaterial({map: t1, side: THREE.BackSide, fog: false})

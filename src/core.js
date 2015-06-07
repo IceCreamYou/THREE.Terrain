@@ -126,7 +126,7 @@ THREE.Terrain = function(options) {
     THREE.Terrain.Normalize(mesh, options);
 
     if (options.useBufferGeometry) {
-        mesh.geometry = THREE.BufferGeometryUtils.fromGeometry(mesh.geometry);
+        mesh.geometry = (new THREE.BufferGeometry()).fromGeometry(mesh.geometry);
     }
 
     // lod.addLevel(mesh, options.unit * 10 * Math.pow(2, lodLevel));

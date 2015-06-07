@@ -1,5 +1,5 @@
 /**
- * THREE.Terrain.js 1.2.0-20150217
+ * THREE.Terrain.js 1.2.0-20150607
  *
  * @author Isaac Sukin (http://www.isaacsukin.com/)
  * @license MIT
@@ -312,7 +312,7 @@ THREE.Terrain = function(options) {
     THREE.Terrain.Normalize(mesh, options);
 
     if (options.useBufferGeometry) {
-        mesh.geometry = THREE.BufferGeometryUtils.fromGeometry(mesh.geometry);
+        mesh.geometry = (new THREE.BufferGeometry()).fromGeometry(mesh.geometry);
     }
 
     // lod.addLevel(mesh, options.unit * 10 * Math.pow(2, lodLevel));
@@ -1685,15 +1685,20 @@ THREE.Terrain.generateBlendedMaterial = function(textures) {
             'void main() {',
             'varying vec2 MyvUv;\nvarying vec3 vPosition;\nvarying vec3 myNormal; void main() {\nMyvUv = uv;\nvPosition = position;\nmyNormal = normal;'
         ),
+        // This is mostly copied from THREE.ShaderLib.lambert.fragmentShader
         fragmentShader: [
+            'uniform vec3 diffuse;',
+            'uniform vec3 emissive;',
             'uniform float opacity;',
             'varying vec3 vLightFront;',
             '#ifdef DOUBLE_SIDED',
             '    varying vec3 vLightBack;',
             '#endif',
 
+            THREE.ShaderChunk.common,
             THREE.ShaderChunk.color_pars_fragment,
             THREE.ShaderChunk.map_pars_fragment,
+            THREE.ShaderChunk.alphamap_pars_fragment,
             THREE.ShaderChunk.lightmap_pars_fragment,
             THREE.ShaderChunk.envmap_pars_fragment,
             THREE.ShaderChunk.fog_pars_fragment,
@@ -1711,33 +1716,36 @@ THREE.Terrain.generateBlendedMaterial = function(textures) {
             // TODO: The second vector here is the object's "up" vector. Ideally we'd just pass it in directly.
             'float slope = acos(max(min(dot(myNormal, vec3(0.0, 0.0, 1.0)), 1.0), -1.0));',
 
-            //'    gl_FragColor = vec4( vec3( 1.0 ), opacity );',
+            '    vec3 outgoingLight = vec3( 0.0 );', // outgoing light does not have an alpha; the surface does
+            '    vec4 diffuseColor = vec4( diffuse, opacity );',
             '    vec4 color = texture2D( texture_0, MyvUv ); // base',
                 assign,
-            '    gl_FragColor = color;',
-            //'    gl_FragColor.a = opacity;',
+            '    diffuseColor = color;',
+            //'    gl_FragColor = color;',
 
                 THREE.ShaderChunk.logdepthbuf_fragment,
                 THREE.ShaderChunk.map_fragment,
+                THREE.ShaderChunk.color_fragment,
+                THREE.ShaderChunk.alphamap_fragment,
                 THREE.ShaderChunk.alphatest_fragment,
                 THREE.ShaderChunk.specularmap_fragment,
 
             '    #ifdef DOUBLE_SIDED',
             '        if ( gl_FrontFacing )',
-            '            gl_FragColor.xyz *= vLightFront;',
+            '            outgoingLight += diffuseColor.rgb * vLightFront + emissive;',
             '        else',
-            '            gl_FragColor.xyz *= vLightBack;',
+            '            outgoingLight += diffuseColor.rgb * vLightBack + emissive;',
             '    #else',
-            '        gl_FragColor.xyz *= vLightFront;',
+            '        outgoingLight += diffuseColor.rgb * vLightFront + emissive;',
             '    #endif',
 
                 THREE.ShaderChunk.lightmap_fragment,
-                THREE.ShaderChunk.color_fragment,
                 THREE.ShaderChunk.envmap_fragment,
                 THREE.ShaderChunk.shadowmap_fragment,
                 THREE.ShaderChunk.linear_to_gamma_fragment,
                 THREE.ShaderChunk.fog_fragment,
 
+            '    gl_FragColor = vec4( outgoingLight, diffuseColor.a );', // This will probably change in future three.js releases
             '}'
         ].join('\n'),
     };
