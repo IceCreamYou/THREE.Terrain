@@ -1,3 +1,4 @@
+// jscs:disable disallowSpaceBeforeSemicolon, requireBlocksOnNewline
 (function() {
 
 /**

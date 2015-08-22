@@ -1,6 +1,6 @@
 {
   "name": "THREE.Terrain",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "main": "build/THREE.Terrain.min.js",
   "ignore": [
     "node_modules"

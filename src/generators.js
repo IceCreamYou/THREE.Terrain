@@ -85,8 +85,9 @@ THREE.Terrain.CosineLayers = function(g, options) {
 THREE.Terrain.DiamondSquare = function(g, options) {
     // Set the segment length to the smallest power of 2 that is greater than
     // the number of vertices in either dimension of the plane
-    var segments = Math.max(options.xSegments, options.ySegments) + 1, n;
-    for (n = 1; Math.pow(2, n) < segments; n++) {}
+    var segments = Math.max(options.xSegments, options.ySegments) + 1,
+        n = 1;
+    while (Math.pow(2, n) < segments) { n++; }
     segments = Math.pow(2, n);
 
     // Initialize heightmap
@@ -103,15 +104,21 @@ THREE.Terrain.DiamondSquare = function(g, options) {
 
     // Generate heightmap
     for (var l = segments; l >= 2; l /= 2) {
-        var half = Math.round(l*0.5), whole = Math.round(l), x, y, avg, d, e;
+        var half = Math.round(l*0.5),
+            whole = Math.round(l),
+            x,
+            y,
+            avg,
+            d,
+            e;
         smoothing /= 2;
         // square
         for (x = 0; x < segments; x += whole) {
             for (y = 0; y < segments; y += whole) {
                 d = Math.random() * smoothing * 2 - smoothing;
-                avg = heightmap[x][y] +    // top left
-                      heightmap[x+whole][y] +  // top right
-                      heightmap[x][y+whole] +  // bottom left
+                avg = heightmap[x][y] +            // top left
+                      heightmap[x+whole][y] +      // top right
+                      heightmap[x][y+whole] +      // bottom left
                       heightmap[x+whole][y+whole]; // bottom right
                 avg *= 0.25;
                 heightmap[x+half][y+half] = avg + d;
@@ -142,7 +149,7 @@ THREE.Terrain.DiamondSquare = function(g, options) {
         }
     }
 
-    //THREE.Terrain.SmoothConservative(g, options);
+    // THREE.Terrain.SmoothConservative(g, options);
 };
 
 /**
@@ -180,7 +187,7 @@ THREE.Terrain.Fault = function(g, options) {
             }
         }
     }
-    //THREE.Terrain.Smooth(g, options);
+    // THREE.Terrain.Smooth(g, options);
 };
 
 /**
@@ -352,7 +359,7 @@ THREE.Terrain.HillIsland = (function() {
                 j = Math.floor(options.ySegments*(0.5+yDeviation) + Math.sin(d) * Math.random() * options.ySegments*(0.5-Math.abs(yDeviation)));
             }
         }
-        //THREE.Terrain.Smooth(g, options, 3);
+        // THREE.Terrain.Smooth(g, options, 3);
     };
 })();
 
@@ -460,12 +467,14 @@ THREE.Terrain.SimplexLayers = function(g, options) {
                 var k = j * xl + i;
                 data[k] = Math.random() * range;
                 if (lastX < 0 && lastY < 0) continue;
+                // jscs:disable disallowSpacesInsideBrackets
                 /* c b *
                  * l t */
                 var t = data[k],
                     l = data[ j      * xl + (i-inc)] || t, // left
                     b = data[(j-inc) * xl +  i     ] || t, // bottom
                     c = data[(j-inc) * xl + (i-inc)] || t; // corner
+                // jscs:enable disallowSpacesInsideBrackets
                 // Interpolate between adjacent points to set the height of
                 // higher-resolution target data.
                 for (var x = lastX; x < i; x++) {
@@ -508,8 +517,9 @@ THREE.Terrain.SimplexLayers = function(g, options) {
     THREE.Terrain.Value = function(g, options) {
         // Set the segment length to the smallest power of 2 that is greater
         // than the number of vertices in either dimension of the plane
-        var segments = Math.max(options.xSegments, options.ySegments) + 1, n;
-        for (n = 1; Math.pow(2, n) < segments; n++) {}
+        var segments = Math.max(options.xSegments, options.ySegments) + 1,
+            n = 1;
+        while (Math.pow(2, n) < segments) { n++; }
         segments = Math.pow(2, n);
 
         // Store the array of white noise outside of the WhiteNoise function to
@@ -524,7 +534,7 @@ THREE.Terrain.SimplexLayers = function(g, options) {
         }
 
         // White noise creates some weird artifacts; fix them.
-        //THREE.Terrain.Smooth(g, options, 1);
+        // THREE.Terrain.Smooth(g, options, 1);
         THREE.Terrain.Clamp(g, {
             maxHeight: options.maxHeight,
             minHeight: options.minHeight,

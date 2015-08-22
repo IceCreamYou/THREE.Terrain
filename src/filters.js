@@ -147,7 +147,7 @@ THREE.Terrain.RadialEdges = function(g, options, direction, distance, easing) {
         yl2 = yl * 0.5,
         xSegmentSize = options.xSize / options.xSegments,
         ySegmentSize = options.ySize / options.ySegments,
-        edgeRadius = Math.min(options.xSize, options.ySize) * 0.5 - distance,//Math.sqrt(options.xSize * options.xSize + options.ySize * options.ySize) - distance,
+        edgeRadius = Math.min(options.xSize, options.ySize) * 0.5 - distance,
         i, j, multiplier, k, vertexDistance;
     for (i = 0; i < xl; i++) {
         for (j = 0; j < yl2; j++) {
@@ -180,8 +180,7 @@ THREE.Terrain.RadialEdges = function(g, options, direction, distance, easing) {
 THREE.Terrain.Smooth = function(g, options, weight) {
     var heightmap = new Float64Array(g.length);
     for (var i = 0, xl = options.xSegments + 1, yl = options.ySegments + 1; i < xl; i++) {
-        for (var j = 0; j < yl; j++) {
-            var sum = 0, c = 0;
+        for (var j = 0, sum = 0, c = 0; j < yl; j++) {
             for (var n = -1; n <= 1; n++) {
                 for (var m = -1; m <= 1; m++) {
                     var key = (j+n)*xl + i + m;

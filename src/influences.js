@@ -121,7 +121,7 @@ THREE.Terrain.Influence = function(g, options, f, x, y, r, h, t, e) {
                 // interpolate using e, then blend according to t.
                 d = f(fdr, fdxr, fdyr) * h * (1 - e(fdr, fdxr, fdyr));
             if (fd > r || typeof g[k] == 'undefined') continue;
-            if      (t === THREE.AdditiveBlending)    g[k].z += d;
+            if      (t === THREE.AdditiveBlending)    g[k].z += d; // jscs:ignore requireSpaceAfterKeywords
             else if (t === THREE.SubtractiveBlending) g[k].z -= d;
             else if (t === THREE.MultiplyBlending)    g[k].z *= d;
             else if (t === THREE.NoBlending)          g[k].z  = d;

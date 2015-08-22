@@ -1,5 +1,5 @@
 /**
- * THREE.Terrain.js 1.2.1-20150607
+ * THREE.Terrain.js 1.2.2-20150822
  *
  * @author Isaac Sukin (http://www.isaacsukin.com/)
  * @license MIT
@@ -9,179 +9,187 @@
 * Simplex and Perlin noise.
 *
 * Copied with small edits from https://github.com/josephg/noisejs which is
-* public domain, originally by Stefan Gustavson (stegu@itn.liu.se) with
+* public domain. Originally by Stefan Gustavson (stegu@itn.liu.se) with
 * optimizations by Peter Eastman (peastman@drizzle.stanford.edu) and converted
 * to JavaScript by Joseph Gentle.
 */
 
 (function(global) {
-  var module = global.noise = {};
+    var module = global.noise = {};
 
-  function Grad(x, y, z) {
-    this.x = x; this.y = y; this.z = z;
-  }
-
-  Grad.prototype.dot2 = function(x, y) {
-    return this.x*x + this.y*y;
-  };
-
-  Grad.prototype.dot3 = function(x, y, z) {
-    return this.x*x + this.y*y + this.z*z;
-  };
-
-  var grad3 = [new Grad(1,1,0),new Grad(-1,1,0),new Grad(1,-1,0),new Grad(-1,-1,0),
-               new Grad(1,0,1),new Grad(-1,0,1),new Grad(1,0,-1),new Grad(-1,0,-1),
-               new Grad(0,1,1),new Grad(0,-1,1),new Grad(0,1,-1),new Grad(0,-1,-1)];
-
-  var p = [151,160,137,91,90,15,
-  131,13,201,95,96,53,194,233,7,225,140,36,103,30,69,142,8,99,37,240,21,10,23,
-  190, 6,148,247,120,234,75,0,26,197,62,94,252,219,203,117,35,11,32,57,177,33,
-  88,237,149,56,87,174,20,125,136,171,168, 68,175,74,165,71,134,139,48,27,166,
-  77,146,158,231,83,111,229,122,60,211,133,230,220,105,92,41,55,46,245,40,244,
-  102,143,54, 65,25,63,161, 1,216,80,73,209,76,132,187,208, 89,18,169,200,196,
-  135,130,116,188,159,86,164,100,109,198,173,186, 3,64,52,217,226,250,124,123,
-  5,202,38,147,118,126,255,82,85,212,207,206,59,227,47,16,58,17,182,189,28,42,
-  223,183,170,213,119,248,152, 2,44,154,163, 70,221,153,101,155,167, 43,172,9,
-  129,22,39,253, 19,98,108,110,79,113,224,232,178,185, 112,104,218,246,97,228,
-  251,34,242,193,238,210,144,12,191,179,162,241, 81,51,145,235,249,14,239,107,
-  49,192,214, 31,181,199,106,157,184, 84,204,176,115,121,50,45,127, 4,150,254,
-  138,236,205,93,222,114,67,29,24,72,243,141,128,195,78,66,215,61,156,180];
-  // To remove the need for index wrapping, double the permutation table length
-  var perm = new Array(512);
-  var gradP = new Array(512);
-
-  // This isn't a very good seeding function, but it works ok. It supports 2^16
-  // different seed values. Write something better if you need more seeds.
-  module.seed = function(seed) {
-    if (seed > 0 && seed < 1) {
-      // Scale the seed out
-      seed *= 65536;
+    function Grad(x, y, z) {
+        this.x = x;
+        this.y = y;
+        this.z = z;
     }
 
-    seed = Math.floor(seed);
-    if (seed < 256) {
-      seed |= seed << 8;
+    Grad.prototype.dot2 = function(x, y) {
+        return this.x*x + this.y*y;
+    };
+
+    Grad.prototype.dot3 = function(x, y, z) {
+        return this.x*x + this.y*y + this.z*z;
+    };
+
+    var grad3 = [
+        new Grad(1,1,0),new Grad(-1,1,0),new Grad(1,-1,0),new Grad(-1,-1,0),
+        new Grad(1,0,1),new Grad(-1,0,1),new Grad(1,0,-1),new Grad(-1,0,-1),
+        new Grad(0,1,1),new Grad(0,-1,1),new Grad(0,1,-1),new Grad(0,-1,-1),
+    ];
+
+    var p = [151,160,137,91,90,15,131,13,201,95,96,53,194,233,7,225,140,36,103,
+        30,69,142,8,99,37,240,21,10,23,190,6,148,247,120,234,75,0,26,197,62,94,
+        252,219,203,117,35,11,32,57,177,33,88,237,149,56,87,174,20,125,136,171,
+        168,68,175,74,165,71,134,139,48,27,166,77,146,158,231,83,111,229,122,
+        60,211,133,230,220,105,92,41,55,46,245,40,244,102,143,54,65,25,63,161,
+        1,216,80,73,209,76,132,187,208,89,18,169,200,196,135,130,116,188,159,
+        86,164,100,109,198,173,186,3,64,52,217,226,250,124,123,5,202,38,147,
+        118,126,255,82,85,212,207,206,59,227,47,16,58,17,182,189,28,42,223,183,
+        170,213,119,248,152,2,44,154,163,70,221,153,101,155,167,43,172,9,129,
+        22,39,253,19,98,108,110,79,113,224,232,178,185,112,104,218,246,97,228,
+        251,34,242,193,238,210,144,12,191,179,162,241,81,51,145,235,249,14,239,
+        107,49,192,214,31,181,199,106,157,184,84,204,176,115,121,50,45,127,4,
+        150,254,138,236,205,93,222,114,67,29,24,72,243,141,128,195,78,66,215,
+        61,156,180];
+    // To avoid the need for index wrapping, double the permutation table length
+    var perm = new Array(512),
+        gradP = new Array(512);
+
+    // This isn't a very good seeding function, but it works okay. It supports
+    // 2^16 different seed values. Write your own if you need more seeds.
+    module.seed = function(seed) {
+        if (seed > 0 && seed < 1) {
+            // Scale the seed out
+            seed *= 65536;
+        }
+
+        seed = Math.floor(seed);
+        if (seed < 256) {
+            seed |= seed << 8;
+        }
+
+        for (var i = 0; i < 256; i++) {
+            var v;
+            if (i & 1) {
+                v = p[i] ^ (seed & 255);
+            }
+            else {
+                v = p[i] ^ ((seed>>8) & 255);
+            }
+
+            perm[i] = perm[i + 256] = v;
+            gradP[i] = gradP[i + 256] = grad3[v % 12];
+        }
+    };
+
+    module.seed(Math.random());
+
+    // Skewing and unskewing factors for 2 and 3 dimensions
+    var F2 = 0.5*(Math.sqrt(3)-1),
+        G2 = (3-Math.sqrt(3))/6,
+        F3 = 1/3,
+        G3 = 1/6;
+
+    // 2D simplex noise
+    module.simplex = function(xin, yin) {
+        var n0, n1, n2; // Noise contributions from the three corners
+        // Skew the input space to determine which simplex cell we're in
+        var s = (xin+yin)*F2; // Hairy factor for 2D
+        var i = Math.floor(xin+s);
+        var j = Math.floor(yin+s);
+        var t = (i+j)*G2;
+        var x0 = xin-i+t; // The x,y distances from the cell origin, unskewed
+        var y0 = yin-j+t;
+        // For the 2D case, the simplex shape is an equilateral triangle.
+        // Determine which simplex we are in.
+        var i1, j1; // Offsets for second (middle) corner of simplex in (i,j) coords
+        if (x0 > y0) { // Lower triangle, XY order: (0,0)->(1,0)->(1,1)
+            i1 = 1; j1 = 0;
+        }
+        else { // Upper triangle, YX order: (0,0)->(0,1)->(1,1)
+            i1 = 0; j1 = 1;
+        }
+        // A step of (1,0) in (i,j) means a step of (1-c,-c) in (x,y), and
+        // a step of (0,1) in (i,j) means a step of (-c,1-c) in (x,y), where
+        // c = (3-sqrt(3))/6
+        var x1 = x0 - i1 + G2; // Offsets for middle corner in (x,y) unskewed coords
+        var y1 = y0 - j1 + G2;
+        var x2 = x0 - 1 + 2 * G2; // Offsets for last corner in (x,y) unskewed coords
+        var y2 = y0 - 1 + 2 * G2;
+        // Work out the hashed gradient indices of the three simplex corners
+        i &= 255;
+        j &= 255;
+        var gi0 = gradP[i+perm[j]];
+        var gi1 = gradP[i+i1+perm[j+j1]];
+        var gi2 = gradP[i+1+perm[j+1]];
+        // Calculate the contribution from the three corners
+        var t0 = 0.5 - x0*x0-y0*y0;
+        if (t0 < 0) {
+            n0 = 0;
+        }
+        else {
+            t0 *= t0;
+            n0 = t0 * t0 * gi0.dot2(x0, y0); // (x,y) of grad3 used for 2D gradient
+        }
+        var t1 = 0.5 - x1*x1-y1*y1;
+        if (t1 < 0) {
+            n1 = 0;
+        }
+        else {
+            t1 *= t1;
+            n1 = t1 * t1 * gi1.dot2(x1, y1);
+        }
+        var t2 = 0.5 - x2*x2-y2*y2;
+        if (t2 < 0) {
+            n2 = 0;
+        }
+        else {
+            t2 *= t2;
+            n2 = t2 * t2 * gi2.dot2(x2, y2);
+        }
+        // Add contributions from each corner to get the final noise value.
+        // The result is scaled to return values in the interval [-1,1].
+        return 70 * (n0 + n1 + n2);
+    };
+
+    // ##### Perlin noise stuff
+
+    function fade(t) {
+        return t*t*t*(t*(t*6-15)+10);
     }
 
-    for (var i = 0; i < 256; i++) {
-      var v;
-      if (i & 1) {
-        v = p[i] ^ (seed & 255);
-      }
-      else {
-        v = p[i] ^ ((seed>>8) & 255);
-      }
-
-      perm[i] = perm[i + 256] = v;
-      gradP[i] = gradP[i + 256] = grad3[v % 12];
+    function lerp(a, b, t) {
+        return (1-t)*a + t*b;
     }
-  };
 
-  module.seed(Math.random());
+    // 2D Perlin Noise
+    module.perlin = function(x, y) {
+        // Find unit grid cell containing point
+        var X = Math.floor(x),
+            Y = Math.floor(y);
+        // Get relative xy coordinates of point within that cell
+        x = x - X;
+        y = y - Y;
+        // Wrap the integer cells at 255 (smaller integer period can be introduced here)
+        X = X & 255;
+        Y = Y & 255;
 
-  // Skewing and unskewing factors for 2, 3, and 4 dimensions
-  var F2 = 0.5*(Math.sqrt(3)-1);
-  var G2 = (3-Math.sqrt(3))/6;
+        // Calculate noise contributions from each of the four corners
+        var n00 = gradP[X+perm[Y]].dot2(x, y);
+        var n01 = gradP[X+perm[Y+1]].dot2(x, y-1);
+        var n10 = gradP[X+1+perm[Y]].dot2(x-1, y);
+        var n11 = gradP[X+1+perm[Y+1]].dot2(x-1, y-1);
 
-  var F3 = 1/3;
-  var G3 = 1/6;
+        // Compute the fade curve value for x
+        var u = fade(x);
 
-  // 2D simplex noise
-  module.simplex = function(xin, yin) {
-    var n0, n1, n2; // Noise contributions from the three corners
-    // Skew the input space to determine which simplex cell we're in
-    var s = (xin+yin)*F2; // Hairy factor for 2D
-    var i = Math.floor(xin+s);
-    var j = Math.floor(yin+s);
-    var t = (i+j)*G2;
-    var x0 = xin-i+t; // The x,y distances from the cell origin, unskewed.
-    var y0 = yin-j+t;
-    // For the 2D case, the simplex shape is an equilateral triangle.
-    // Determine which simplex we are in.
-    var i1, j1; // Offsets for second (middle) corner of simplex in (i,j) coords
-    if (x0 > y0) { // lower triangle, XY order: (0,0)->(1,0)->(1,1)
-      i1 = 1; j1 = 0;
-    }
-    else {    // upper triangle, YX order: (0,0)->(0,1)->(1,1)
-      i1 = 0; j1 = 1;
-    }
-    // A step of (1,0) in (i,j) means a step of (1-c,-c) in (x,y), and
-    // a step of (0,1) in (i,j) means a step of (-c,1-c) in (x,y), where
-    // c = (3-sqrt(3))/6
-    var x1 = x0 - i1 + G2; // Offsets for middle corner in (x,y) unskewed coords
-    var y1 = y0 - j1 + G2;
-    var x2 = x0 - 1 + 2 * G2; // Offsets for last corner in (x,y) unskewed coords
-    var y2 = y0 - 1 + 2 * G2;
-    // Work out the hashed gradient indices of the three simplex corners
-    i &= 255;
-    j &= 255;
-    var gi0 = gradP[i+perm[j]];
-    var gi1 = gradP[i+i1+perm[j+j1]];
-    var gi2 = gradP[i+1+perm[j+1]];
-    // Calculate the contribution from the three corners
-    var t0 = 0.5 - x0*x0-y0*y0;
-    if (t0 < 0) {
-      n0 = 0;
-    }
-    else {
-      t0 *= t0;
-      n0 = t0 * t0 * gi0.dot2(x0, y0);  // (x,y) of grad3 used for 2D gradient
-    }
-    var t1 = 0.5 - x1*x1-y1*y1;
-    if (t1 < 0) {
-      n1 = 0;
-    }
-    else {
-      t1 *= t1;
-      n1 = t1 * t1 * gi1.dot2(x1, y1);
-    }
-    var t2 = 0.5 - x2*x2-y2*y2;
-    if (t2 < 0) {
-      n2 = 0;
-    }
-    else {
-      t2 *= t2;
-      n2 = t2 * t2 * gi2.dot2(x2, y2);
-    }
-    // Add contributions from each corner to get the final noise value.
-    // The result is scaled to return values in the interval [-1,1].
-    return 70 * (n0 + n1 + n2);
-  };
-
-  // ##### Perlin noise stuff
-
-  function fade(t) {
-    return t*t*t*(t*(t*6-15)+10);
-  }
-
-  function lerp(a, b, t) {
-    return (1-t)*a + t*b;
-  }
-
-  // 2D Perlin Noise
-  module.perlin = function(x, y) {
-    // Find unit grid cell containing point
-    var X = Math.floor(x), Y = Math.floor(y);
-    // Get relative xy coordinates of point within that cell
-    x = x - X; y = y - Y;
-    // Wrap the integer cells at 255 (smaller integer period can be introduced here)
-    X = X & 255; Y = Y & 255;
-
-    // Calculate noise contributions from each of the four corners
-    var n00 = gradP[X+perm[Y]].dot2(x, y);
-    var n01 = gradP[X+perm[Y+1]].dot2(x, y-1);
-    var n10 = gradP[X+1+perm[Y]].dot2(x-1, y);
-    var n11 = gradP[X+1+perm[Y+1]].dot2(x-1, y-1);
-
-    // Compute the fade curve value for x
-    var u = fade(x);
-
-    // Interpolate the four results
-    return lerp(
-        lerp(n00, n10, u),
-        lerp(n01, n11, u),
-       fade(y));
-  };
+        // Interpolate the four results
+        return lerp(
+            lerp(n00, n10, u),
+            lerp(n01, n11, u),
+            fade(y)
+        );
+    };
 })(this);
 
 /**
@@ -285,7 +293,7 @@ THREE.Terrain = function(options) {
             options[opt] = typeof options[opt] === 'undefined' ? defaultOptions[opt] : options[opt];
         }
     }
-    //options.unit = (options.xSize / (options.xSegments+1) + options.ySize / (options.ySegments+1)) * 0.5;
+    // options.unit = (options.xSize / (options.xSegments+1) + options.ySize / (options.ySegments+1)) * 0.5;
     options.material = options.material || new THREE.MeshBasicMaterial({ color: 0xee6633 });
 
     // Encapsulating the terrain in a parent object allows us the flexibility
@@ -805,7 +813,7 @@ THREE.Terrain.RadialEdges = function(g, options, direction, distance, easing) {
         yl2 = yl * 0.5,
         xSegmentSize = options.xSize / options.xSegments,
         ySegmentSize = options.ySize / options.ySegments,
-        edgeRadius = Math.min(options.xSize, options.ySize) * 0.5 - distance,//Math.sqrt(options.xSize * options.xSize + options.ySize * options.ySize) - distance,
+        edgeRadius = Math.min(options.xSize, options.ySize) * 0.5 - distance,
         i, j, multiplier, k, vertexDistance;
     for (i = 0; i < xl; i++) {
         for (j = 0; j < yl2; j++) {
@@ -838,8 +846,7 @@ THREE.Terrain.RadialEdges = function(g, options, direction, distance, easing) {
 THREE.Terrain.Smooth = function(g, options, weight) {
     var heightmap = new Float64Array(g.length);
     for (var i = 0, xl = options.xSegments + 1, yl = options.ySegments + 1; i < xl; i++) {
-        for (var j = 0; j < yl; j++) {
-            var sum = 0, c = 0;
+        for (var j = 0, sum = 0, c = 0; j < yl; j++) {
             for (var n = -1; n <= 1; n++) {
                 for (var m = -1; m <= 1; m++) {
                     var key = (j+n)*xl + i + m;
@@ -1098,8 +1105,9 @@ THREE.Terrain.CosineLayers = function(g, options) {
 THREE.Terrain.DiamondSquare = function(g, options) {
     // Set the segment length to the smallest power of 2 that is greater than
     // the number of vertices in either dimension of the plane
-    var segments = Math.max(options.xSegments, options.ySegments) + 1, n;
-    for (n = 1; Math.pow(2, n) < segments; n++) {}
+    var segments = Math.max(options.xSegments, options.ySegments) + 1,
+        n = 1;
+    while (Math.pow(2, n) < segments) { n++; }
     segments = Math.pow(2, n);
 
     // Initialize heightmap
@@ -1116,15 +1124,21 @@ THREE.Terrain.DiamondSquare = function(g, options) {
 
     // Generate heightmap
     for (var l = segments; l >= 2; l /= 2) {
-        var half = Math.round(l*0.5), whole = Math.round(l), x, y, avg, d, e;
+        var half = Math.round(l*0.5),
+            whole = Math.round(l),
+            x,
+            y,
+            avg,
+            d,
+            e;
         smoothing /= 2;
         // square
         for (x = 0; x < segments; x += whole) {
             for (y = 0; y < segments; y += whole) {
                 d = Math.random() * smoothing * 2 - smoothing;
-                avg = heightmap[x][y] +    // top left
-                      heightmap[x+whole][y] +  // top right
-                      heightmap[x][y+whole] +  // bottom left
+                avg = heightmap[x][y] +            // top left
+                      heightmap[x+whole][y] +      // top right
+                      heightmap[x][y+whole] +      // bottom left
                       heightmap[x+whole][y+whole]; // bottom right
                 avg *= 0.25;
                 heightmap[x+half][y+half] = avg + d;
@@ -1155,7 +1169,7 @@ THREE.Terrain.DiamondSquare = function(g, options) {
         }
     }
 
-    //THREE.Terrain.SmoothConservative(g, options);
+    // THREE.Terrain.SmoothConservative(g, options);
 };
 
 /**
@@ -1193,7 +1207,7 @@ THREE.Terrain.Fault = function(g, options) {
             }
         }
     }
-    //THREE.Terrain.Smooth(g, options);
+    // THREE.Terrain.Smooth(g, options);
 };
 
 /**
@@ -1365,7 +1379,7 @@ THREE.Terrain.HillIsland = (function() {
                 j = Math.floor(options.ySegments*(0.5+yDeviation) + Math.sin(d) * Math.random() * options.ySegments*(0.5-Math.abs(yDeviation)));
             }
         }
-        //THREE.Terrain.Smooth(g, options, 3);
+        // THREE.Terrain.Smooth(g, options, 3);
     };
 })();
 
@@ -1473,12 +1487,14 @@ THREE.Terrain.SimplexLayers = function(g, options) {
                 var k = j * xl + i;
                 data[k] = Math.random() * range;
                 if (lastX < 0 && lastY < 0) continue;
+                // jscs:disable disallowSpacesInsideBrackets
                 /* c b *
                  * l t */
                 var t = data[k],
                     l = data[ j      * xl + (i-inc)] || t, // left
                     b = data[(j-inc) * xl +  i     ] || t, // bottom
                     c = data[(j-inc) * xl + (i-inc)] || t; // corner
+                // jscs:enable disallowSpacesInsideBrackets
                 // Interpolate between adjacent points to set the height of
                 // higher-resolution target data.
                 for (var x = lastX; x < i; x++) {
@@ -1521,8 +1537,9 @@ THREE.Terrain.SimplexLayers = function(g, options) {
     THREE.Terrain.Value = function(g, options) {
         // Set the segment length to the smallest power of 2 that is greater
         // than the number of vertices in either dimension of the plane
-        var segments = Math.max(options.xSegments, options.ySegments) + 1, n;
-        for (n = 1; Math.pow(2, n) < segments; n++) {}
+        var segments = Math.max(options.xSegments, options.ySegments) + 1,
+            n = 1;
+        while (Math.pow(2, n) < segments) { n++; }
         segments = Math.pow(2, n);
 
         // Store the array of white noise outside of the WhiteNoise function to
@@ -1537,7 +1554,7 @@ THREE.Terrain.SimplexLayers = function(g, options) {
         }
 
         // White noise creates some weird artifacts; fix them.
-        //THREE.Terrain.Smooth(g, options, 1);
+        // THREE.Terrain.Smooth(g, options, 1);
         THREE.Terrain.Clamp(g, {
             maxHeight: options.maxHeight,
             minHeight: options.minHeight,
@@ -1646,7 +1663,7 @@ THREE.Terrain.generateBlendedMaterial = function(textures) {
                 // Convert levels to floating-point numbers as strings so GLSL doesn't barf on "1" instead of "1.0"
                 for (var j = 0; j < v.length; j++) {
                     var n = v[j];
-                    v[j] = n|0 === n ? n+'.0' : n+'';
+                    v[j] = n === n|0 ? n+'.0' : n+'';
                 }
             }
             // The transparency of the new texture when it is layered on top of the existing color at this texel is
@@ -1721,7 +1738,7 @@ THREE.Terrain.generateBlendedMaterial = function(textures) {
             '    vec4 color = texture2D( texture_0, MyvUv ); // base',
                 assign,
             '    diffuseColor = color;',
-            //'    gl_FragColor = color;',
+            // '    gl_FragColor = color;',
 
                 THREE.ShaderChunk.logdepthbuf_fragment,
                 THREE.ShaderChunk.map_fragment,
@@ -1841,7 +1858,7 @@ THREE.Terrain.ScatterMeshes = function(geometry, options) {
         randomHeightmap = options.randomness();
         randomness = typeof randomHeightmap === 'number' ? Math.random : function(k) { return randomHeightmap[k]; };
     }
-    //geometry.computeFaceNormals();
+    // geometry.computeFaceNormals();
     for (var i = 0, w = options.w*2; i < w; i++) {
         for (var j = 0, h = options.h; j < h; j++) {
             var key = j*w + i,
@@ -1868,9 +1885,9 @@ THREE.Terrain.ScatterMeshes = function(geometry, options) {
                     continue;
                 }
                 var mesh = options.mesh.clone();
-                //mesh.geometry.computeBoundingBox();
+                // mesh.geometry.computeBoundingBox();
                 mesh.position.copy(v[f.a]).add(v[f.b]).add(v[f.c]).divideScalar(3);
-                //mesh.translateZ((mesh.geometry.boundingBox.max.z - mesh.geometry.boundingBox.min.z) * 0.5);
+                // mesh.translateZ((mesh.geometry.boundingBox.max.z - mesh.geometry.boundingBox.min.z) * 0.5);
                 if (options.maxTilt > 0) {
                     var normal = mesh.position.clone().add(f.normal);
                     mesh.lookAt(normal);
@@ -2099,7 +2116,7 @@ THREE.Terrain.Influence = function(g, options, f, x, y, r, h, t, e) {
                 // interpolate using e, then blend according to t.
                 d = f(fdr, fdxr, fdyr) * h * (1 - e(fdr, fdxr, fdyr));
             if (fd > r || typeof g[k] == 'undefined') continue;
-            if      (t === THREE.AdditiveBlending)    g[k].z += d;
+            if      (t === THREE.AdditiveBlending)    g[k].z += d; // jscs:ignore requireSpaceAfterKeywords
             else if (t === THREE.SubtractiveBlending) g[k].z -= d;
             else if (t === THREE.MultiplyBlending)    g[k].z *= d;
             else if (t === THREE.NoBlending)          g[k].z  = d;

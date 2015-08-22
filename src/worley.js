@@ -9,11 +9,13 @@
         return Math.abs(this.x - b.x) + Math.abs(this.y - b.y);
     };
     THREE.Vector2.prototype.distanceToChebyshev = function(b) {
-        var c = Math.abs(this.x - b.x), d = Math.abs(this.y - b.y);
+        var c = Math.abs(this.x - b.x),
+            d = Math.abs(this.y - b.y);
         return c <= d ? d : c;
     };
     THREE.Vector2.prototype.distanceToQuadratic = function(b) {
-        var c = Math.abs(this.x - b.x), d = Math.abs(this.y - b.y);
+        var c = Math.abs(this.x - b.x),
+            d = Math.abs(this.y - b.y);
         return c*c + c*d + d*d;
     };
 
@@ -119,13 +121,14 @@
     }
 
     function putInGrid(grid, point, cellSize) {
-        var gx = Math.floor(point.x / cellSize), gy = Math.floor(point.y / cellSize);
+        var gx = Math.floor(point.x / cellSize),
+            gy = Math.floor(point.y / cellSize);
         if (!grid[gx]) grid[gx] = [];
         grid[gx][gy] = point;
     }
 
     function inRectangle(point, width, height) {
-        return  point.x >= 0 &&
+        return  point.x >= 0 && // jscs:ignore requireSpaceAfterKeywords
                 point.y >= 0 &&
                 point.x <= width+1 &&
                 point.y <= height+1;
@@ -138,7 +141,8 @@
             for (var y = gy - 1; y <= gy + 1; y++) {
                 if (x !== gx && y !== gy &&
                     typeof grid[x] !== 'undefined' && typeof grid[x][y] !== 'undefined') {
-                    var cx = x * cellSize, cy = y * cellSize;
+                    var cx = x * cellSize,
+                        cy = y * cellSize;
                     if (Math.sqrt((point.x - cx) * (point.x - cx) + (point.y - cy) * (point.y - cy)) < minDist) {
                         return true;
                     }

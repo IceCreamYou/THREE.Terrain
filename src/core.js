@@ -99,7 +99,7 @@ THREE.Terrain = function(options) {
             options[opt] = typeof options[opt] === 'undefined' ? defaultOptions[opt] : options[opt];
         }
     }
-    //options.unit = (options.xSize / (options.xSegments+1) + options.ySize / (options.ySegments+1)) * 0.5;
+    // options.unit = (options.xSize / (options.xSegments+1) + options.ySize / (options.ySegments+1)) * 0.5;
     options.material = options.material || new THREE.MeshBasicMaterial({ color: 0xee6633 });
 
     // Encapsulating the terrain in a parent object allows us the flexibility

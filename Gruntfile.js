@@ -9,7 +9,7 @@ module.exports = function(grunt) {
     pkg: grunt.file.readJSON('package.json'),
     concat: {
       options: {
-        banner: banner + "\n",
+        banner: banner + '\n',
         separator: grunt.util.linefeed,
       },
       target: {
@@ -18,8 +18,8 @@ module.exports = function(grunt) {
           'src/core.js',
           'src/images.js',
           'src/filters.js',
-          //'src/gaussian.js',
-          //'src/weightedBoxBlurGaussian.js',
+          // 'src/gaussian.js',
+          // 'src/weightedBoxBlurGaussian.js',
           'src/generators.js',
           'src/materials.js',
           'src/scatter.js',
@@ -112,7 +112,7 @@ module.exports = function(grunt) {
   grunt.loadNpmTasks('grunt-contrib-concat');
   grunt.loadNpmTasks('grunt-contrib-uglify');
   grunt.loadNpmTasks('grunt-contrib-jshint');
-  grunt.loadNpmTasks("grunt-jscs-checker");
+  grunt.loadNpmTasks('grunt-jscs');
   grunt.loadNpmTasks('grunt-contrib-watch');
   grunt.registerTask('default', ['concat', 'uglify', 'jshint', 'jscs']);
   grunt.registerTask('lint', ['jshint', 'jscs']);

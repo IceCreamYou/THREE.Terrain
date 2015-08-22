@@ -63,7 +63,7 @@ THREE.Terrain.generateBlendedMaterial = function(textures) {
                 // Convert levels to floating-point numbers as strings so GLSL doesn't barf on "1" instead of "1.0"
                 for (var j = 0; j < v.length; j++) {
                     var n = v[j];
-                    v[j] = n|0 === n ? n+'.0' : n+'';
+                    v[j] = n === n|0 ? n+'.0' : n+'';
                 }
             }
             // The transparency of the new texture when it is layered on top of the existing color at this texel is
@@ -138,7 +138,7 @@ THREE.Terrain.generateBlendedMaterial = function(textures) {
             '    vec4 color = texture2D( texture_0, MyvUv ); // base',
                 assign,
             '    diffuseColor = color;',
-            //'    gl_FragColor = color;',
+            // '    gl_FragColor = color;',
 
                 THREE.ShaderChunk.logdepthbuf_fragment,
                 THREE.ShaderChunk.map_fragment,

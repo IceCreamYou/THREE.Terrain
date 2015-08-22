@@ -1,4 +1,4 @@
-var webglExists = ( function () { try { var canvas = document.createElement( 'canvas' ); return !!window.WebGLRenderingContext && ( canvas.getContext( 'webgl' ) || canvas.getContext( 'experimental-webgl' ) ); } catch( e ) { return false; } } )();
+var webglExists = ( function () { try { var canvas = document.createElement( 'canvas' ); return !!window.WebGLRenderingContext && ( canvas.getContext( 'webgl' ) || canvas.getContext( 'experimental-webgl' ) ); } catch( e ) { return false; } } )(); // jscs:ignore
 
 if (!webglExists) {
   alert('Your browser does not appear to support WebGL. You can try viewing this page anyway, but it may be slow and some things may not look as intended. Please try viewing on desktop Firefox or Chrome.');
@@ -11,10 +11,14 @@ if (/&?webgl=0\b/g.test(location.hash)) {
   }
 }
 
-// Workaround: in Chrome, if a page is opened with window.open(), window.innerWidth and window.innerHeight will be zero.
-if ( window.innerWidth === 0 ) { window.innerWidth = parent.innerWidth; window.innerHeight = parent.innerHeight; }
+// Workaround: in Chrome, if a page is opened with window.open(),
+// window.innerWidth and window.innerHeight will be zero.
+if ( window.innerWidth === 0 ) {
+  window.innerWidth = parent.innerWidth;
+  window.innerHeight = parent.innerHeight;
+}
 
-var camera, scene, renderer, clock, player, terrainScene, decoScene, lastOptions, controls = {}, fpsCamera, skyDome, skyLight, sand, water;
+var camera, scene, renderer, clock, player, terrainScene, decoScene, lastOptions, controls = {}, fpsCamera, skyDome, skyLight, sand, water; // jscs:ignore requireLineBreakAfterVariableAssignment
 var INV_MAX_FPS = 1 / 100,
     frameDelta = 0,
     paused = true,
@@ -383,12 +387,12 @@ function watchFocus() {
   window.addEventListener('focus', function() {
     if (_blurred) {
       _blurred = false;
-      //startAnimating();
+      // startAnimating();
       controls.freeze = false;
     }
   });
   window.addEventListener('blur', function() {
-    //stopAnimating();
+    // stopAnimating();
     _blurred = true;
     controls.freeze = true;
   });

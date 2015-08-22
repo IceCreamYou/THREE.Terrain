@@ -87,7 +87,7 @@ THREE.Terrain.ScatterMeshes = function(geometry, options) {
         randomHeightmap = options.randomness();
         randomness = typeof randomHeightmap === 'number' ? Math.random : function(k) { return randomHeightmap[k]; };
     }
-    //geometry.computeFaceNormals();
+    // geometry.computeFaceNormals();
     for (var i = 0, w = options.w*2; i < w; i++) {
         for (var j = 0, h = options.h; j < h; j++) {
             var key = j*w + i,
@@ -114,9 +114,9 @@ THREE.Terrain.ScatterMeshes = function(geometry, options) {
                     continue;
                 }
                 var mesh = options.mesh.clone();
-                //mesh.geometry.computeBoundingBox();
+                // mesh.geometry.computeBoundingBox();
                 mesh.position.copy(v[f.a]).add(v[f.b]).add(v[f.c]).divideScalar(3);
-                //mesh.translateZ((mesh.geometry.boundingBox.max.z - mesh.geometry.boundingBox.min.z) * 0.5);
+                // mesh.translateZ((mesh.geometry.boundingBox.max.z - mesh.geometry.boundingBox.min.z) * 0.5);
                 if (options.maxTilt > 0) {
                     var normal = mesh.position.clone().add(f.normal);
                     mesh.lookAt(normal);

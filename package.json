@@ -1,9 +1,10 @@
 {
     "name": "three.terrain.js",
-    "version": "1.2.1",
+    "version": "1.2.2",
     "description": "Extends the Three.js web-based 3D graphics framework to support generating random terrains and rendering terrain from predetermined heightmaps.",
     "homepage": "https://github.com/IceCreamYou/THREE.Terrain",
     "bugs": "https://github.com/IceCreamYou/THREE.Terrain/issues",
+    "main": "build/THREE.Terrain.min.js",
     "directories": {
         "lib": "build",
         "example": "demo"
@@ -25,11 +26,11 @@
     "license": "MIT",
     "readmeFilename": "README.md",
     "devDependencies": {
-        "grunt": "~0.4.4",
-        "grunt-contrib-concat": "~0.4.0",
-        "grunt-contrib-jshint": "~0.10.0",
-        "grunt-contrib-uglify": "~0.4.0",
-        "grunt-jscs-checker": "~0.4.1",
+        "grunt": "~0.4.5",
+        "grunt-contrib-concat": "~0.5.1",
+        "grunt-contrib-jshint": "~0.11.2",
+        "grunt-contrib-uglify": "~0.9.1",
+        "grunt-jscs": "~2.1.0",
         "grunt-contrib-watch": "^0.6.1"
     }
 }
