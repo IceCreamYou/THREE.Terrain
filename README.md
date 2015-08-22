@@ -5,17 +5,23 @@
 
 ## Usage
 
-Include the script on your page (after the `three.js` library):
+You can download the script normally, install it with Bower (`bower install
+THREE.Terrain`), or install it with npm (`npm install three.terrain.js`). To
+include it on a page client-side without a module loader:
 
 ```html
-<script src="THREE.Terrain.min.js"></script>
+<!-- from a direct download or git clone -->
+<script src="build/THREE.Terrain.min.js"></script>
+
+<!-- from Bower -->
+<script src="bower_components/THREE.Terrain/build/THREE.Terrain.min.js"></script>
+
+<!-- from npm -->
+<script src="node_modules/three.terrain.js/build/THREE.Terrain.min.js"></script>
 ```
 
-Or with Bower (`bower install THREE.Terrain`):
-
-```html
-<script src="bower_components\THREE.Terrain\build\THREE.Terrain.min.js"></script>
-```
+You then have access to the `THREE.Terrain` object. (Make sure the `three.js`
+library is loaded first.)
 
 Tested with three.js
 [r71](https://github.com/mrdoob/three.js/releases/tag/r71). Use the
