@@ -187,7 +187,7 @@ function setupDatGui() {
               val = analysis[prop[0]][prop[1]].round(3),
               valIntStr = (val | 0) + '',
               c = '';
-          while (valIntStr.length + c.length < 4) {
+          while (valIntStr.length + c.length < 5) {
             c += ' ';
           }
           analyticsValues[i].textContent = c + val;

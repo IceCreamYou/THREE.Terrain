@@ -1,5 +1,7 @@
 ## 1.3
 
+The steps filter seems to be misbehaving
+Use THREE.Math.nextPowerOfTwo in the DiamondSquare and Value generators instead of their custom implementation
 Make the custom shader(s) scalable https://twitter.com/VMA3D/status/562631211752112128
 Write documentation that's not in the code
 Fix Smoothing to use a smoothing factor (a multiplier for how close the point should move to the average) instead of a weight for the target point
