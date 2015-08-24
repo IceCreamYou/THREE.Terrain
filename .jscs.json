@@ -38,7 +38,7 @@
     "requireParenthesesAroundIIFE": true,
     "requireSemicolons": true,
     "requireSpaceAfterBinaryOperators": ["=", "==", "===", "!=", "!==", ">", ">=", "<", "<="],
-    "requireSpaceAfterKeywords": ["if", "else", "for", "while", "do", "switch", "case", "return", "try", "catch", "void", "with", "typeof"],
+    "requireSpaceAfterKeywords": ["if", "else", "for", "while", "do", "switch", "case", "return", "try", "void", "with", "typeof"],
     "requireSpaceAfterLineComment": {
         "allExcept": ["#", "="]
     },

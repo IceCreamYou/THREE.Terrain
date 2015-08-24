@@ -10,75 +10,84 @@
 
   <link rel="icon" href="demo/img/favicon.png"/>
 
-  <style>
-::-moz-selection { background: #39f; }
-::selection { background: #39f; }
-html, body {
-  font-size: 1em;
-  line-height: 1.4;
-  margin: 0;
-  overflow: hidden;
-  padding: 0;
-}
-canvas {
-  -khtml-user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
-  -webkit-user-select: none;
-  -webkit-tap-highlight-color: rgba(0,0,0,0);
-  -webkit-touch-callout: none;
-  background-color: black;
-  display: block;
-  margin: 0 auto;
-  user-select: none;
-}
-#code,
-#fpscontrols {
-  background-color: rgba(16, 16, 16, 0.75);
-  border: 1px solid #AAAAAA;
-  border-bottom-width: 0;
-  bottom: 0;
-  color: #AAAAAA;
-  font-family: Arial, sans-serif;
-  font-size: 18px;
-  height: 25px;
-  letter-spacing: 0.03em;
-  opacity: 0;
-  padding: 2px 10px;
-  position: absolute;
-  right: 20px;
-  transition: opacity 0.5s;
-  z-index: 3;
-}
-#fpscontrols.visible {
-  opacity: 1;
-  transition: opacity 0.5s;
-}
-#code {
-  left: 20px;
-  opacity: 1;
-  right: auto;
-}
-#code a {
-  color: #AAAAAA;
-  text-decoration: none;
-}
-#code a:hover {
-  text-decoration: underline;
-}
-#heightmap {
-  border: 1px solid #AAAAAA;
-  height: 128px;
-  left: 20px;
-  position: absolute;
-  top: 20px;
-  width: 128px;
-  z-index: 3;
-}
-  </style>
+  <link rel="stylesheet" href="demo/index.css">
 </head>
 <body>
   <canvas id="heightmap"></canvas>
+  <div id="show-analytics" class="visible">Analyze</div>
+  <div id="analytics" class="">
+    <h2>Analytics</h2>
+    <div class="colgroup">
+      <div class="column">
+        <h3>Elevation</h3>
+        <table class="analytics-group">
+          <tbody>
+            <tr class="stat"><td class="label">Sample size</td><td class="value" data-property="elevation.sampleSize"></td></tr>
+            <tr class="stat"><td class="label">Min</td><td class="value" data-property="elevation.min"></td></tr>
+            <tr class="stat"><td class="label">Max</td><td class="value" data-property="elevation.max"></td></tr>
+            <tr class="stat"><td class="label">Range</td><td class="value" data-property="elevation.range"></td></tr>
+            <tr class="stat"><td class="label">Midrange</td><td class="value" data-property="elevation.midrange"></td></tr>
+            <tr class="stat"><td class="label">Median</td><td class="value" data-property="elevation.median"></td></tr>
+            <tr class="stat"><td class="label">IQR</td><td class="value" data-property="elevation.iqr"></td></tr>
+            <tr class="stat"><td class="label">Mean</td><td class="value" data-property="elevation.mean"></td></tr>
+            <tr class="stat"><td class="label">Std Dev</td><td class="value" data-property="elevation.stdev"></td></tr>
+            <tr class="stat"><td class="label">RSD</td><td class="value" data-property="elevation.rsd"></td></tr>
+            <tr class="stat"><td class="label">Offset</td><td class="value" data-property="elevation.minOffset"></td></tr>
+            <tr class="stat empty"><td class="">&nbsp;</td><td class="">&nbsp;</td></tr>
+          </tbody>
+        </table>
+        <div class="histogram-container">
+          <canvas id="elevation-graph" class="histogram"></canvas>
+          <div class="graph-label">Elevation Histogram</div>
+        </div>
+      </div>
+      <div class="column">
+        <h3>Slope</h3>
+        <table class="analytics-group">
+          <tbody>
+            <tr class="stat"><td class="label">Sample size</td><td class="value" data-property="slope.sampleSize"></td></tr>
+            <tr class="stat"><td class="label">Min</td><td class="value degree" data-property="slope.min"></td></tr>
+            <tr class="stat"><td class="label">Max</td><td class="value degree" data-property="slope.max"></td></tr>
+            <tr class="stat"><td class="label">Range</td><td class="value degree" data-property="slope.range"></td></tr>
+            <tr class="stat"><td class="label">Midrange</td><td class="value degree" data-property="slope.midrange"></td></tr>
+            <tr class="stat"><td class="label">Median</td><td class="value degree" data-property="slope.median"></td></tr>
+            <tr class="stat"><td class="label">IQR</td><td class="value degree" data-property="slope.iqr"></td></tr>
+            <tr class="stat"><td class="label">Mean</td><td class="value degree" data-property="slope.mean"></td></tr>
+            <tr class="stat"><td class="label">Std Dev</td><td class="value degree" data-property="slope.stdev"></td></tr>
+            <tr class="stat"><td class="label">RSD</td><td class="value" data-property="slope.rsd"></td></tr>
+            <tr class="stat"><td class="label">Fitted Std Dev</td><td class="value degree" data-property="slope.stdevFitted"></td></tr>
+            <tr class="stat"><td class="label">Fitted RSD</td><td class="value" data-property="slope.rsdFitted"></td></tr>
+          </tbody>
+        </table>
+        <div class="histogram-container">
+          <canvas id="slope-graph" class="histogram"></canvas>
+          <div class="graph-label">Slope Histogram</div>
+        </div>
+      </div>
+    </div>
+    <div class="colgroup">
+      <div class="column">
+        <h3>Roughness metrics</h3>
+        <table class="analytics-group">
+          <tbody>
+            <tr class="stat"><td class="label">2D to 3D area ratio</td><td class="value" data-property="roughness.planimetricAreaRatio"></td></tr>
+            <tr class="stat"><td class="label">Ruggedness Index</td><td class="value" data-property="roughness.terrainRuggednessIndex"></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="column">
+        <h3>Fitted Plane</h3>
+        <table class="analytics-group">
+          <tbody>
+            <tr class="stat"><td class="label">Slope</td><td class="value degree" data-property="fittedPlane.slope"></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div>
+      <a href="#" class="close">Close</a>
+    </div>
+  </div>
   <div id="code"><a href="https://github.com/IceCreamYou/THREE.Terrain" target="_blank">Fork me on Github</a></div>
   <div id="fpscontrols">W = Forward, S = Back, A = Left, D = Right, R = Up, F = Down, Q = Freeze, Mouse = Look</div>
 
@@ -92,6 +101,7 @@ canvas {
   <script src="src/worley.js"></script>
   <script src="src/gaussian.js"></script>
   <script src="src/weightedBoxBlurGaussian.js"></script>
+  <script src="src/analysis.js"></script>
   <script src="demo/index.js"></script>
   <script>setup();</script>
 </body>

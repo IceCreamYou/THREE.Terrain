@@ -131,6 +131,9 @@ function setupDatGui() {
     var mat = new THREE.MeshBasicMaterial({color: 0x5566aa, wireframe: true});
     var gray = new THREE.MeshPhongMaterial({ color: 0x88aaaa, specular: 0x444455, shininess: 10 });
     var blend;
+    var elevationGraph = document.getElementById('elevation-graph'),
+        slopeGraph = document.getElementById('slope-graph'),
+        analyticsValues = document.getElementsByClassName('value');
     THREE.ImageUtils.loadTexture('demo/img/sand1.jpg', undefined, function(t1) {
       t1.wrapS = t1.wrapT = THREE.RepeatWrapping;
       sand = new THREE.Mesh(
@@ -175,6 +178,22 @@ function setupDatGui() {
     this.spread = 60;
     this.scattering = 'PerlinAltitude';
     this.after = function(vertices, options) {
+      if (typeof terrainScene !== 'undefined') {
+        var analysis = THREE.Terrain.Analyze(terrainScene.children[0], options);
+        analysis.elevation.drawHistogram(elevationGraph, 10);
+        analysis.slope.drawHistogram(slopeGraph, 10);
+        for (var i = 0, l = analyticsValues.length; i < l; i++) {
+          var prop = analyticsValues[i].getAttribute('data-property').split('.'),
+              val = analysis[prop[0]][prop[1]].round(3),
+              valIntStr = (val | 0) + '',
+              c = '';
+          while (valIntStr.length + c.length < 4) {
+            c += ' ';
+          }
+          analyticsValues[i].textContent = c + val;
+        }
+      }
+
       if (that.edgeDirection === 'Normal') return;
       (that.edgeType === 'Box' ? THREE.Terrain.Edges : THREE.Terrain.RadialEdges)(
         vertices,
@@ -398,6 +417,20 @@ function watchFocus() {
   });
 }
 
+document.querySelector('#analytics .close').addEventListener('click', function(event) {
+  event.preventDefault();
+  document.getElementById('analytics').classList.remove('visible');
+  document.getElementById('show-analytics').classList.add('visible');
+}, false);
+
+document.querySelector('#show-analytics').addEventListener('click', function(event) {
+  event.preventDefault();
+  document.getElementById('show-analytics').classList.remove('visible');
+  var analytics = document.getElementById('analytics');
+  analytics.scrollTop = 0;
+  analytics.classList.add('visible');
+}, false);
+
 function __printCameraData() {
   var s = '';
   s += 'camera.position.x = ' + Math.round(fpsCamera.position.x) + ';\n';
@@ -513,3 +546,23 @@ function customInfluences(g, options) {
     THREE.Terrain.EaseInStrong
   );
 }
+
+/**
+ * Utility method to round numbers to a given number of decimal places.
+ *
+ * Usage:
+ *   3.5.round(0) // 4
+ *   Math.random().round(4) // 0.8179
+ *   var a = 5532; a.round(-2) // 5500
+ *   Number.prototype.round(12345.6, -1) // 12350
+ *   32..round(-1) // 30 (two dots required since the first one is a decimal)
+ */
+Number.prototype.round = function(v, a) {
+  if (typeof a === 'undefined') {
+    a = v;
+    v = this;
+  }
+  if (!a) a = 0;
+  var m = Math.pow(10, a|0);
+  return Math.round(v*m)/m;
+};

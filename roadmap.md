@@ -14,6 +14,7 @@ Add a method to get the terrain height at a given spatial location
     The best way to do this is probably with a raycaster
 Make scattering be based on spatial distance, not faces
     This probably looks something like Voronoi cells
+Add a function to horizontally shift the high points of high slope faces to possibly generate some overhang
 
 
 ## 1.4
@@ -79,6 +80,7 @@ Support infinite terrain
 Try IFFT(LowPassFilter(FFT(WhiteNoise()))) again as a procedural generation method
 Try simulating techtonic plates as a procedural generation method as described at https://webcache.googleusercontent.com/search?q=cache:http://experilous.com/1/blog/post/procedural-planet-generation
 Try implementing spherical (planet) generation with biomes
+Tunnels and caves
 
 
 ## Known bugs
