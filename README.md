@@ -116,7 +116,7 @@ texture in code and apply it to the terrain.
 ### Dynamic Terrain Materials
 
 When generating terrains procedurally, it's useful to automatically texture
-terrains based on height/biome, slope, and location. A utility function is
+terrains based on elevation/biome, slope, and location. A utility function is
 provided that generates such a material (other than blending textures together,
 it is the same as a `MeshLambertMaterial`).
 
