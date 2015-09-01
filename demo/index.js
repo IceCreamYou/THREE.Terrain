@@ -178,30 +178,32 @@ function setupDatGui() {
     this.spread = 60;
     this.scattering = 'PerlinAltitude';
     this.after = function(vertices, options) {
+      if (that.edgeDirection !== 'Normal') {
+        (that.edgeType === 'Box' ? THREE.Terrain.Edges : THREE.Terrain.RadialEdges)(
+          vertices,
+          options,
+          that.edgeDirection === 'Up' ? true : false,
+          that.edgeDistance,
+          THREE.Terrain[that.edgeCurve]
+        );
+      }
+
       if (typeof terrainScene !== 'undefined') {
-        var analysis = THREE.Terrain.Analyze(terrainScene.children[0], options);
+        var analysis = THREE.Terrain.Analyze(terrainScene.children[0], options),
+            deviations = analysis.deviationFromAverageMoments(true),
+            prop;
         analysis.elevation.drawHistogram(elevationGraph, 10);
         analysis.slope.drawHistogram(slopeGraph, 10);
         for (var i = 0, l = analyticsValues.length; i < l; i++) {
-          var prop = analyticsValues[i].getAttribute('data-property').split('.'),
-              val = analysis[prop[0]][prop[1]].round(3),
-              valIntStr = (val | 0) + '',
-              c = '';
-          while (valIntStr.length + c.length < 5) {
-            c += ' ';
+          prop = analyticsValues[i].getAttribute('data-property').split('.');
+          analyticsValues[i].textContent = cleanAnalytic(analysis[prop[0]][prop[1]]);
+        }
+        for (prop in deviations) {
+          if (deviations.hasOwnProperty(prop)) {
+            document.querySelector('.summary-value[data-property="' + prop + '"]').textContent = deviations[prop];
           }
-          analyticsValues[i].textContent = c + val;
         }
       }
-
-      if (that.edgeDirection === 'Normal') return;
-      (that.edgeType === 'Box' ? THREE.Terrain.Edges : THREE.Terrain.RadialEdges)(
-        vertices,
-        options,
-        that.edgeDirection === 'Up' ? true : false,
-        that.edgeDistance,
-        THREE.Terrain[that.edgeCurve]
-      );
     };
     window.rebuild = this.Regenerate = function() {
       var s = parseInt(that.segments, 10),
@@ -545,6 +547,18 @@ function customInfluences(g, options) {
     THREE.NormalBlending,
     THREE.Terrain.EaseInStrong
   );
+}
+
+function cleanAnalytic(val) {
+  var valIntStr = (val | 0) + '',
+      c = '';
+  if (val | 0 === 0 && val < 0) {
+    valIntStr = '-' + valIntStr;
+  }
+  while (valIntStr.length + c.length < 5) {
+    c += ' ';
+  }
+  return c + val.round(3);
 }
 
 /**

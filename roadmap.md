@@ -1,5 +1,9 @@
 ## 1.3
 
+Add an analytics measure for jaggedness: what percent of vertices are the highest or lowest in their neighborhood
+Add mode bucket for elevation and slope to the analysis
+Add an explanation of the terms used to the analysis panel in the demo
+Add a Slope/Curve and a pure Random generator
 The steps filter seems to be misbehaving
 Use THREE.Math.nextPowerOfTwo in the DiamondSquare and Value generators instead of their custom implementation
 Make the custom shader(s) scalable https://twitter.com/VMA3D/status/562631211752112128
@@ -21,6 +25,7 @@ Add a function to horizontally shift the high points of high slope faces to poss
 
 ## 1.4
 
+Make FirstPersonControls rotate on swipe and move forward on tap-and-hold like OrbitControls
 Try using the terrain with a physics library
 Support morphing over time between two heightmaps
 Support manually sculpting (raising/lowering) terrain

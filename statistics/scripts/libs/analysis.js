@@ -19,10 +19,8 @@ THREE.Terrain.Analyze = function(mesh, options) {
     }
 
     var elevations = Array.prototype.sort.call(
-            Array.prototype.map.call(
-                THREE.Terrain.toArray1D(mesh.geometry.vertices),
-                function(v) { return v - options.minHeight; }
-            ),
+            THREE.Terrain.toArray1D(mesh.geometry.vertices)
+                .map(function(v) { return v - options.minHeight; }),
             function(a, b) { return a - b; }
         ),
         numVertices = elevations.length,
@@ -171,9 +169,6 @@ THREE.Terrain.Analyze = function(mesh, options) {
             centroid: centroid,
             normal: fittedPlaneNormal,
             slope: fittedPlaneSlope,
-        },
-        deviationFromAverageMoments: function(asText) {
-            return getDeviationFromAverageMoments(this, asText);
         },
         // # of different kinds of features http://www.armystudyguide.com/content/army_board_study_guide_topics/land_navigation_map_reading/identify-major-minor-terr.shtml
     };
@@ -429,58 +424,6 @@ function drawHistogram(buckets, canvas, minV, maxV, append) {
     context.moveTo(border, height + border);
     context.lineTo(width + border, height + border);
     context.stroke();
-}
-
-// These numbers are from a sample of size 80 on 2015-09-01
-var moments = {
-    'elevation.stdev': {
-        mean: 42.106,
-        stdev: 6.319,
-    },
-    'elevation.pearsonSkew': {
-        mean: 0.098,
-        stdev: 0.564,
-    },
-    'slope.stdev': {
-        mean: 10.143,
-        stdev: 3.581,
-    },
-    'slope.groeneveldMeedenSkew': {
-        mean: -0.021,
-        stdev: 0.162,
-    },
-    'roughness.terrainRuggednessIndex': {
-        mean: 41.014,
-        stdev: 6.344,
-    },
-    'fittedPlane.slope': {
-        mean: 2.478,
-        stdev: 1.701,
-    },
-};
-
-function getDeviationFromAverageMoments(analytics, asText) {
-    var results = {};
-    for (var prop in moments) {
-        if (moments.hasOwnProperty(prop)) {
-            var averageProp = moments[prop],
-                split = prop.split('.'),
-                sampleProp = analytics[split[0]][split[1]];
-            results[prop] = (sampleProp - averageProp.mean) / averageProp.stdev;
-            if (asText) {
-                results[prop] = mapDeviationToText(results[prop]);
-            }
-        }
-    }
-    return results;
-}
-
-function mapDeviationToText(deviation) {
-    if (deviation < -2) return 'very low';
-    if (deviation < -1) return 'low';
-    if (deviation <= 1) return 'medium';
-    if (deviation <= 2) return 'high';
-    if (deviation >  2) return 'very high';
 }
 
 })();

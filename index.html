@@ -19,6 +19,28 @@
     <h2>Analytics</h2>
     <div class="colgroup">
       <div class="column">
+        <h3>Summary</h3>
+        <table class="analytics-group">
+          <tbody>
+            <tr class="stat"><td class="label">Elevation dispersion</td><td class="summary-value" data-property="elevation.stdev"></td></tr>
+            <tr class="stat"><td class="label">Elevation skew</td><td class="summary-value" data-property="elevation.pearsonSkew"></td></tr>
+            <tr class="stat"><td class="label">Ruggedness</td><td class="summary-value" data-property="roughness.terrainRuggednessIndex"></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="column">
+        <h3 class="collapse">&nbsp;</h3>
+        <table class="analytics-group">
+          <tbody>
+            <tr class="stat"><td class="label">Slope dispersion</td><td class="summary-value" data-property="slope.stdev"></td></tr>
+            <tr class="stat"><td class="label">Slope skew</td><td class="summary-value" data-property="slope.groeneveldMeedenSkew"></td></tr>
+            <tr class="stat"><td class="label">Fitted slope</td><td class="summary-value" data-property="fittedPlane.slope"></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="colgroup">
+      <div class="column">
         <h3>Elevation</h3>
         <table class="analytics-group">
           <tbody>
@@ -32,6 +54,9 @@
             <tr class="stat"><td class="label">Mean</td><td class="value" data-property="elevation.mean"></td></tr>
             <tr class="stat"><td class="label">Std Dev</td><td class="value" data-property="elevation.stdev"></td></tr>
             <tr class="stat"><td class="label">RSD</td><td class="value" data-property="elevation.rsd"></td></tr>
+            <tr class="stat"><td class="label">Pearson Skew</td><td class="value" data-property="elevation.pearsonSkew"></td></tr>
+            <tr class="stat"><td class="label">G&amp;M Skew</td><td class="value" data-property="elevation.groeneveldMeedenSkew"></td></tr>
+            <tr class="stat"><td class="label">Kurtosis</td><td class="value" data-property="elevation.kurtosis"></td></tr>
             <tr class="stat"><td class="label">Offset</td><td class="value" data-property="elevation.minOffset"></td></tr>
             <tr class="stat empty"><td class="">&nbsp;</td><td class="">&nbsp;</td></tr>
           </tbody>
@@ -55,6 +80,9 @@
             <tr class="stat"><td class="label">Mean</td><td class="value degree" data-property="slope.mean"></td></tr>
             <tr class="stat"><td class="label">Std Dev</td><td class="value degree" data-property="slope.stdev"></td></tr>
             <tr class="stat"><td class="label">RSD</td><td class="value" data-property="slope.rsd"></td></tr>
+            <tr class="stat"><td class="label">Pearson Skew</td><td class="value" data-property="slope.pearsonSkew"></td></tr>
+            <tr class="stat"><td class="label">G&amp;M Skew</td><td class="value" data-property="slope.groeneveldMeedenSkew"></td></tr>
+            <tr class="stat"><td class="label">Kurtosis</td><td class="value" data-property="slope.kurtosis"></td></tr>
             <tr class="stat"><td class="label">Fitted Std Dev</td><td class="value degree" data-property="slope.stdevFitted"></td></tr>
             <tr class="stat"><td class="label">Fitted RSD</td><td class="value" data-property="slope.rsdFitted"></td></tr>
           </tbody>

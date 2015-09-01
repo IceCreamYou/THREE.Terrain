@@ -33,6 +33,9 @@ h3 {
   padding: 0;
   text-decoration: underline;
 }
+.collapse {
+  text-decoration: none;
+}
 #code,
 #fpscontrols {
   background-color: rgba(16, 16, 16, 0.75);
@@ -123,7 +126,8 @@ h3 {
 .label:after {
   content: ": ";
 }
-.value {
+.value,
+.summary-value {
   font-family: monospace;
   white-space: pre;
 }
@@ -166,19 +170,20 @@ h3 {
 a.close,
 a.close:link,
 a.close:visited {
-  color: #AAAAAA;
+  color: #44ABDA;
   text-decoration: none;
 }
 a.close:hover,
 a.close:active {
-  color: #AAAAAA;
+  color: #44ABDA;
   text-decoration: underline;
 }
 @media (max-width: 1024px) {
   .column {
     display: block;
   }
-  .empty {
+  .empty,
+  .collapse {
     display: none;
   }
 }

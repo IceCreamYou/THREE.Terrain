@@ -1,0 +1,73 @@
+::-moz-selection { background: #39f; }
+::selection { background: #39f; }
+html, body {
+  background-color: #333333;
+  color: #AAAAAA;
+  font-family: Arial, sans-serif;
+  font-size: 18px;
+  letter-spacing: 0.03em;
+  line-height: 1.4;
+  margin: 0;
+  padding: 0;
+}
+h2 {
+  background-color: #222222;
+  clear: both;
+  font-size: 27px;
+  font-weight: bolder;
+  margin: 10px 0 35px;
+  padding: 10px 0;
+  text-align: center;
+}
+canvas {
+  background-color: rgb(239, 247, 255);
+  border: 1px solid black;
+  margin: 0;
+  padding: 0;
+}
+a,
+a:link,
+a:visited {
+  color: #2A88CC;
+  text-decoration: none;
+}
+a:hover,
+a:active {
+  color: #2A88CC;
+  text-decoration: underline;
+}
+#analytics {
+  border: 1px solid #AAAAAA;
+  padding: 20px 40px;
+}
+.section {
+  border-top: 1px solid #AAAAAA;
+  padding: 20px 0 50px;
+}
+.statgroup {
+  display: inline-block;
+  min-width: 400px;
+  padding: 0 10px 20px;
+}
+.label {
+  font-weight: bold;
+  padding-right: 10px;
+}
+.label:after {
+  content: ": ";
+}
+.value {
+  font-family: monospace;
+  white-space: pre;
+}
+.histogram-container {
+  display: inline-block;
+  margin-top: 10px;
+}
+.graph-label {
+  font-style: italic;
+  text-align: center;
+}
+.degree:after {
+  content: "\00b0";
+}
