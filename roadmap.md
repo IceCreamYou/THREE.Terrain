@@ -1,4 +1,4 @@
-## 1.3
+## 1.x
 
 Add an analytics measure for jaggedness: what percent of vertices are the highest or lowest in their neighborhood
 Add mode bucket for elevation and slope to the analysis
@@ -7,10 +7,14 @@ Add a Slope/Curve and a pure Random generator
 The steps filter seems to be misbehaving
 Use THREE.Math.nextPowerOfTwo in the DiamondSquare and Value generators instead of their custom implementation
 Make the custom shader(s) scalable https://twitter.com/VMA3D/status/562631211752112128
+
+
+## 2.0
+
+Make the API more consistent
 Write documentation that's not in the code
 Fix Smoothing to use a smoothing factor (a multiplier for how close the point should move to the average) instead of a weight for the target point
 Implement helper functions to convert from a 1D Vector3 array to/from a 1D and 2D float array, and convert the generator and filter functions to operate on those
-Make the API more consistent
 Phong lighting for generated textures
 Allow making slopes rougher than flats
     Create modified smoothing functions that apply at different intensities depending on the slope
@@ -23,7 +27,7 @@ Make scattering be based on spatial distance, not faces
 Add a function to horizontally shift the high points of high slope faces to possibly generate some overhang
 
 
-## 1.4
+## 2.1
 
 Make FirstPersonControls rotate on swipe and move forward on tap-and-hold like OrbitControls
 Try using the terrain with a physics library
@@ -33,10 +37,12 @@ Look into writing a space partitioning algorithm (like the way procedural dungeo
 Investigate search-based and agent-based terrain generation http://pcgbook.com/wp-content/uploads/chapter04.pdf
     Provide some sort of grammar for to guide terrain generation based on objectives?
     Provide some mechanism for evolution towards finding a terrain that most closely meets a set of rules?
+Try IFFT(LowPassFilter(FFT(WhiteNoise()))) again as a procedural generation method
+Try simulating techtonic plates as a procedural generation method as described at https://webcache.googleusercontent.com/search?q=cache:http://experilous.com/1/blog/post/procedural-planet-generation
 Support a terrain "mask" for creating holes
 
 
-## 2.0
+## 3.0
 
 Erosion
     Clone the terrain
@@ -80,12 +86,10 @@ River generation
     Make rivers narrower and shallower at the top
 
 
-## 3.0
+## 4.0
 
 Implement optimization types
 Support infinite terrain
-Try IFFT(LowPassFilter(FFT(WhiteNoise()))) again as a procedural generation method
-Try simulating techtonic plates as a procedural generation method as described at https://webcache.googleusercontent.com/search?q=cache:http://experilous.com/1/blog/post/procedural-planet-generation
 Try implementing spherical (planet) generation with biomes
 Tunnels and caves
 

@@ -552,7 +552,7 @@ function customInfluences(g, options) {
 function cleanAnalytic(val) {
   var valIntStr = (val | 0) + '',
       c = '';
-  if (val | 0 === 0 && val < 0) {
+  if ((val | 0) === 0 && val < 0) {
     valIntStr = '-' + valIntStr;
   }
   while (valIntStr.length + c.length < 5) {

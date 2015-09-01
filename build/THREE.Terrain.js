@@ -1,5 +1,5 @@
 /**
- * THREE.Terrain.js 1.2.2-20150830
+ * THREE.Terrain.js 1.3.0-20150901
  *
  * @author Isaac Sukin (http://www.isaacsukin.com/)
  * @license MIT
