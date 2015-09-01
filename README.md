@@ -23,10 +23,10 @@ include it on a page client-side without a module loader:
 You then have access to the `THREE.Terrain` object. (Make sure the `three.js`
 library is loaded first.)
 
-Tested with three.js
+The latest releases have been tested with three.js
 [r71](https://github.com/mrdoob/three.js/releases/tag/r71). Use the
 [1.2.0](https://github.com/IceCreamYou/THREE.Terrain/releases/tag/1.2.0)
-release of this project with three.js r67 - r70.
+release of this project if you are using three.js r67 - r70.
 
 ### Procedurally Generate a Terrain
 
@@ -105,8 +105,9 @@ function).
 
 If you want to export and import the scattered foliage with the terrain or if
 you want to export/import the whole scene, you can do this the usual Three.js
-way using [SceneExporter](https://github.com/mrdoob/three.js/blob/master/examples/js/exporters/SceneExporter.js)
-and [SceneLoader](https://github.com/mrdoob/three.js/blob/master/src/loaders/SceneLoader.js).
+way (currently using
+[SceneExporter](https://github.com/mrdoob/three.js/blob/master/examples/js/exporters/SceneExporter.js)
+and [JSONLoader](http://threejs.org/docs/#Reference/Loaders/JSONLoader)).
 This will work just fine in general with the caveat that the exported files
 will be much larger than a heightmap. Note that if you do it this way and
 you're using the dynamic texture generator, you'll need to re-generate the
@@ -149,7 +150,12 @@ Additionally, you can create custom methods for generating terrain or affecting
 other processes. How to do so will also be documented soon. A writeup on how it
 all works under the hood is in order as well.
 
+There is also a
+[simulation](https://github.com/IceCreamYou/THREE.Terrain/tree/gh-pages/statistics)
+included that calculates statistics about each major procedural terrain
+generation method included in the `THREE.Terrain` library.
+
 ## Screenshots
 
 ![Screenshot 1](https://raw.githubusercontent.com/IceCreamYou/THREE.Terrain/gh-pages/demo/img/screenshot1.jpg)
-![Screenshot 2](https://raw.githubusercontent.com/IceCreamYou/THREE.Terrain/gh-pages/demo/img/screenshot2.png)
+![Screenshot 2](https://raw.githubusercontent.com/IceCreamYou/THREE.Terrain/gh-pages/demo/img/screenshot2.jpg)
