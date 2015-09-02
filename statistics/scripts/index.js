@@ -40,6 +40,7 @@ var heightmaps = [
       'slope.kurtosis',
       'roughness.planimetricAreaRatio',
       'roughness.terrainRuggednessIndex',
+      'roughness.jaggedness',
       'fittedPlane.slope',
     ],
     mat = new THREE.MeshBasicMaterial({color: 0x5566aa, wireframe: true}),

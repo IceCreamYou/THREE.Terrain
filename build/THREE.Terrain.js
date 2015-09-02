@@ -1,5 +1,5 @@
 /**
- * THREE.Terrain.js 1.3.0-20150901
+ * THREE.Terrain.js 1.3.0-20150902
  *
  * @author Isaac Sukin (http://www.isaacsukin.com/)
  * @license MIT
@@ -846,11 +846,13 @@ THREE.Terrain.RadialEdges = function(g, options, direction, distance, easing) {
 THREE.Terrain.Smooth = function(g, options, weight) {
     var heightmap = new Float64Array(g.length);
     for (var i = 0, xl = options.xSegments + 1, yl = options.ySegments + 1; i < xl; i++) {
-        for (var j = 0, sum = 0, c = 0; j < yl; j++) {
+        for (var j = 0; j < yl; j++) {
+            var sum = 0,
+                c = 0;
             for (var n = -1; n <= 1; n++) {
                 for (var m = -1; m <= 1; m++) {
                     var key = (j+n)*xl + i + m;
-                    if (typeof g[key] !== 'undefined') {
+                    if (typeof g[key] !== 'undefined' && i+m >= 0 && j+n >= 0 && i+m < xl && j+n < yl) {
                         sum += g[key].z;
                         c++;
                     }
@@ -885,7 +887,7 @@ THREE.Terrain.SmoothMedian = function(g, options) {
             for (var n = -1; n <= 1; n++) {
                 for (var m = -1; m <= 1; m++) {
                     var key = (j+n)*xl + i + m;
-                    if (typeof g[key] !== 'undefined') {
+                    if (typeof g[key] !== 'undefined' && i+m >= 0 && j+n >= 0 && i+m < xl && j+n < yl) {
                         neighborValues.push(g[key].z);
                         neighborKeys.push(key);
                     }
@@ -933,7 +935,7 @@ THREE.Terrain.SmoothConservative = function(g, options, multiplier) {
             for (var n = -1; n <= 1; n++) {
                 for (var m = -1; m <= 1; m++) {
                     var key = (j+n)*xl + i + m;
-                    if (typeof g[key] !== 'undefined' && n && m) {
+                    if (typeof g[key] !== 'undefined' && n && m && i+m >= 0 && j+n >= 0 && i+m < xl && j+n < yl) {
                         if (g[key].z < min) min = g[key].z;
                         if (g[key].z > max) max = g[key].z;
                     }

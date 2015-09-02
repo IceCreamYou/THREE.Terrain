@@ -142,6 +142,9 @@ h3 {
 .degree:after {
   content: "\00b0";
 }
+.percent:after {
+  content: "%";
+}
 .close {
   display: block;
   font-style: italic;

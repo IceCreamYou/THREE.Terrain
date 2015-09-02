@@ -54,6 +54,7 @@ THREE.Terrain.Analyze = function(mesh, options) {
         faceArea2D = (options.xSize / options.xSegments) * (options.ySize / options.ySegments) * 0.5,
         area3D = 0,
         tri = 0,
+        jaggedness = 0,
         deviation,
         i;
 
@@ -85,20 +86,30 @@ THREE.Terrain.Analyze = function(mesh, options) {
     stdevFittedSlope = Math.sqrt(stdevFittedSlope / numFaces);
 
     for (var ii = 0, xl = options.xSegments + 1, yl = options.ySegments + 1; ii < xl; ii++) {
-        for (var j = 0, sum = 0, c = 0; j < yl; j++) {
+        for (var j = 0; j < yl; j++) {
+            var neighborhoodMax = -Infinity,
+                neighborhoodMin = Infinity,
+                v = mesh.geometry.vertices[j*xl + ii].z,
+                sum = 0,
+                c = 0;
             for (var n = -1; n <= 1; n++) {
                 for (var m = -1; m <= 1; m++) {
-                    var key = (j+n)*xl + ii + m;
-                    if (typeof elevations[key] !== 'undefined' && !(n === 0 && m === 0)) {
-                        sum += elevations[key];
+                    if (ii+m >= 0 && j+n >= 0 && ii+m < xl && j+n < yl && !(n === 0 && m === 0)) {
+                        var val = mesh.geometry.vertices[(j+n)*xl + ii + m].z;
+                        sum += val;
                         c++;
+                        if (val > neighborhoodMax) neighborhoodMax = val;
+                        if (val < neighborhoodMin) neighborhoodMin = val;
                     }
                 }
             }
-            tri += (sum / c - elevations[j*xl + ii]) * (sum / c - elevations[j*xl + ii]);
+            tri += (sum / c - v) * (sum / c - v);
+            if (v > neighborhoodMax || v < neighborhoodMin) jaggedness++;
         }
     }
     tri = Math.sqrt(tri / numVertices);
+    // ceil(n/2)*ceil(m/2) is the max # of local maxima or minima in an n*m grid
+    jaggedness *= 100 / (Math.ceil((options.xSegments+1) * 0.5) * Math.ceil((options.ySegments+1) * 0.5) * 2);
 
     return {
         elevation: {
@@ -166,6 +177,7 @@ THREE.Terrain.Analyze = function(mesh, options) {
         roughness: {
             planimetricAreaRatio: options.xSize * options.ySize / area3D,
             terrainRuggednessIndex: tri,
+            jaggedness: jaggedness,
         },
         fittedPlane: {
             centroid: centroid,
@@ -431,31 +443,30 @@ function drawHistogram(buckets, canvas, minV, maxV, append) {
     context.stroke();
 }
 
-// These numbers are from a sample of size 80 on 2015-09-01
 var moments = {
     'elevation.stdev': {
-        mean: 42.106,
-        stdev: 6.319,
+        mean: 42.063,
+        stdev: 6.353,
     },
     'elevation.pearsonSkew': {
-        mean: 0.098,
-        stdev: 0.564,
+        mean: 0.100,
+        stdev: 0.566,
     },
     'slope.stdev': {
-        mean: 10.143,
-        stdev: 3.581,
+        mean: 10.154,
+        stdev: 3.586,
     },
     'slope.groeneveldMeedenSkew': {
         mean: -0.021,
-        stdev: 0.162,
+        stdev: 0.163,
     },
     'roughness.terrainRuggednessIndex': {
-        mean: 41.014,
-        stdev: 6.344,
+        mean: 2.179,
+        stdev: 1.389,
     },
     'fittedPlane.slope': {
-        mean: 2.478,
-        stdev: 1.701,
+        mean: 2.445,
+        stdev: 1.695,
     },
 };
 
@@ -477,8 +488,8 @@ function getDeviationFromAverageMoments(analytics, asText) {
 
 function mapDeviationToText(deviation) {
     if (deviation < -2) return 'very low';
-    if (deviation < -1) return 'low';
-    if (deviation <= 1) return 'medium';
+    if (deviation < -2/3) return 'low';
+    if (deviation <= 2/3) return 'medium';
     if (deviation <= 2) return 'high';
     if (deviation >  2) return 'very high';
 }
