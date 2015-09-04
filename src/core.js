@@ -384,6 +384,11 @@ THREE.Terrain.InEaseOut = function(x) {
     return 0.5 * y*y*y + 0.5;
 };
 
+// x = [0, 1], x^1.55
+THREE.Terrain.EaseInWeak = function(x) {
+    return Math.pow(x, 1.55);
+};
+
 // x = [0, 1], x^7
 THREE.Terrain.EaseInStrong = function(x) {
     return x*x*x*x*x*x*x;

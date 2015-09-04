@@ -1,5 +1,5 @@
 /**
- * THREE.Terrain.js 1.3.0-20150902
+ * THREE.Terrain.js 1.3.0-20150904
  *
  * @author Isaac Sukin (http://www.isaacsukin.com/)
  * @license MIT
@@ -576,6 +576,11 @@ THREE.Terrain.EaseInOut = function(x) {
 THREE.Terrain.InEaseOut = function(x) {
     var y = 2*x-1;
     return 0.5 * y*y*y + 0.5;
+};
+
+// x = [0, 1], x^1.55
+THREE.Terrain.EaseInWeak = function(x) {
+    return Math.pow(x, 1.55);
 };
 
 // x = [0, 1], x^7

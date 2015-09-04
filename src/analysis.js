@@ -7,8 +7,8 @@
  *   The terrain mesh to analyze.
  * @param {Object} options
  *   The map of settings that were passed to `THREE.Terrain()` to construct the
- *   terrain mesh that is being analyzed. Requires at least `minHeight`,
- *   `xSegments`, `xSize`, `ySegments`, and `ySize` properties.
+ *   terrain mesh that is being analyzed. Requires at least `maxHeight`,
+ *   `minHeight`, `xSegments`, `xSize`, `ySegments`, and `ySize` properties.
  *
  * @return {Object}
  *   An object containing statistical information about the terrain.
@@ -127,6 +127,12 @@ THREE.Terrain.Analyze = function(mesh, options) {
             pearsonSkew: pearsonSkewElevation,
             groeneveldMeedenSkew: groeneveldMeedenSkewElevation,
             kurtosis: kurtosisElevation,
+            modes: getModes(
+                elevations,
+                Math.round(options.maxHeight - options.minHeight),
+                options.minHeight,
+                options.maxHeight
+            ),
             percentile: function(p) { return percentile(elevations, p); },
             percentRank: function(v) { return percentRank(elevations, v); },
             drawHistogram: function(canvas, bucketCount) {
@@ -159,6 +165,7 @@ THREE.Terrain.Analyze = function(mesh, options) {
             kurtosis: kurtosisSlope,
             stdevFitted: stdevFittedSlope,
             rsdFitted: stdevFittedSlope / Math.abs(fittedPlaneSlope),
+            modes: getModes(slopes, 90, 0, 90),
             percentile: function(p) { return percentile(slopes, p); },
             percentRank: function(v) { return percentRank(slopes, v); },
             drawHistogram: function(canvas, bucketCount) {
@@ -184,8 +191,8 @@ THREE.Terrain.Analyze = function(mesh, options) {
             normal: fittedPlaneNormal,
             slope: fittedPlaneSlope,
         },
-        deviationFromAverageMoments: function(asText) {
-            return getDeviationFromAverageMoments(this, asText);
+        deviationFromAverageMoments: function() {
+            return getDeviationFromAverageMoments(this);
         },
         // # of different kinds of features http://www.armystudyguide.com/content/army_board_study_guide_topics/land_navigation_map_reading/identify-major-minor-terr.shtml
     };
@@ -354,6 +361,22 @@ function bucketNumbersLinearly(data, bucketCount, min, max) {
     return buckets;
 }
 
+function getModes(data, bucketCount, min, max) {
+    var buckets = bucketNumbersLinearly(data, bucketCount, min, max),
+        maxLen = 0,
+        modes = [];
+    for (var i = 0, l = buckets.length; i < l; i++) {
+        if (buckets[i].length > maxLen) {
+            maxLen = buckets[i].length;
+            modes = [Math.floor(((i + 0.5) / l) * (max - min) + min)];
+        }
+        else if (buckets[i].length === maxLen) {
+            modes.push(Math.floor(((i + 0.5) / l) * (max - min) + min));
+        }
+    }
+    return modes;
+}
+
 /**
  * Draw a histogram.
  *
@@ -460,38 +483,74 @@ var moments = {
         mean: -0.021,
         stdev: 0.163,
     },
-    'roughness.terrainRuggednessIndex': {
-        mean: 2.179,
-        stdev: 1.389,
+    'roughness.jaggedness': {
+        levels: [0.6, 2, 4.4, 10],
     },
-    'fittedPlane.slope': {
-        mean: 2.445,
-        stdev: 1.695,
+    'roughness.terrainRuggednessIndex': {
+        levels: [1, 2.2, 3.5, 4.8],
     },
 };
 
-function getDeviationFromAverageMoments(analytics, asText) {
-    var results = {};
+function getDeviationFromAverageMoments(analytics) {
+    var results = {},
+        deviationBuckets = [-2, -2/3, 2/3, 2];
     for (var prop in moments) {
         if (moments.hasOwnProperty(prop)) {
             var averageProp = moments[prop],
                 split = prop.split('.'),
                 sampleProp = analytics[split[0]][split[1]];
-            results[prop] = (sampleProp - averageProp.mean) / averageProp.stdev;
-            if (asText) {
-                results[prop] = mapDeviationToText(results[prop]);
+            if (typeof averageProp.mean === 'number') {
+                results[prop] = (sampleProp - averageProp.mean) / averageProp.stdev;
+                results[prop] = numberToCategory(results[prop], deviationBuckets);
+            }
+            else {
+                results[prop] = numberToCategory(sampleProp, averageProp.levels);
             }
         }
     }
     return results;
 }
 
-function mapDeviationToText(deviation) {
-    if (deviation < -2) return 'very low';
-    if (deviation < -2/3) return 'low';
-    if (deviation <= 2/3) return 'medium';
-    if (deviation <= 2) return 'high';
-    if (deviation >  2) return 'very high';
+/**
+ * Classify a numeric input.
+ *
+ * @param {Number} value
+ *   The number to classify.
+ * @param {Object/Number[]} [buckets=[-2, -2/3, 2/3, 2]]
+ *   An object or numeric array used to classify `value`. If `buckets` is an
+ *   array, the returned category will be the first of "very low," "low,"
+ *   "medium," and "high," in that order, where the correspondingly ordered
+ *   bucket value is higher than the `value` being classified, or "very high"
+ *   if all bucket values are smaller than the `value` being classified. If
+ *   `buckets` is an object, its values will be sorted, and the returned
+ *   category will be the key of the first bucket value that is higher than the
+ *   `value` being classified, or the key of the highest bucket value if the
+ *   `value` being classified is higher than all the values in `buckets`.
+ *
+ * @return {String}
+ *   The category into which the numeric input was classified.
+ */
+function numberToCategory(value, buckets) {
+    if (!buckets) {
+        buckets = [-2, -2/3, 2/3, 2];
+    }
+    if (typeof buckets.length === 'number' && buckets.length > 3) {
+        if (value <  buckets[0]) return 'very low';
+        if (value <  buckets[1]) return 'low';
+        if (value <  buckets[2]) return 'medium';
+        if (value <  buckets[3]) return 'high';
+        if (value >= buckets[3]) return 'very high';
+    }
+    var keys = Object.keys(buckets).sort(function(a, b) {
+            return buckets[a] - buckets[b];
+        }),
+        l = keys.length;
+    for (var i = 0; i < l; i++) {
+        if (value < buckets[keys[i]]) {
+            return keys[i];
+        }
+    }
+    return keys[l-1];
 }
 
 })();

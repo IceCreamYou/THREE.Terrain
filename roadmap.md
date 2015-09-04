@@ -1,8 +1,5 @@
 ## 1.x
 
-Add jaggedness to summary
-TRI and jaggedness and maybe fittedPlane.slope are not normal; the summary should reflect this
-Add mode bucket for elevation and slope to the analysis
 Add an explanation of the terms used to the analysis panel in the demo
 Add a Slope/Curve and a pure Random generator
 The steps filter seems to be misbehaving
