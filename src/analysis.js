@@ -129,9 +129,9 @@ THREE.Terrain.Analyze = function(mesh, options) {
             kurtosis: kurtosisElevation,
             modes: getModes(
                 elevations,
-                Math.round(options.maxHeight - options.minHeight),
-                options.minHeight,
-                options.maxHeight
+                Math.ceil(options.maxHeight - options.minHeight),
+                0,
+                options.maxHeight - options.minHeight
             ),
             percentile: function(p) { return percentile(elevations, p); },
             percentRank: function(v) { return percentRank(elevations, v); },
@@ -159,7 +159,7 @@ THREE.Terrain.Analyze = function(mesh, options) {
             iqr: percentile(slopes, 0.75) - percentile(slopes, 0.25),
             mean: meanSlope,
             stdev: stdevSlope,
-            rsd: stdevSlope / Math.abs(meanSlope), // Coefficient of variation. TODO
+            rsd: stdevSlope / Math.abs(meanSlope), // Coefficient of variation
             pearsonSkew: pearsonSkewSlope,
             groeneveldMeedenSkew: groeneveldMeedenSkewSlope,
             kurtosis: kurtosisSlope,
@@ -191,8 +191,8 @@ THREE.Terrain.Analyze = function(mesh, options) {
             normal: fittedPlaneNormal,
             slope: fittedPlaneSlope,
         },
-        deviationFromAverageMoments: function() {
-            return getDeviationFromAverageMoments(this);
+        summarize: function() {
+            return getSummary(this);
         },
         // # of different kinds of features http://www.armystudyguide.com/content/army_board_study_guide_topics/land_navigation_map_reading/identify-major-minor-terr.shtml
     };
@@ -273,7 +273,7 @@ function getFittedPlaneNormal(points, centroid) {
         yy = 0,
         yz = 0,
         zz = 0;
-    if (n < 3) throw new Error('At least three points required');
+    if (n < 3) throw new Error('At least three points are required to fit a plane');
 
     var r = new THREE.Vector3();
     for (var i = 0, l = points.length; i < l; i++) {
@@ -399,15 +399,15 @@ function drawHistogram(buckets, canvas, minV, maxV, append) {
         separator = 4,
         max = typeof maxV === 'undefined' ? -Infinity : maxV,
         min = typeof minV === 'undefined' ? Infinity : minV,
-        i,
-        l;
+        l = buckets.length,
+        i;
     canvas.width = width + border*2;
     canvas.height = height + border*2;
     if (typeof append === 'undefined') append = '';
 
     // If max or min is not set, set them to the highest/lowest value.
     if (max === -Infinity || min === Infinity) {
-        for (i = 0, l = buckets.length; i < l; i++) {
+        for (i = 0; i < l; i++) {
             for (var j = 0, m = buckets[i].length; j < m; j++) {
                 if (buckets[i][j] > max) {
                     max = buckets[i][j];
@@ -420,11 +420,13 @@ function drawHistogram(buckets, canvas, minV, maxV, append) {
     }
 
     // Find the size of the largest bucket.
-    var maxBucketSize = 0;
-    for (i = 0, l = buckets.length; i < l; i++) {
+    var maxBucketSize = 0
+        n = 0;
+    for (i = 0; i < l; i++) {
         if (buckets[i].length > maxBucketSize) {
             maxBucketSize = buckets[i].length;
         }
+        n += buckets[i].length;
     }
 
     // Draw a bar.
@@ -433,7 +435,7 @@ function drawHistogram(buckets, canvas, minV, maxV, append) {
     if (unitSizeX >= 1) unitSizeX = Math.floor(unitSizeX);
     if (unitSizeY >= 1) unitSizeY = Math.floor(unitSizeY);
     context.fillStyle = 'rgba(13, 42, 64, 1)';
-    for (i = 0, l = buckets.length; i < l; i++) {
+    for (i = 0; i < l; i++) {
         context.fillRect(
             border + separator + i * (unitSizeX + separator),
             border + height - (separator + buckets[i].length * unitSizeY),
@@ -445,7 +447,7 @@ function drawHistogram(buckets, canvas, minV, maxV, append) {
     // Draw the label text on the bar.
     context.fillStyle = 'rgba(144, 176, 192, 1)';
     context.font = '12px Arial';
-    for (i = 0, l = buckets.length; i < l; i++) {
+    for (i = 0; i < l; i++) {
         var text = Math.floor(((i + 0.5) / buckets.length) * (max - min) + min) + '' + append;
         context.fillText(
             text,
@@ -454,6 +456,12 @@ function drawHistogram(buckets, canvas, minV, maxV, append) {
             unitSizeX
         );
     }
+
+    context.fillText(
+        Math.round(100 * maxBucketSize / n) + '%',
+        border + separator,
+        border + separator + 6
+    );
 
     // Draw axes.
     context.strokeStyle = 'rgba(13, 42, 64, 1)';
@@ -491,7 +499,7 @@ var moments = {
     },
 };
 
-function getDeviationFromAverageMoments(analytics) {
+function getSummary(analytics) {
     var results = {},
         deviationBuckets = [-2, -2/3, 2/3, 2];
     for (var prop in moments) {

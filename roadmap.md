@@ -1,6 +1,9 @@
 ## 1.x
 
-Add an explanation of the terms used to the analysis panel in the demo
+Is normalizing the elevation data for analysis a reasonable thing to do, or should we stop subtracting the minHeight?
+Fitted stdev/RSD of slope is not a meaningful measure since the plane is fitted to the elevation data. Would be better to measure R^2 of elev_z and fitted_z
+The summary should measure abs(deviation) and show low/med/high, instead of counting high negative deviation as low
+Implement Median Absolute Deviation (MAD)? https://en.wikipedia.org/wiki/Median_absolute_deviation
 Add a Slope/Curve and a pure Random generator
 The steps filter seems to be misbehaving
 Use THREE.Math.nextPowerOfTwo in the DiamondSquare and Value generators instead of their custom implementation
@@ -9,7 +12,7 @@ Make the custom shader(s) scalable https://twitter.com/VMA3D/status/562631211752
 
 ## 2.0
 
-Make the API more consistent
+Make the API more consistent: naming (e.g. use "elevation" instead of "height"), capitalization, method and property grouping
 Write documentation that's not in the code
 Fix Smoothing to use a smoothing factor (a multiplier for how close the point should move to the average) instead of a weight for the target point
 Implement helper functions to convert from a 1D Vector3 array to/from a 1D and 2D float array, and convert the generator and filter functions to operate on those

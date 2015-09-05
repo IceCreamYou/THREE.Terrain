@@ -181,6 +181,36 @@ a.close:active {
   color: #44ABDA;
   text-decoration: underline;
 }
+a.help,
+a.help:link,
+a.help:visited {
+  border: 1px solid #AAAAAA;
+  border-radius: 10px;
+  color: #AAAAAA;
+  cursor: pointer;
+  font-size: 18px;
+  height: 20px;
+  line-height: 18px;
+  position: absolute;
+  right: 30px;
+  text-align: center;
+  text-decoration: none;
+  top: 30px;
+  width: 20px;
+}
+a.help:hover,
+a.help:active {
+  border-color: #44ABDA;
+  color: #44ABDA;
+}
+a.help:focus {
+  box-shadow: 0 0 2px 1px #AAAAAA;
+  outline: 0;
+}
+a.help:focus:hover,
+a.help:focus:active {
+  box-shadow: 0 0 2px 1px #44ABDA;
+}
 @media (max-width: 1024px) {
   .column {
     display: block;

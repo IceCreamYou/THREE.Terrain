@@ -190,7 +190,7 @@ function setupDatGui() {
 
       if (typeof terrainScene !== 'undefined') {
         var analysis = THREE.Terrain.Analyze(terrainScene.children[0], options),
-            deviations = analysis.deviationFromAverageMoments(),
+            deviations = analysis.summarize(),
             prop;
         analysis.elevation.drawHistogram(elevationGraph, 10);
         analysis.slope.drawHistogram(slopeGraph, 10);
