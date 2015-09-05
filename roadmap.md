@@ -2,7 +2,6 @@
 
 Is normalizing the elevation data for analysis a reasonable thing to do, or should we stop subtracting the minHeight?
 Fitted stdev/RSD of slope is not a meaningful measure since the plane is fitted to the elevation data. Would be better to measure R^2 of elev_z and fitted_z
-The summary should measure abs(deviation) and show low/med/high, instead of counting high negative deviation as low
 Implement Median Absolute Deviation (MAD)? https://en.wikipedia.org/wiki/Median_absolute_deviation
 Add a Slope/Curve and a pure Random generator
 The steps filter seems to be misbehaving

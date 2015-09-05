@@ -480,16 +480,30 @@ var moments = {
         stdev: 6.353,
     },
     'elevation.pearsonSkew': {
-        mean: 0.100,
-        stdev: 0.566,
+        //mean: 0.100,
+        //stdev: 0.566,
+        levels: {
+            '+high': -1.032,
+            '+medium': -0.277,
+            'low': 0.666,
+            '-medium': 1.232,
+            '-high': Infinity,
+        },
     },
     'slope.stdev': {
         mean: 10.154,
         stdev: 3.586,
     },
     'slope.groeneveldMeedenSkew': {
-        mean: -0.021,
-        stdev: 0.163,
+        //mean: -0.021,
+        //stdev: 0.163,
+        levels: {
+            '+high': -0.347,
+            '+medium': -0.130,
+            'low': 0.088,
+            '-medium': 0.305,
+            '-high': Infinity,
+        },
     },
     'roughness.jaggedness': {
         levels: [0.6, 2, 4.4, 10],
