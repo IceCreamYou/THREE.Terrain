@@ -71,7 +71,7 @@ Methods for generating terrain procedurally that are available by default
 include Cosine, Diamond-Square (a better version of Midpoint Displacement),
 Fault lines, Feature picking, Particle deposition, Perlin and Simplex noise,
 Value noise, Weierstrass functions, Worley noise (aka Cell or Voronoi noise),
-and various combinations of those.
+Brownian motion, and various combinations of those.
 
 ### Exporting and Importing
 

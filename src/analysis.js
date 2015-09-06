@@ -420,7 +420,7 @@ function drawHistogram(buckets, canvas, minV, maxV, append) {
     }
 
     // Find the size of the largest bucket.
-    var maxBucketSize = 0
+    var maxBucketSize = 0,
         n = 0;
     for (i = 0; i < l; i++) {
         if (buckets[i].length > maxBucketSize) {
@@ -480,8 +480,8 @@ var moments = {
         stdev: 6.353,
     },
     'elevation.pearsonSkew': {
-        //mean: 0.100,
-        //stdev: 0.566,
+        // mean: 0.100,
+        // stdev: 0.566,
         levels: {
             '+high': -1.032,
             '+medium': -0.277,
@@ -495,8 +495,8 @@ var moments = {
         stdev: 3.586,
     },
     'slope.groeneveldMeedenSkew': {
-        //mean: -0.021,
-        //stdev: 0.163,
+        // mean: -0.021,
+        // stdev: 0.163,
         levels: {
             '+high': -0.347,
             '+medium': -0.130,

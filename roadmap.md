@@ -1,6 +1,6 @@
 ## 1.x
 
-Is normalizing the elevation data for analysis a reasonable thing to do, or should we stop subtracting the minHeight?
+Is normalizing the elevation data for analysis a reasonable thing to do, or should we stop subtracting the minHeight? (It does avoid the issue of dividing by a mean of zero or close to it... but maybe a more useful measure than RSD is 2*SD/range)
 Fitted stdev/RSD of slope is not a meaningful measure since the plane is fitted to the elevation data. Would be better to measure R^2 of elev_z and fitted_z
 Implement Median Absolute Deviation (MAD)? https://en.wikipedia.org/wiki/Median_absolute_deviation
 Add a Slope/Curve and a pure Random generator
@@ -14,6 +14,7 @@ Make the custom shader(s) scalable https://twitter.com/VMA3D/status/562631211752
 Make the API more consistent: naming (e.g. use "elevation" instead of "height"), capitalization, method and property grouping
 Write documentation that's not in the code
 Fix Smoothing to use a smoothing factor (a multiplier for how close the point should move to the average) instead of a weight for the target point
+Add the ability for Smoothing to look in a broader neighborhood, not just the immediately surrounding 8 points
 Implement helper functions to convert from a 1D Vector3 array to/from a 1D and 2D float array, and convert the generator and filter functions to operate on those
 Phong lighting for generated textures
 Allow making slopes rougher than flats
@@ -40,6 +41,11 @@ Investigate search-based and agent-based terrain generation http://pcgbook.com/w
 Try IFFT(LowPassFilter(FFT(WhiteNoise()))) again as a procedural generation method
 Try simulating techtonic plates as a procedural generation method as described at https://webcache.googleusercontent.com/search?q=cache:http://experilous.com/1/blog/post/procedural-planet-generation
 Support a terrain "mask" for creating holes
+
+
+## 2.2
+
+Allow terrain generators and filters to partially apply by returning promises, to enable watching while the terrain is transformed
 
 
 ## 3.0
