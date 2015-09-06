@@ -40,6 +40,34 @@ THREE.Terrain.MultiPass = function(g, options, passes) {
 };
 
 /**
+ * Generate random terrain using a curve.
+ *
+ * @param {THREE.Vector3[]} g
+ *   The vertex array for plane geometry to modify with heightmap data. This
+ *   method sets the `z` property of each vertex.
+ * @param {Object} options
+ *   A map of settings that control how the terrain is constructed and
+ *   displayed. Valid values are the same as those for the `options` parameter
+ *   of {@link THREE.Terrain}().
+ * @param {Function} curve
+ *   A function that takes an x- and y-coordinate and returns a z-coordinate.
+ *   For example, `function(x, y) { return Math.sin(x*y*Math.PI*100); }`
+ *   generates sine noise, and `function() { return Math.random(); }` sets the
+ *   vertex elevations entirely randomly. The function's parameters (the x- and
+ *   y-coordinates) are given as percentages of a phase (i.e. how far across
+ *   the terrain in the relevant direction they are).
+ */
+THREE.Terrain.Curve = function(g, options, curve) {
+    var range = (options.maxHeight - options.minHeight) * 0.5,
+        scalar = options.frequency / (Math.min(options.xSegments, options.ySegments) + 1);
+    for (var i = 0, xl = options.xSegments + 1, yl = options.ySegments + 1; i < xl; i++) {
+        for (var j = 0; j < yl; j++) {
+            g[j * xl + i].z += curve(i * scalar, j * scalar) * range;
+        }
+    }
+};
+
+/**
  * Generate random terrain using the Cosine waves.
  *
  * Parameters are the same as those for {@link THREE.Terrain.DiamondSquare}.
