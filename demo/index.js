@@ -108,7 +108,7 @@ function setupWorld() {
   });
 
   water = new THREE.Mesh(
-    new THREE.PlaneGeometry(16384+1024, 16384+1024, 16, 16),
+    new THREE.PlaneBufferGeometry(16384+1024, 16384+1024, 16, 16),
     new THREE.MeshLambertMaterial({color: 0x006ba0, transparent: true, opacity: 0.6})
   );
   water.position.y = -99;
@@ -137,7 +137,7 @@ function setupDatGui() {
     THREE.ImageUtils.loadTexture('demo/img/sand1.jpg', undefined, function(t1) {
       t1.wrapS = t1.wrapT = THREE.RepeatWrapping;
       sand = new THREE.Mesh(
-        new THREE.PlaneGeometry(16384+1024, 16384+1024, 64, 64),
+        new THREE.PlaneBufferGeometry(16384+1024, 16384+1024, 64, 64),
         new THREE.MeshLambertMaterial({map: t1})
       );
       sand.position.y = -101;
@@ -183,26 +183,9 @@ function setupDatGui() {
           vertices,
           options,
           that.edgeDirection === 'Up' ? true : false,
-          that.edgeDistance,
+          that.edgeType === 'Box' ? that.edgeDistance : Math.min(options.xSize, options.ySize) * 0.5 - that.edgeDistance,
           THREE.Terrain[that.edgeCurve]
         );
-      }
-
-      if (typeof terrainScene !== 'undefined') {
-        var analysis = THREE.Terrain.Analyze(terrainScene.children[0], options),
-            deviations = analysis.summarize(),
-            prop;
-        analysis.elevation.drawHistogram(elevationGraph, 10);
-        analysis.slope.drawHistogram(slopeGraph, 10);
-        for (var i = 0, l = analyticsValues.length; i < l; i++) {
-          prop = analyticsValues[i].getAttribute('data-property').split('.');
-          analyticsValues[i].textContent = cleanAnalytic(analysis[prop[0]][prop[1]]);
-        }
-        for (prop in deviations) {
-          if (deviations.hasOwnProperty(prop)) {
-            document.querySelector('.summary-value[data-property="' + prop + '"]').textContent = deviations[prop];
-          }
-        }
       }
     };
     window.rebuild = this.Regenerate = function() {
@@ -223,6 +206,7 @@ function setupDatGui() {
         ySize: Math.round(that.size * that['width:length ratio']),
         xSegments: s,
         ySegments: Math.round(s * that['width:length ratio']),
+        _mesh: typeof terrainScene === 'undefined' ? null : terrainScene.children[0], // internal only
       };
       scene.remove(terrainScene);
       terrainScene = THREE.Terrain(o);
@@ -236,6 +220,25 @@ function setupDatGui() {
       }
       that['Scatter meshes']();
       lastOptions = o;
+
+      var analysis = THREE.Terrain.Analyze(terrainScene.children[0], o),
+          deviations = getSummary(analysis),
+          prop;
+      analysis.elevation.drawHistogram(elevationGraph, 10);
+      analysis.slope.drawHistogram(slopeGraph, 10);
+      for (var i = 0, l = analyticsValues.length; i < l; i++) {
+        prop = analyticsValues[i].getAttribute('data-property').split('.');
+        var analytic = analysis[prop[0]][prop[1]];
+        if (analyticsValues[i].getAttribute('class').split(/\s+/).indexOf('percent') !== -1) {
+          analytic *= 100;
+        }
+        analyticsValues[i].textContent = cleanAnalytic(analytic);
+      }
+      for (prop in deviations) {
+        if (deviations.hasOwnProperty(prop)) {
+          document.querySelector('.summary-value[data-property="' + prop + '"]').textContent = deviations[prop];
+        }
+      }
     };
     function altitudeProbability(z) {
       if (z > -80 && z < -50) return THREE.Terrain.EaseInOut((z + 80) / (-50 + 80)) * that.spread * 0.002;
@@ -570,6 +573,107 @@ function cleanAnalytic(val) {
     c += ' ';
   }
   return c + val.round(3);
+}
+
+var moments = {
+    'elevation.stdev': {
+        mean: 42.063,
+        stdev: 6.353,
+    },
+    'elevation.pearsonSkew': {
+        // mean: 0.100,
+        // stdev: 0.566,
+        levels: {
+            '+high': -1.032,
+            '+medium': -0.277,
+            'low': 0.666,
+            '-medium': 1.232,
+            '-high': Infinity,
+        },
+    },
+    'slope.stdev': {
+        mean: 10.154,
+        stdev: 3.586,
+    },
+    'slope.groeneveldMeedenSkew': {
+        // mean: -0.021,
+        // stdev: 0.163,
+        levels: {
+            '+high': -0.347,
+            '+medium': -0.130,
+            'low': 0.088,
+            '-medium': 0.305,
+            '-high': Infinity,
+        },
+    },
+    'roughness.jaggedness': {
+        levels: [0.006, 0.02, 0.044, 0.10],
+    },
+    'roughness.terrainRuggednessIndex': {
+        levels: [1, 2.2, 3.5, 4.8],
+    },
+};
+
+function getSummary(analytics) {
+    var results = {},
+        deviationBuckets = [-2, -2/3, 2/3, 2];
+    for (var prop in moments) {
+        if (moments.hasOwnProperty(prop)) {
+            var averageProp = moments[prop],
+                split = prop.split('.'),
+                sampleProp = analytics[split[0]][split[1]];
+            if (typeof averageProp.mean === 'number') {
+                results[prop] = (sampleProp - averageProp.mean) / averageProp.stdev;
+                results[prop] = numberToCategory(results[prop], deviationBuckets);
+            }
+            else {
+                results[prop] = numberToCategory(sampleProp, averageProp.levels);
+            }
+        }
+    }
+    return results;
+}
+
+/**
+ * Classify a numeric input.
+ *
+ * @param {Number} value
+ *   The number to classify.
+ * @param {Object/Number[]} [buckets=[-2, -2/3, 2/3, 2]]
+ *   An object or numeric array used to classify `value`. If `buckets` is an
+ *   array, the returned category will be the first of "very low," "low,"
+ *   "medium," and "high," in that order, where the correspondingly ordered
+ *   bucket value is higher than the `value` being classified, or "very high"
+ *   if all bucket values are smaller than the `value` being classified. If
+ *   `buckets` is an object, its values will be sorted, and the returned
+ *   category will be the key of the first bucket value that is higher than the
+ *   `value` being classified, or the key of the highest bucket value if the
+ *   `value` being classified is higher than all the values in `buckets`.
+ *
+ * @return {String}
+ *   The category into which the numeric input was classified.
+ */
+function numberToCategory(value, buckets) {
+    if (!buckets) {
+        buckets = [-2, -2/3, 2/3, 2];
+    }
+    if (typeof buckets.length === 'number' && buckets.length > 3) {
+        if (value <  buckets[0]) return 'very low';
+        if (value <  buckets[1]) return 'low';
+        if (value <  buckets[2]) return 'medium';
+        if (value <  buckets[3]) return 'high';
+        if (value >= buckets[3]) return 'very high';
+    }
+    var keys = Object.keys(buckets).sort(function(a, b) {
+            return buckets[a] - buckets[b];
+        }),
+        l = keys.length;
+    for (var i = 0; i < l; i++) {
+        if (value < buckets[keys[i]]) {
+            return keys[i];
+        }
+    }
+    return keys[l-1];
 }
 
 /**

@@ -1,5 +1,5 @@
 /**
- * THREE.Terrain.js 1.3.0-20150905
+ * THREE.Terrain.js 1.3.0-20150906
  *
  * @author Isaac Sukin (http://www.isaacsukin.com/)
  * @license MIT
@@ -222,15 +222,15 @@
  *     the PerlinLayers and SimplexLayers methods demonstrate. (The counterpart
  *     to frequency, amplitude, is represented by the difference between the
  *     `maxHeight` and `minHeight` parameters.) Defaults to 2.5.
- *   - `heightmap`: Either a pre-loaded image (from the same domain as the
- *     webpage or served with a CORS-friendly header) representing terrain
- *     height data (lighter pixels are higher); or a function used to generate
- *     random height data for the terrain. Valid random functions are specified
- *     in `generators.js` (or custom functions with the same signature).
- *     (Ideally heightmap images have the same number of pixels as the terrain
- *     has vertices, as determined by the `xSegments` and `ySegments` options,
- *     but this is not required: if the heightmap is a different size, vertex
- *     height values will be interpolated.) Defaults to
+ *   - `heightmap`: Either a canvas or pre-loaded image (from the same domain
+ *     as the webpage or served with a CORS-friendly header) representing
+ *     terrain height data (lighter pixels are higher); or a function used to
+ *     generate random height data for the terrain. Valid random functions are
+ *     specified in `generators.js` (or custom functions with the same
+ *     signature). Ideally heightmap images have the same number of pixels as
+ *     the terrain has vertices, as determined by the `xSegments` and
+ *     `ySegments` options, but this is not required. If the heightmap is a
+ *     different size, vertex height values will be interpolated.) Defaults to
  *     `THREE.Terrain.DiamondSquare`.
  *   - `material`: a THREE.Material instance used to display the terrain.
  *     Defaults to `new THREE.MeshBasicMaterial({color: 0xee6633})`.
@@ -286,6 +286,7 @@ THREE.Terrain = function(options) {
         xSize: 1024,
         ySegments: 63,
         ySize: 1024,
+        _mesh: null, // internal only
     };
     options = options || {};
     for (var opt in defaultOptions) {
@@ -293,7 +294,6 @@ THREE.Terrain = function(options) {
             options[opt] = typeof options[opt] === 'undefined' ? defaultOptions[opt] : options[opt];
         }
     }
-    // options.unit = (options.xSize / (options.xSegments+1) + options.ySize / (options.ySegments+1)) * 0.5;
     options.material = options.material || new THREE.MeshBasicMaterial({ color: 0xee6633 });
 
     // Encapsulating the terrain in a parent object allows us the flexibility
@@ -302,12 +302,28 @@ THREE.Terrain = function(options) {
     // Planes are initialized on the XY plane, so rotate the plane to make it lie flat.
     scene.rotation.x = -0.5 * Math.PI;
 
-    var mesh = new THREE.Mesh(
-        new THREE.PlaneGeometry(options.xSize, options.ySize, options.xSegments, options.ySegments),
-        options.material
-    );
+    // Create the terrain mesh.
+    // To save memory, it is possible to re-use a pre-existing mesh.
+    var mesh = options._mesh;
+    if (mesh && mesh.geometry.type === 'PlaneGeometry' &&
+                mesh.geometry.parameters.widthSegments === options.xSegments &&
+                mesh.geometry.parameters.heightSegments === options.ySegments) {
+        mesh.material = options.material;
+        mesh.scale.x = options.xSize / mesh.geometry.parameters.width;
+        mesh.scale.y = options.ySize / mesh.geometry.parameters.height;
+        for (var i = 0, l = mesh.geometry.vertices.length; i < l; i++) {
+            mesh.geometry.vertices[i].z = 0;
+        }
+    }
+    else {
+        mesh = new THREE.Mesh(
+            new THREE.PlaneGeometry(options.xSize, options.ySize, options.xSegments, options.ySegments),
+            options.material
+        );
+    }
+    delete options._mesh; // Remove the reference for GC
 
-    // It's actually possible to pass a canvas with heightmap data instead of an image.
+    // Assign elevation data to the terrain plane from a heightmap or function.
     if (options.heightmap instanceof HTMLCanvasElement || options.heightmap instanceof Image) {
         THREE.Terrain.fromHeightmap(mesh.geometry.vertices, options);
     }

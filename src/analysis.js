@@ -19,10 +19,7 @@ THREE.Terrain.Analyze = function(mesh, options) {
     }
 
     var elevations = Array.prototype.sort.call(
-            Array.prototype.map.call(
-                THREE.Terrain.toArray1D(mesh.geometry.vertices),
-                function(v) { return v - options.minHeight; }
-            ),
+            THREE.Terrain.toArray1D(mesh.geometry.vertices),
             function(a, b) { return a - b; }
         ),
         numVertices = elevations.length,
@@ -34,7 +31,7 @@ THREE.Terrain.Analyze = function(mesh, options) {
         pearsonSkewElevation = 0,
         groeneveldMeedenSkewElevation = 0,
         kurtosisElevation = 0,
-        up = mesh.up.clone().applyAxisAngle(new THREE.Vector3(1, 0, 0), 0.5*Math.PI),
+        up = mesh.up.clone().applyAxisAngle(new THREE.Vector3(1, 0, 0), 0.5*Math.PI), // correct for mesh rotation
         slopes = mesh.geometry.faces
             .map(function(v) { return v.normal.angleTo(up) * 180 / Math.PI; })
             .sort(function(a, b) { return a - b; }),
@@ -47,7 +44,6 @@ THREE.Terrain.Analyze = function(mesh, options) {
         fittedPlaneNormal = getFittedPlaneNormal(mesh.geometry.vertices, centroid),
         fittedPlaneSlope = fittedPlaneNormal.angleTo(up) * 180 / Math.PI,
         stdevSlope = 0,
-        stdevFittedSlope = 0,
         pearsonSkewSlope = 0,
         groeneveldMeedenSkewSlope = 0,
         kurtosisSlope = 0,
@@ -73,7 +69,6 @@ THREE.Terrain.Analyze = function(mesh, options) {
     for (i = 0; i < numFaces; i++) {
         deviation = slopes[i] - meanSlope;
         stdevSlope += deviation * deviation;
-        stdevFittedSlope += (slopes[i] - fittedPlaneSlope) * (slopes[i] - fittedPlaneSlope);
         pearsonSkewSlope += deviation * deviation * deviation;
         groeneveldMeedenSkewSlope += Math.abs(slopes[i] - medianSlope);
         kurtosisSlope += deviation * deviation * deviation * deviation;
@@ -83,7 +78,6 @@ THREE.Terrain.Analyze = function(mesh, options) {
     groeneveldMeedenSkewSlope = (meanSlope - medianSlope) / (groeneveldMeedenSkewSlope / numFaces);
     kurtosisSlope = (kurtosisSlope * numFaces) / (stdevSlope * stdevSlope) - 3;
     stdevSlope = Math.sqrt(stdevSlope / numFaces);
-    stdevFittedSlope = Math.sqrt(stdevFittedSlope / numFaces);
 
     for (var ii = 0, xl = options.xSegments + 1, yl = options.ySegments + 1; ii < xl; ii++) {
         for (var j = 0; j < yl; j++) {
@@ -103,13 +97,13 @@ THREE.Terrain.Analyze = function(mesh, options) {
                     }
                 }
             }
-            tri += (sum / c - v) * (sum / c - v);
+            if (c) tri += (sum / c - v) * (sum / c - v);
             if (v > neighborhoodMax || v < neighborhoodMin) jaggedness++;
         }
     }
     tri = Math.sqrt(tri / numVertices);
     // ceil(n/2)*ceil(m/2) is the max # of local maxima or minima in an n*m grid
-    jaggedness *= 100 / (Math.ceil((options.xSegments+1) * 0.5) * Math.ceil((options.ySegments+1) * 0.5) * 2);
+    jaggedness /= Math.ceil((options.xSegments+1) * 0.5) * Math.ceil((options.ySegments+1) * 0.5) * 2;
 
     return {
         elevation: {
@@ -117,21 +111,19 @@ THREE.Terrain.Analyze = function(mesh, options) {
             max: maxElevation,
             min: minElevation,
             range: maxElevation - minElevation,
-            midrange: (maxElevation + minElevation) * 0.5,
+            midrange: (maxElevation - minElevation) * 0.5 + minElevation,
             median: medianElevation,
             iqr: percentile(elevations, 0.75) - percentile(elevations, 0.25),
             mean: meanElevation,
-            minOffset: options.minHeight,
             stdev: stdevElevation,
-            rsd: stdevElevation / Math.abs(meanElevation), // Coefficient of variation
             pearsonSkew: pearsonSkewElevation,
             groeneveldMeedenSkew: groeneveldMeedenSkewElevation,
             kurtosis: kurtosisElevation,
             modes: getModes(
                 elevations,
                 Math.ceil(options.maxHeight - options.minHeight),
-                0,
-                options.maxHeight - options.minHeight
+                options.minHeight,
+                options.maxHeight
             ),
             percentile: function(p) { return percentile(elevations, p); },
             percentRank: function(v) { return percentRank(elevations, v); },
@@ -140,12 +132,12 @@ THREE.Terrain.Analyze = function(mesh, options) {
                     bucketNumbersLinearly(
                         elevations,
                         bucketCount,
-                        0,
-                        options.maxHeight - options.minHeight
+                        options.minHeight,
+                        options.maxHeight
                     ),
                     canvas,
-                    0,
-                    options.maxHeight - options.minHeight
+                    options.minHeight,
+                    options.maxHeight
                 );
             },
         },
@@ -154,17 +146,14 @@ THREE.Terrain.Analyze = function(mesh, options) {
             max: maxSlope,
             min: minSlope,
             range: maxSlope - minSlope,
-            midrange: (maxSlope + minSlope) * 0.5,
+            midrange: (maxSlope - minSlope) * 0.5 + minSlope,
             median: medianSlope,
             iqr: percentile(slopes, 0.75) - percentile(slopes, 0.25),
             mean: meanSlope,
             stdev: stdevSlope,
-            rsd: stdevSlope / Math.abs(meanSlope), // Coefficient of variation
             pearsonSkew: pearsonSkewSlope,
             groeneveldMeedenSkew: groeneveldMeedenSkewSlope,
             kurtosis: kurtosisSlope,
-            stdevFitted: stdevFittedSlope,
-            rsdFitted: stdevFittedSlope / Math.abs(fittedPlaneSlope),
             modes: getModes(slopes, 90, 0, 90),
             percentile: function(p) { return percentile(slopes, p); },
             percentRank: function(v) { return percentRank(slopes, v); },
@@ -172,7 +161,9 @@ THREE.Terrain.Analyze = function(mesh, options) {
                 drawHistogram(
                     bucketNumbersLinearly(
                         slopes,
-                        bucketCount
+                        bucketCount,
+                        0,
+                        90
                     ),
                     canvas,
                     0,
@@ -190,9 +181,12 @@ THREE.Terrain.Analyze = function(mesh, options) {
             centroid: centroid,
             normal: fittedPlaneNormal,
             slope: fittedPlaneSlope,
-        },
-        summarize: function() {
-            return getSummary(this);
+            pctExplained: percentVariationExplainedByFittedPlane(
+                mesh.geometry.vertices,
+                centroid,
+                fittedPlaneNormal,
+                options.maxHeight - options.minHeight
+            ),
         },
         // # of different kinds of features http://www.armystudyguide.com/content/army_board_study_guide_topics/land_navigation_map_reading/identify-major-minor-terr.shtml
     };
@@ -361,6 +355,21 @@ function bucketNumbersLinearly(data, bucketCount, min, max) {
     return buckets;
 }
 
+/**
+ * Get the bucketed mode(s) in a data set.
+ *
+ * @param {Number[]} data
+ *   The data set from which the modes should be retrieved.
+ * @param {Number} bucketCount
+ *   The number of buckets to use.
+ * @param {Number} min
+ *   The minimum allowed data value.
+ * @param {Number} max
+ *   The maximum allowed data value.
+ *
+ * @return {Number[]}
+ *   An array containing the bucketed mode(s).
+ */
 function getModes(data, bucketCount, min, max) {
     var buckets = bucketNumbersLinearly(data, bucketCount, min, max),
         maxLen = 0,
@@ -474,105 +483,40 @@ function drawHistogram(buckets, canvas, minV, maxV, append) {
     context.stroke();
 }
 
-var moments = {
-    'elevation.stdev': {
-        mean: 42.063,
-        stdev: 6.353,
-    },
-    'elevation.pearsonSkew': {
-        // mean: 0.100,
-        // stdev: 0.566,
-        levels: {
-            '+high': -1.032,
-            '+medium': -0.277,
-            'low': 0.666,
-            '-medium': 1.232,
-            '-high': Infinity,
-        },
-    },
-    'slope.stdev': {
-        mean: 10.154,
-        stdev: 3.586,
-    },
-    'slope.groeneveldMeedenSkew': {
-        // mean: -0.021,
-        // stdev: 0.163,
-        levels: {
-            '+high': -0.347,
-            '+medium': -0.130,
-            'low': 0.088,
-            '-medium': 0.305,
-            '-high': Infinity,
-        },
-    },
-    'roughness.jaggedness': {
-        levels: [0.6, 2, 4.4, 10],
-    },
-    'roughness.terrainRuggednessIndex': {
-        levels: [1, 2.2, 3.5, 4.8],
-    },
-};
-
-function getSummary(analytics) {
-    var results = {},
-        deviationBuckets = [-2, -2/3, 2/3, 2];
-    for (var prop in moments) {
-        if (moments.hasOwnProperty(prop)) {
-            var averageProp = moments[prop],
-                split = prop.split('.'),
-                sampleProp = analytics[split[0]][split[1]];
-            if (typeof averageProp.mean === 'number') {
-                results[prop] = (sampleProp - averageProp.mean) / averageProp.stdev;
-                results[prop] = numberToCategory(results[prop], deviationBuckets);
-            }
-            else {
-                results[prop] = numberToCategory(sampleProp, averageProp.levels);
-            }
-        }
-    }
-    return results;
-}
-
 /**
- * Classify a numeric input.
+ * A measure of correlation between a terrain and its fitted plane.
  *
- * @param {Number} value
- *   The number to classify.
- * @param {Object/Number[]} [buckets=[-2, -2/3, 2/3, 2]]
- *   An object or numeric array used to classify `value`. If `buckets` is an
- *   array, the returned category will be the first of "very low," "low,"
- *   "medium," and "high," in that order, where the correspondingly ordered
- *   bucket value is higher than the `value` being classified, or "very high"
- *   if all bucket values are smaller than the `value` being classified. If
- *   `buckets` is an object, its values will be sorted, and the returned
- *   category will be the key of the first bucket value that is higher than the
- *   `value` being classified, or the key of the highest bucket value if the
- *   `value` being classified is higher than all the values in `buckets`.
+ * This uses a different approach than the common one (R^2, aka Pearson's
+ * correlation coefficient) because the range is constricted and the data is
+ * often non-normal. The approach taken here compares the differences between
+ * the terrain elevations and the fitted plane at each vertex, and divides by
+ * half the range to arrive at a dimensionless value.
  *
- * @return {String}
- *   The category into which the numeric input was classified.
+ * @param {THREE.Vector3[]} vertices
+ *   The terrain vertices.
+ * @param {THREE.Vector3} centroid
+ *   The fitted plane centroid.
+ * @param {THREE.Vector3} normal
+ *   The fitted plane normal.
+ * @param {Number} range
+ *   The allowed range in elevations.
+ *
+ * @return {Number}
+ *   Returns a number between 0 and 1 indicating how well the fitted plane
+ *   explains the variation in terrain elevation. 1 means entirely explained; 0
+ *   means not explained at all.
  */
-function numberToCategory(value, buckets) {
-    if (!buckets) {
-        buckets = [-2, -2/3, 2/3, 2];
+function percentVariationExplainedByFittedPlane(vertices, centroid, normal, range) {
+    var numVertices = vertices.length,
+        diff = 0;
+    for (var i = 0; i < numVertices; i++) {
+        var fittedZ = Math.sqrt(
+                (vertices[i].x - centroid.x) * (vertices[i].x - centroid.x) +
+                (vertices[i].y - centroid.y) * (vertices[i].y - centroid.y)
+            ) * Math.tan(normal.z * Math.PI) + centroid.z;
+        diff += (vertices[i].z - fittedZ) * (vertices[i].z - fittedZ);
     }
-    if (typeof buckets.length === 'number' && buckets.length > 3) {
-        if (value <  buckets[0]) return 'very low';
-        if (value <  buckets[1]) return 'low';
-        if (value <  buckets[2]) return 'medium';
-        if (value <  buckets[3]) return 'high';
-        if (value >= buckets[3]) return 'very high';
-    }
-    var keys = Object.keys(buckets).sort(function(a, b) {
-            return buckets[a] - buckets[b];
-        }),
-        l = keys.length;
-    for (var i = 0; i < l; i++) {
-        if (value < buckets[keys[i]]) {
-            return keys[i];
-        }
-    }
-    return keys[l-1];
+    return 1 - Math.sqrt(diff / numVertices) * 2 / range;
 }
 
 })();

@@ -54,13 +54,11 @@
             <tr class="stat"><td class="label">IQR</td><td class="value" data-property="elevation.iqr"></td></tr>
             <tr class="stat"><td class="label">Mean</td><td class="value" data-property="elevation.mean"></td></tr>
             <tr class="stat"><td class="label">Std dev</td><td class="value" data-property="elevation.stdev"></td></tr>
-            <tr class="stat"><td class="label">RSD</td><td class="value" data-property="elevation.rsd"></td></tr>
             <tr class="stat"><td class="label">Mode</td><td class="value" data-property="elevation.modes"></td></tr>
             <tr class="stat"><td class="label">Pearson skew</td><td class="value" data-property="elevation.pearsonSkew"></td></tr>
             <tr class="stat"><td class="label">G&amp;M skew</td><td class="value" data-property="elevation.groeneveldMeedenSkew"></td></tr>
             <tr class="stat"><td class="label">Kurtosis</td><td class="value" data-property="elevation.kurtosis"></td></tr>
-            <tr class="stat"><td class="label">Offset</td><td class="value" data-property="elevation.minOffset"></td></tr>
-            <tr class="stat empty"><td class="">&nbsp;</td><td class="">&nbsp;</td></tr>
+            <!-- <tr class="stat empty"><td class="">&nbsp;</td><td class="">&nbsp;</td></tr> -->
           </tbody>
         </table>
         <div class="histogram-container">
@@ -81,13 +79,10 @@
             <tr class="stat"><td class="label">IQR</td><td class="value degree" data-property="slope.iqr"></td></tr>
             <tr class="stat"><td class="label">Mean</td><td class="value degree" data-property="slope.mean"></td></tr>
             <tr class="stat"><td class="label">Std dev</td><td class="value degree" data-property="slope.stdev"></td></tr>
-            <tr class="stat"><td class="label">RSD</td><td class="value" data-property="slope.rsd"></td></tr>
             <tr class="stat"><td class="label">Mode</td><td class="value" data-property="slope.modes"></td></tr>
             <tr class="stat"><td class="label">Pearson skew</td><td class="value" data-property="slope.pearsonSkew"></td></tr>
             <tr class="stat"><td class="label">G&amp;M skew</td><td class="value" data-property="slope.groeneveldMeedenSkew"></td></tr>
             <tr class="stat"><td class="label">Kurtosis</td><td class="value" data-property="slope.kurtosis"></td></tr>
-            <tr class="stat"><td class="label">Fitted std dev</td><td class="value degree" data-property="slope.stdevFitted"></td></tr>
-            <tr class="stat"><td class="label">Fitted RSD</td><td class="value" data-property="slope.rsdFitted"></td></tr>
           </tbody>
         </table>
         <div class="histogram-container">
@@ -112,6 +107,7 @@
         <table class="analytics-group">
           <tbody>
             <tr class="stat"><td class="label">Slope</td><td class="value degree" data-property="fittedPlane.slope"></td></tr>
+            <tr class="stat"><td class="label">Var. explained</td><td class="value percent" data-property="fittedPlane.pctExplained"></td></tr>
           </tbody>
         </table>
       </div>
