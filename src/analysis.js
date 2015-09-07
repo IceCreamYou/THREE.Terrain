@@ -26,7 +26,7 @@ THREE.Terrain.Analyze = function(mesh, options) {
         maxElevation = percentile(elevations, 1),
         minElevation = percentile(elevations, 0),
         medianElevation = percentile(elevations, 0.5),
-        meanElevation = elevations.reduce(function(sum, value) { return sum + value; }) / numVertices,
+        meanElevation = mean(elevations),
         stdevElevation = 0,
         pearsonSkewElevation = 0,
         groeneveldMeedenSkewElevation = 0,
@@ -39,7 +39,7 @@ THREE.Terrain.Analyze = function(mesh, options) {
         maxSlope = percentile(slopes, 1),
         minSlope = percentile(slopes, 0),
         medianSlope = percentile(slopes, 0.5),
-        meanSlope = slopes.reduce(function(sum, value) { return sum + value; }) / numFaces,
+        meanSlope = mean(slopes),
         centroid = mesh.position.clone().setZ(meanElevation),
         fittedPlaneNormal = getFittedPlaneNormal(mesh.geometry.vertices, centroid),
         fittedPlaneSlope = fittedPlaneNormal.angleTo(up) * 180 / Math.PI,
@@ -517,6 +517,15 @@ function percentVariationExplainedByFittedPlane(vertices, centroid, normal, rang
         diff += (vertices[i].z - fittedZ) * (vertices[i].z - fittedZ);
     }
     return 1 - Math.sqrt(diff / numVertices) * 2 / range;
+}
+
+function mean(data) {
+    var sum = 0,
+        l = data.length;
+    for (var i = 0; i < l; i++) {
+        sum += data[i];
+    }
+    return sum / l;
 }
 
 })();
