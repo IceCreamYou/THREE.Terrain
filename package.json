@@ -1,6 +1,6 @@
 {
     "name": "three.terrain.js",
-    "version": "1.3.0",
+    "version": "1.4.0",
     "description": "Extends the Three.js web-based 3D graphics framework to support generating random terrains and rendering terrain from predetermined heightmaps.",
     "homepage": "https://github.com/IceCreamYou/THREE.Terrain",
     "bugs": "https://github.com/IceCreamYou/THREE.Terrain/issues",

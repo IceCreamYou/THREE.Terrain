@@ -1,14 +1,8 @@
-## 1.x
-
-The steps filter seems to be misbehaving
-Make the custom shader(s) scalable https://twitter.com/VMA3D/status/562631211752112128
-Update the analytics docs page
-
-
 ## 2.0
 
 Make the API more consistent: naming (e.g. use "elevation" instead of "height"), capitalization, method and property grouping
 Write documentation that's not in the code
+Minify JS in /src that isn't included in the main bundle
 Fix Smoothing to use a smoothing factor (a multiplier for how close the point should move to the average) instead of a weight for the target point
 Add the ability for Smoothing to look in a broader neighborhood, not just the immediately surrounding 8 points
 Implement helper functions to convert from a 1D Vector3 array to/from a 1D and 2D float array, and convert the generator and filter functions to operate on those

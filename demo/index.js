@@ -144,8 +144,12 @@ function setupDatGui() {
       sand.rotation.x = -0.5 * Math.PI;
       scene.add(sand);
       THREE.ImageUtils.loadTexture('demo/img/grass1.jpg', undefined, function(t2) {
+        t2.wrapS = t2.wrapT = THREE.RepeatWrapping;
         THREE.ImageUtils.loadTexture('demo/img/stone1.jpg', undefined, function(t3) {
+          t3.wrapS = t3.wrapT = THREE.RepeatWrapping;
           THREE.ImageUtils.loadTexture('demo/img/snow1.jpg', undefined, function(t4) {
+            t4.wrapS = t4.wrapT = THREE.RepeatWrapping;
+            // t2.repeat.x = t2.repeat.y = 2;
             blend = THREE.Terrain.generateBlendedMaterial([
               {texture: t1},
               {texture: t2, levels: [-80, -35, 20, 50]},
@@ -412,7 +416,7 @@ function watchFocus() {
     if (_blurred) {
       _blurred = false;
       // startAnimating();
-      controls.freeze = false;
+      // controls.freeze = false;
     }
   });
   window.addEventListener('blur', function() {

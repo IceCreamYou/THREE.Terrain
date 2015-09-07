@@ -36,9 +36,16 @@
  *   rendered.
  */
 THREE.Terrain.generateBlendedMaterial = function(textures) {
+    // Convert numbers to strings of floats so GLSL doesn't barf on "1" instead of "1.0"
+    function glslifyNumber(n) {
+        return n === (n|0) ? n+'.0' : n+'';
+    }
+
     var uniforms = THREE.UniformsUtils.merge([THREE.ShaderLib.lambert.uniforms]),
         declare = '',
-        assign = '';
+        assign = '',
+        t0Repeat = textures[0].texture.repeat,
+        t0Offset = textures[0].texture.offset;
     for (var i = 0, l = textures.length; i < l; i++) {
         // Uniforms
         textures[i].wrapS = textures[i].wrapT = THREE.RepeatWrapping;
@@ -54,16 +61,16 @@ THREE.Terrain.generateBlendedMaterial = function(textures) {
         if (i !== 0) {
             var v = textures[i].levels, // Vertex heights at which to blend textures in and out
                 p = textures[i].glsl, // Or specify a GLSL expression that evaluates to a float between 0.0 and 1.0 indicating how opaque the texture should be at this texel
-                useLevels = typeof v !== 'undefined'; // Use levels if they exist; otherwise, use the GLSL expression
+                useLevels = typeof v !== 'undefined', // Use levels if they exist; otherwise, use the GLSL expression
+                tiRepeat = textures[i].texture.repeat,
+                tiOffset = textures[i].texture.offset;
             if (useLevels) {
                 // Must fade in; can't start and stop at the same point.
                 // So, if levels are too close, move one of them slightly.
                 if (v[1] - v[0] < 1) v[0] -= 1;
                 if (v[3] - v[2] < 1) v[3] += 1;
-                // Convert levels to floating-point numbers as strings so GLSL doesn't barf on "1" instead of "1.0"
                 for (var j = 0; j < v.length; j++) {
-                    var n = v[j];
-                    v[j] = n === n|0 ? n+'.0' : n+'';
+                    v[j] = glslifyNumber(v[j]);
                 }
             }
             // The transparency of the new texture when it is layered on top of the existing color at this texel is
@@ -73,12 +80,13 @@ THREE.Terrain.generateBlendedMaterial = function(textures) {
             var blendAmount = !useLevels ? p :
                 '1.0 - smoothstep(' + v[0] + ', ' + v[1] + ', vPosition.z) + smoothstep(' + v[2] + ', ' + v[3] + ', vPosition.z)';
             assign += '        color = mix( ' +
-                'texture2D( texture_' + i + ', MyvUv ), ' +
+                'texture2D( texture_' + i + ', MyvUv * vec2( ' + glslifyNumber(tiRepeat.x) + ', ' + glslifyNumber(tiRepeat.y) + ' ) + vec2( ' + glslifyNumber(tiOffset.x) + ', ' + glslifyNumber(tiOffset.y) + ' ) ), ' +
                 'color, ' +
                 'max(min(' + blendAmount + ', 1.0), 0.0)' +
                 ');\n';
         }
     }
+
     var params = {
         // I don't know which of these properties have any effect
         fog: true,
@@ -135,7 +143,7 @@ THREE.Terrain.generateBlendedMaterial = function(textures) {
 
             '    vec3 outgoingLight = vec3( 0.0 );', // outgoing light does not have an alpha; the surface does
             '    vec4 diffuseColor = vec4( diffuse, opacity );',
-            '    vec4 color = texture2D( texture_0, MyvUv ); // base',
+            '    vec4 color = texture2D( texture_0, MyvUv * vec2( ' + glslifyNumber(t0Repeat.x) + ', ' + glslifyNumber(t0Repeat.y) + ' ) + vec2( ' + glslifyNumber(t0Offset.x) + ', ' + glslifyNumber(t0Offset.y) + ' ) ); // base',
                 assign,
             '    diffuseColor = color;',
             // '    gl_FragColor = color;',
