@@ -18,9 +18,10 @@ THREE.Terrain.Analyze = function(mesh, options) {
         throw new Error('Not enough vertices to analyze');
     }
 
-    var elevations = Array.prototype.sort.call(
+    var sortNumeric = function(a, b) { return a - b; },
+        elevations = Array.prototype.sort.call(
             THREE.Terrain.toArray1D(mesh.geometry.vertices),
-            function(a, b) { return a - b; }
+            sortNumeric
         ),
         numVertices = elevations.length,
         maxElevation = percentile(elevations, 1),
@@ -34,7 +35,7 @@ THREE.Terrain.Analyze = function(mesh, options) {
         up = mesh.up.clone().applyAxisAngle(new THREE.Vector3(1, 0, 0), 0.5*Math.PI), // correct for mesh rotation
         slopes = mesh.geometry.faces
             .map(function(v) { return v.normal.angleTo(up) * 180 / Math.PI; })
-            .sort(function(a, b) { return a - b; }),
+            .sort(sortNumeric),
         numFaces = slopes.length,
         maxSlope = percentile(slopes, 1),
         minSlope = percentile(slopes, 0),
@@ -51,6 +52,8 @@ THREE.Terrain.Analyze = function(mesh, options) {
         area3D = 0,
         tri = 0,
         jaggedness = 0,
+        medianElevationDeviations = new Float32Array(numVertices),
+        medianSlopeDeviations = new Float32Array(numFaces),
         deviation,
         i;
 
@@ -58,19 +61,22 @@ THREE.Terrain.Analyze = function(mesh, options) {
         deviation = elevations[i] - meanElevation;
         stdevElevation += deviation * deviation;
         pearsonSkewElevation += deviation * deviation * deviation;
-        groeneveldMeedenSkewElevation += Math.abs(elevations[i] - medianElevation);
+        medianElevationDeviations[i] = Math.abs(elevations[i] - medianElevation);
+        groeneveldMeedenSkewElevation += medianElevationDeviations[i];
         kurtosisElevation += deviation * deviation * deviation * deviation;
     }
     pearsonSkewElevation = (pearsonSkewElevation / numVertices) / Math.pow(stdevElevation / (numVertices - 1), 1.5);
     groeneveldMeedenSkewElevation = (meanElevation - medianElevation) / (groeneveldMeedenSkewElevation / numVertices);
     kurtosisElevation = (kurtosisElevation * numVertices) / (stdevElevation * stdevElevation) - 3;
     stdevElevation = Math.sqrt(stdevElevation / numVertices);
+    Array.prototype.sort.call(medianElevationDeviations, sortNumeric);
 
     for (i = 0; i < numFaces; i++) {
         deviation = slopes[i] - meanSlope;
         stdevSlope += deviation * deviation;
         pearsonSkewSlope += deviation * deviation * deviation;
-        groeneveldMeedenSkewSlope += Math.abs(slopes[i] - medianSlope);
+        medianSlopeDeviations[i] = Math.abs(slopes[i] - medianSlope);
+        groeneveldMeedenSkewSlope += medianSlopeDeviations[i];
         kurtosisSlope += deviation * deviation * deviation * deviation;
         area3D += faceArea2D / Math.cos(slopes[i] * Math.PI / 180);
     }
@@ -78,6 +84,7 @@ THREE.Terrain.Analyze = function(mesh, options) {
     groeneveldMeedenSkewSlope = (meanSlope - medianSlope) / (groeneveldMeedenSkewSlope / numFaces);
     kurtosisSlope = (kurtosisSlope * numFaces) / (stdevSlope * stdevSlope) - 3;
     stdevSlope = Math.sqrt(stdevSlope / numFaces);
+    Array.prototype.sort.call(medianSlopeDeviations, sortNumeric);
 
     for (var ii = 0, xl = options.xSegments + 1, yl = options.ySegments + 1; ii < xl; ii++) {
         for (var j = 0; j < yl; j++) {
@@ -116,6 +123,7 @@ THREE.Terrain.Analyze = function(mesh, options) {
             iqr: percentile(elevations, 0.75) - percentile(elevations, 0.25),
             mean: meanElevation,
             stdev: stdevElevation,
+            mad: percentile(medianElevationDeviations, 0.5),
             pearsonSkew: pearsonSkewElevation,
             groeneveldMeedenSkew: groeneveldMeedenSkewElevation,
             kurtosis: kurtosisElevation,
@@ -151,6 +159,7 @@ THREE.Terrain.Analyze = function(mesh, options) {
             iqr: percentile(slopes, 0.75) - percentile(slopes, 0.25),
             mean: meanSlope,
             stdev: stdevSlope,
+            mad: percentile(medianSlopeDeviations, 0.5),
             pearsonSkew: pearsonSkewSlope,
             groeneveldMeedenSkew: groeneveldMeedenSkewSlope,
             kurtosis: kurtosisSlope,

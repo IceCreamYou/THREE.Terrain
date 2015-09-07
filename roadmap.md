@@ -1,8 +1,8 @@
 ## 1.x
 
-Implement Median Absolute Deviation (MAD)? https://en.wikipedia.org/wiki/Median_absolute_deviation
 The steps filter seems to be misbehaving
 Make the custom shader(s) scalable https://twitter.com/VMA3D/status/562631211752112128
+Update the analytics docs page
 
 
 ## 2.0
