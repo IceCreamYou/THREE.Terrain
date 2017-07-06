@@ -1,5 +1,5 @@
 /**
- * THREE.Terrain.js 1.4.0-20150907
+ * THREE.Terrain.js 1.4.0-20170705
  *
  * @author Isaac Sukin (http://www.isaacsukin.com/)
  * @license MIT
@@ -1766,15 +1766,25 @@ THREE.Terrain.generateBlendedMaterial = function(textures) {
             '#endif',
 
             THREE.ShaderChunk.common,
+            THREE.ShaderChunk.packing,
+            THREE.ShaderChunk.dithering_pars_fragment,
             THREE.ShaderChunk.color_pars_fragment,
+            THREE.ShaderChunk.uv_pars_fragment,
+            THREE.ShaderChunk.uv2_pars_fragment,
             THREE.ShaderChunk.map_pars_fragment,
             THREE.ShaderChunk.alphamap_pars_fragment,
+            THREE.ShaderChunk.aomap_pars_fragment,
             THREE.ShaderChunk.lightmap_pars_fragment,
+            THREE.ShaderChunk.emissivemap_pars_fragment,
             THREE.ShaderChunk.envmap_pars_fragment,
+            THREE.ShaderChunk.bsdfs,
+            THREE.ShaderChunk.lights_pars,
             THREE.ShaderChunk.fog_pars_fragment,
             THREE.ShaderChunk.shadowmap_pars_fragment,
+            THREE.ShaderChunk.shadowmask_pars_fragment,
             THREE.ShaderChunk.specularmap_pars_fragment,
             THREE.ShaderChunk.logdepthbuf_pars_fragment,
+            THREE.ShaderChunk.clipping_planes_pars_fragment,
 
             declare,
             'varying vec2 MyvUv;',
@@ -1783,10 +1793,14 @@ THREE.Terrain.generateBlendedMaterial = function(textures) {
 
             'void main() {',
 
+            THREE.ShaderChunk.clipping_planes_fragment,
+
+	'ReflectedLight reflectedLight = ReflectedLight( vec3( 0.0 ), vec3( 0.0 ), vec3( 0.0 ), vec3( 0.0 ) );',
+	'vec3 totalEmissiveRadiance = emissive;',
+
             // TODO: The second vector here is the object's "up" vector. Ideally we'd just pass it in directly.
             'float slope = acos(max(min(dot(myNormal, vec3(0.0, 0.0, 1.0)), 1.0), -1.0));',
 
-            '    vec3 outgoingLight = vec3( 0.0 );', // outgoing light does not have an alpha; the surface does
             '    vec4 diffuseColor = vec4( diffuse, opacity );',
             '    vec4 color = texture2D( texture_0, MyvUv * vec2( ' + glslifyNumber(t0Repeat.x) + ', ' + glslifyNumber(t0Repeat.y) + ' ) + vec2( ' + glslifyNumber(t0Offset.x) + ', ' + glslifyNumber(t0Offset.y) + ' ) ); // base',
                 assign,
@@ -1799,23 +1813,32 @@ THREE.Terrain.generateBlendedMaterial = function(textures) {
                 THREE.ShaderChunk.alphamap_fragment,
                 THREE.ShaderChunk.alphatest_fragment,
                 THREE.ShaderChunk.specularmap_fragment,
+                THREE.ShaderChunk.emissivemap_fragment,
 
-            '    #ifdef DOUBLE_SIDED',
-            '        if ( gl_FrontFacing )',
-            '            outgoingLight += diffuseColor.rgb * vLightFront + emissive;',
-            '        else',
-            '            outgoingLight += diffuseColor.rgb * vLightBack + emissive;',
-            '    #else',
-            '        outgoingLight += diffuseColor.rgb * vLightFront + emissive;',
-            '    #endif',
+            // accumulation
+            '   reflectedLight.indirectDiffuse = getAmbientLightIrradiance( ambientLightColor );',
 
                 THREE.ShaderChunk.lightmap_fragment,
-                THREE.ShaderChunk.envmap_fragment,
-                THREE.ShaderChunk.shadowmap_fragment,
-                THREE.ShaderChunk.linear_to_gamma_fragment,
-                THREE.ShaderChunk.fog_fragment,
 
-            '    gl_FragColor = vec4( outgoingLight, diffuseColor.a );', // This will probably change in future three.js releases
+            '    reflectedLight.indirectDiffuse *= BRDF_Diffuse_Lambert( diffuseColor.rgb );',
+            '    #ifdef DOUBLE_SIDED',
+            '            reflectedLight.directDiffuse = ( gl_FrontFacing ) ? vLightFront : vLightBack;',
+            '    #else',
+            '            reflectedLight.directDiffuse = vLightFront;',
+            '    #endif',
+            '    reflectedLight.directDiffuse *= BRDF_Diffuse_Lambert( diffuseColor.rgb ) * getShadowMask();',
+
+                // modulation
+                THREE.ShaderChunk.aomap_fragment,
+            '   vec3 outgoingLight = reflectedLight.directDiffuse + reflectedLight.indirectDiffuse + totalEmissiveRadiance;',
+                THREE.ShaderChunk.normal_flip,
+                THREE.ShaderChunk.envmap_fragment,
+            '   gl_FragColor = vec4( outgoingLight, diffuseColor.a );', // This will probably change in future three.js releases
+                THREE.ShaderChunk.tonemapping_fragment,
+                THREE.ShaderChunk.encodings_fragment,
+                THREE.ShaderChunk.fog_fragment,
+                THREE.ShaderChunk.premultiplied_alpha_fragment,
+                THREE.ShaderChunk.dithering_fragment,
             '}'
         ].join('\n'),
     };

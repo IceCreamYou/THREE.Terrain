@@ -97,7 +97,7 @@ function setupControls() {
 }
 
 function setupWorld() {
-  THREE.ImageUtils.loadTexture('demo/img/sky1.jpg', undefined, function(t1) {
+  new THREE.TextureLoader().load('demo/img/sky1.jpg', function(t1) {
     t1.minFilter = THREE.LinearFilter; // Texture is not a power-of-two size; use smoother interpolation.
     skyDome = new THREE.Mesh(
       new THREE.SphereGeometry(8192, 16, 16, 0, Math.PI*2, 0, Math.PI*0.5),
@@ -134,7 +134,8 @@ function setupDatGui() {
     var elevationGraph = document.getElementById('elevation-graph'),
         slopeGraph = document.getElementById('slope-graph'),
         analyticsValues = document.getElementsByClassName('value');
-    THREE.ImageUtils.loadTexture('demo/img/sand1.jpg', undefined, function(t1) {
+    var loader = new THREE.TextureLoader();
+    loader.load('demo/img/sand1.jpg', function(t1) {
       t1.wrapS = t1.wrapT = THREE.RepeatWrapping;
       sand = new THREE.Mesh(
         new THREE.PlaneBufferGeometry(16384+1024, 16384+1024, 64, 64),
@@ -143,11 +144,11 @@ function setupDatGui() {
       sand.position.y = -101;
       sand.rotation.x = -0.5 * Math.PI;
       scene.add(sand);
-      THREE.ImageUtils.loadTexture('demo/img/grass1.jpg', undefined, function(t2) {
+      loader.load('demo/img/grass1.jpg', function(t2) {
         t2.wrapS = t2.wrapT = THREE.RepeatWrapping;
-        THREE.ImageUtils.loadTexture('demo/img/stone1.jpg', undefined, function(t3) {
+        loader.load('demo/img/stone1.jpg', function(t3) {
           t3.wrapS = t3.wrapT = THREE.RepeatWrapping;
-          THREE.ImageUtils.loadTexture('demo/img/snow1.jpg', undefined, function(t4) {
+          loader.load('demo/img/snow1.jpg', function(t4) {
             t4.wrapS = t4.wrapT = THREE.RepeatWrapping;
             // t2.repeat.x = t2.repeat.y = 2;
             blend = THREE.Terrain.generateBlendedMaterial([
@@ -254,9 +255,12 @@ function setupDatGui() {
       return k % 4 === 0 && Math.random() < altitudeProbability(v.z);
     };
     var mesh = buildTree();
-    var decoMat = mesh.material.clone(); // new THREE.MeshBasicMaterial({color: 0x229966, wireframe: true});
-    decoMat.materials[0].wireframe = true;
-    decoMat.materials[1].wireframe = true;
+    var decoMat = mesh.material.map(
+      function(mat) {
+        return mat.clone();
+      }); // new THREE.MeshBasicMaterial({color: 0x229966, wireframe: true});
+    decoMat[0].wireframe = true;
+    decoMat[1].wireframe = true;
     this['Scatter meshes'] = function() {
       var s = parseInt(that.segments, 10),
           spread,
@@ -473,10 +477,10 @@ function applySmoothing(smoothing, o) {
 }
 
 function buildTree() {
-  var material = new THREE.MeshFaceMaterial([
+  var material = [
     new THREE.MeshLambertMaterial({ color: 0x3d2817 }), // brown
     new THREE.MeshLambertMaterial({ color: 0x2d4c1e }), // green
-  ]);
+  ];
 
   var c0 = new THREE.Mesh(new THREE.CylinderGeometry(2, 2, 12, 6, 1, true));
   c0.position.y = 6;
