@@ -23,10 +23,8 @@ include it on a page client-side without a module loader:
 You then have access to the `THREE.Terrain` object. (Make sure the `three.js`
 library is loaded first.)
 
-The latest releases have been tested with three.js
-[r71](https://github.com/mrdoob/three.js/releases/tag/r71). Use the
-[1.2.0](https://github.com/IceCreamYou/THREE.Terrain/releases/tag/1.2.0)
-release of this project if you are using three.js r67 - r70.
+The latest releases of this project have been tested with three.js
+[r86](https://github.com/mrdoob/three.js/releases/tag/r86).
 
 ### Procedurally Generate a Terrain
 
