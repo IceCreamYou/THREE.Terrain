@@ -31,6 +31,7 @@ The latest releases of this project have been tested with three.js
 In your own script, generate a terrain and add it to your scene:
 
 ```javascript
+// Generate a terrain
 var xS = 63, yS = 63;
 terrainScene = THREE.Terrain({
     easing: THREE.Terrain.Linear,
@@ -46,9 +47,12 @@ terrainScene = THREE.Terrain({
     ySegments: yS,
     ySize: 1024,
 });
-// Assuming you already have your global scene
+// Assuming you already have your global scene, add the terrain to it
 scene.add(terrainScene);
 
+// Optional:
+// Get the geometry of the terrain across which you want to scatter meshes
+var geo = terrainScene.children[0].geometry;
 // Add randomly distributed foliage
 decoScene = THREE.Terrain.ScatterMeshes(geo, {
     mesh: new THREE.Mesh(new THREE.CylinderGeometry(2, 2, 12, 6)),
@@ -139,14 +143,12 @@ var material = THREE.Terrain.generateBlendedMaterial([
 ### More
 
 Many other utilities are provided, for example for compositing different
-terrain generation methods; creating islands, cliffs, canyonjs, and plateaus;
+terrain generation methods; creating islands, cliffs, canyons, and plateaus;
 manually influencing the terrain's shape at different locations; different
-kinds of smoothing; and more. These will be documented online soon. In the mean
-time, these features are all fully documented in the
+kinds of smoothing; and more. These features are all fully documented in the
 [source code](https://github.com/IceCreamYou/THREE.Terrain/blob/gh-pages/build/THREE.Terrain.js).
 Additionally, you can create custom methods for generating terrain or affecting
-other processes. How to do so will also be documented soon. A writeup on how it
-all works under the hood is in order as well.
+other processes.
 
 There is also a
 [simulation](https://github.com/IceCreamYou/THREE.Terrain/tree/gh-pages/statistics)
