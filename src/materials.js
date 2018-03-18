@@ -48,8 +48,8 @@ THREE.Terrain.generateBlendedMaterial = function(textures) {
         t0Offset = textures[0].texture.offset;
     for (var i = 0, l = textures.length; i < l; i++) {
         // Uniforms
-        textures[i].wrapS = textures[i].wrapT = THREE.RepeatWrapping;
-        textures[i].needsUpdate = true;
+        textures[i].texture.wrapS = textures[i].wrapT = THREE.RepeatWrapping;
+        textures[i].texture.needsUpdate = true;
         uniforms['texture_' + i] = {
             type: 't',
             value: textures[i].texture,
