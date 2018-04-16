@@ -24,7 +24,7 @@ You then have access to the `THREE.Terrain` object. (Make sure the `three.js`
 library is loaded first.)
 
 The latest releases of this project have been tested with three.js
-[r86](https://github.com/mrdoob/three.js/releases/tag/r86).
+[r91](https://github.com/mrdoob/three.js/releases/tag/r91).
 
 ### Procedurally Generate a Terrain
 
