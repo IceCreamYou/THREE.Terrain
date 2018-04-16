@@ -145,11 +145,8 @@ function setupDatGui() {
       sand.rotation.x = -0.5 * Math.PI;
       scene.add(sand);
       loader.load('demo/img/grass1.jpg', function(t2) {
-        t2.wrapS = t2.wrapT = THREE.RepeatWrapping;
         loader.load('demo/img/stone1.jpg', function(t3) {
-          t3.wrapS = t3.wrapT = THREE.RepeatWrapping;
           loader.load('demo/img/snow1.jpg', function(t4) {
-            t4.wrapS = t4.wrapT = THREE.RepeatWrapping;
             // t2.repeat.x = t2.repeat.y = 2;
             blend = THREE.Terrain.generateBlendedMaterial([
               {texture: t1},

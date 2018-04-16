@@ -1,5 +1,5 @@
 /**
- * THREE.Terrain.js 1.5.0-20180318
+ * THREE.Terrain.js 1.5.0-20180326
  *
  * @author Isaac Sukin (http://www.isaacsukin.com/)
  * @license MIT
@@ -1778,7 +1778,8 @@ THREE.Terrain.generateBlendedMaterial = function(textures) {
             THREE.ShaderChunk.emissivemap_pars_fragment,
             THREE.ShaderChunk.envmap_pars_fragment,
             THREE.ShaderChunk.bsdfs,
-            THREE.ShaderChunk.lights_pars,
+            THREE.ShaderChunk.lights_pars_begin,
+            THREE.ShaderChunk.lights_pars_maps,
             THREE.ShaderChunk.fog_pars_fragment,
             THREE.ShaderChunk.shadowmap_pars_fragment,
             THREE.ShaderChunk.shadowmask_pars_fragment,
