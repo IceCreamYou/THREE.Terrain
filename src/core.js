@@ -262,12 +262,12 @@ THREE.Terrain.POLYGONREDUCTION = 3;
  *   A 2D array representing the terrain's heightmap.
  */
 THREE.Terrain.toArray2D = function(vertices, options) {
-    var tgt = new Array(options.xSegments),
+    var tgt = new Array(options.xSegments + 1),
         xl = options.xSegments + 1,
         yl = options.ySegments + 1,
         i, j;
     for (i = 0; i < xl; i++) {
-        tgt[i] = new Float64Array(options.ySegments);
+        tgt[i] = new Float64Array(options.ySegments + 1);
         for (j = 0; j < yl; j++) {
             tgt[i][j] = vertices[j * xl + i].z;
         }
