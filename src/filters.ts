@@ -1,3 +1,7 @@
+import { TerrainOptions, EasingFunction } from "./basicTypes";
+import { Vector3 } from "three";
+import { Linear, EaseInOut } from "./core";
+
 /**
  * Rescale the heightmap of a terrain to keep it within the maximum range.
  *
@@ -7,15 +11,15 @@
  * @param {Object} options
  *   A map of settings that control how the terrain is constructed and
  *   displayed. Valid values are the same as those for the `options` parameter
- *   of {@link THREE.Terrain}() but only `maxHeight`, `minHeight`, and `easing`
+ *   of {@link THREE.Terrain}() but only `maxHeight`, `minHeight`, `easing`, and `stretch`
  *   are used.
  */
-THREE.Terrain.Clamp = function(g, options) {
+export function Clamp(g: Vector3[], options: Pick<TerrainOptions, 'maxHeight' | 'minHeight' | 'easing' | 'stretch'>) {
     var min = Infinity,
         max = -Infinity,
         l = g.length,
         i;
-    options.easing = options.easing || THREE.Terrain.Linear;
+    options.easing = options.easing || Linear;
     for (i = 0; i < l; i++) {
         if (g[i].z < min) min = g[i].z;
         if (g[i].z > max) max = g[i].z;
@@ -66,7 +70,7 @@ THREE.Terrain.Clamp = function(g, options) {
  *   all edges. If passed, should be an object with `top`, `bottom`, `left`,
  *   and `right` Boolean properties specifying which edges to affect.
  */
-THREE.Terrain.Edges = function(g, options, direction, distance, easing, edges) {
+export function Edges(g: Vector3[], options: TerrainOptions, direction: boolean, distance: number, easing: EasingFunction, edges: { top: boolean, bottom: boolean, left: boolean, right: boolean }) {
     var numXSegments = Math.floor(distance / (options.xSize / options.xSegments)) || 1,
         numYSegments = Math.floor(distance / (options.ySize / options.ySegments)) || 1,
         peak = direction ? options.maxHeight : options.minHeight,
@@ -74,15 +78,15 @@ THREE.Terrain.Edges = function(g, options, direction, distance, easing, edges) {
         xl = options.xSegments + 1,
         yl = options.ySegments + 1,
         i, j, multiplier, k1, k2;
-    easing = easing || THREE.Terrain.EaseInOut;
+    easing = easing || EaseInOut;
     if (typeof edges !== 'object') {
-        edges = {top: true, bottom: true, left: true, right: true};
+        edges = { top: true, bottom: true, left: true, right: true };
     }
     for (i = 0; i < xl; i++) {
         for (j = 0; j < numYSegments; j++) {
             multiplier = easing(1 - j / numYSegments);
-            k1 = j*xl + i;
-            k2 = (options.ySegments-j)*xl + i;
+            k1 = j * xl + i;
+            k2 = (options.ySegments - j) * xl + i;
             if (edges.top) {
                 g[k1].z = max(g[k1].z, (peak - g[k1].z) * multiplier + g[k1].z);
             }
@@ -94,8 +98,8 @@ THREE.Terrain.Edges = function(g, options, direction, distance, easing, edges) {
     for (i = 0; i < yl; i++) {
         for (j = 0; j < numXSegments; j++) {
             multiplier = easing(1 - j / numXSegments);
-            k1 = i*xl+j;
-            k2 = (options.ySegments-i)*xl + (options.xSegments-j);
+            k1 = i * xl + j;
+            k2 = (options.ySegments - i) * xl + (options.xSegments - j);
             if (edges.left) {
                 g[k1].z = max(g[k1].z, (peak - g[k1].z) * multiplier + g[k1].z);
             }
@@ -104,10 +108,11 @@ THREE.Terrain.Edges = function(g, options, direction, distance, easing, edges) {
             }
         }
     }
-    THREE.Terrain.Clamp(g, {
+    Clamp(g, {
         maxHeight: options.maxHeight,
         minHeight: options.minHeight,
         stretch: true,
+        easing: Linear
     });
 };
 
@@ -138,7 +143,7 @@ THREE.Terrain.Edges = function(g, options, direction, distance, easing, edges) {
  *   `THREE.Terrain.InEaseOut`, and any custom function that accepts a float
  *   between 0 and 1 and returns a float between 0 and 1.
  */
-THREE.Terrain.RadialEdges = function(g, options, direction, distance, easing) {
+export function RadialEdges(g: Vector3[], options: TerrainOptions, direction: boolean, distance: number, easing: EasingFunction, ) {
     var peak = direction ? options.maxHeight : options.minHeight,
         max = direction ? Math.max : Math.min,
         xl = (options.xSegments + 1),
@@ -151,13 +156,13 @@ THREE.Terrain.RadialEdges = function(g, options, direction, distance, easing) {
         i, j, multiplier, k, vertexDistance;
     for (i = 0; i < xl; i++) {
         for (j = 0; j < yl2; j++) {
-            k = j*xl + i;
-            vertexDistance = Math.min(edgeRadius, Math.sqrt((xl2-i)*xSegmentSize*(xl2-i)*xSegmentSize + (yl2-j)*ySegmentSize*(yl2-j)*ySegmentSize) - distance);
+            k = j * xl + i;
+            vertexDistance = Math.min(edgeRadius, Math.sqrt((xl2 - i) * xSegmentSize * (xl2 - i) * xSegmentSize + (yl2 - j) * ySegmentSize * (yl2 - j) * ySegmentSize) - distance);
             if (vertexDistance < 0) continue;
             multiplier = easing(vertexDistance / edgeRadius);
             g[k].z = max(g[k].z, (peak - g[k].z) * multiplier + g[k].z);
             // Use symmetry to reduce the number of iterations.
-            k = (options.ySegments-j)*xl + i;
+            k = (options.ySegments - j) * xl + i;
             g[k].z = max(g[k].z, (peak - g[k].z) * multiplier + g[k].z);
         }
     }
@@ -177,7 +182,7 @@ THREE.Terrain.RadialEdges = function(g, options, direction, distance, easing) {
  *   How much to weight the original vertex height against the average of its
  *   neighbors.
  */
-THREE.Terrain.Smooth = function(g, options, weight) {
+export function Smooth(g: Vector3[], options: TerrainOptions, weight: number = 0) {
     var heightmap = new Float64Array(g.length);
     for (var i = 0, xl = options.xSegments + 1, yl = options.ySegments + 1; i < xl; i++) {
         for (var j = 0; j < yl; j++) {
@@ -185,17 +190,16 @@ THREE.Terrain.Smooth = function(g, options, weight) {
                 c = 0;
             for (var n = -1; n <= 1; n++) {
                 for (var m = -1; m <= 1; m++) {
-                    var key = (j+n)*xl + i + m;
-                    if (typeof g[key] !== 'undefined' && i+m >= 0 && j+n >= 0 && i+m < xl && j+n < yl) {
+                    var key = (j + n) * xl + i + m;
+                    if (typeof g[key] !== 'undefined' && i + m >= 0 && j + n >= 0 && i + m < xl && j + n < yl) {
                         sum += g[key].z;
                         c++;
                     }
                 }
             }
-            heightmap[j*xl + i] = sum / c;
+            heightmap[j * xl + i] = sum / c;
         }
     }
-    weight = weight || 0;
     var w = 1 / (1 + weight);
     for (var k = 0, l = g.length; k < l; k++) {
         g[k].z = (heightmap[k] + g[k].z * weight) * w;
@@ -207,11 +211,11 @@ THREE.Terrain.Smooth = function(g, options, weight) {
  *
  * Parameters are the same as those for {@link THREE.Terrain.DiamondSquare}.
  */
-THREE.Terrain.SmoothMedian = function(g, options) {
+export function SmoothMedian(g: Vector3[], options: TerrainOptions) {
     var heightmap = new Float64Array(g.length),
-        neighborValues = [],
+        neighborValues: number[] = [],
         neighborKeys = [],
-        sortByValue = function(a, b) {
+        sortByValue = function (a: number, b: number) {
             return neighborValues[a] - neighborValues[b];
         };
     for (var i = 0, xl = options.xSegments + 1, yl = options.ySegments + 1; i < xl; i++) {
@@ -220,23 +224,23 @@ THREE.Terrain.SmoothMedian = function(g, options) {
             neighborKeys.length = 0;
             for (var n = -1; n <= 1; n++) {
                 for (var m = -1; m <= 1; m++) {
-                    var key = (j+n)*xl + i + m;
-                    if (typeof g[key] !== 'undefined' && i+m >= 0 && j+n >= 0 && i+m < xl && j+n < yl) {
+                    var key = (j + n) * xl + i + m;
+                    if (typeof g[key] !== 'undefined' && i + m >= 0 && j + n >= 0 && i + m < xl && j + n < yl) {
                         neighborValues.push(g[key].z);
                         neighborKeys.push(key);
                     }
                 }
             }
             neighborKeys.sort(sortByValue);
-            var halfKey = Math.floor(neighborKeys.length*0.5),
+            var halfKey = Math.floor(neighborKeys.length * 0.5),
                 median;
             if (neighborKeys.length % 2 === 1) {
                 median = g[neighborKeys[halfKey]].z;
             }
             else {
-                median = (g[neighborKeys[halfKey-1]].z + g[neighborKeys[halfKey]].z) * 0.5;
+                median = (g[neighborKeys[halfKey - 1]].z + g[neighborKeys[halfKey]].z) * 0.5;
             }
-            heightmap[j*xl + i] = median;
+            heightmap[j * xl + i] = median;
         }
     }
     for (var k = 0, l = g.length; k < l; k++) {
@@ -260,7 +264,7 @@ THREE.Terrain.SmoothMedian = function(g, options) {
  *   outside of which the point will be clamped. Higher values mean that the
  *   point can be farther outside the range of its neighbors.
  */
-THREE.Terrain.SmoothConservative = function(g, options, multiplier) {
+export function SmoothConservative(g: Vector3[], options: TerrainOptions, multiplier: number) {
     var heightmap = new Float64Array(g.length);
     for (var i = 0, xl = options.xSegments + 1, yl = options.ySegments + 1; i < xl; i++) {
         for (var j = 0; j < yl; j++) {
@@ -268,14 +272,14 @@ THREE.Terrain.SmoothConservative = function(g, options, multiplier) {
                 min = Infinity;
             for (var n = -1; n <= 1; n++) {
                 for (var m = -1; m <= 1; m++) {
-                    var key = (j+n)*xl + i + m;
-                    if (typeof g[key] !== 'undefined' && n && m && i+m >= 0 && j+n >= 0 && i+m < xl && j+n < yl) {
+                    var key = (j + n) * xl + i + m;
+                    if (typeof g[key] !== 'undefined' && n && m && i + m >= 0 && j + n >= 0 && i + m < xl && j + n < yl) {
                         if (g[key].z < min) min = g[key].z;
                         if (g[key].z > max) max = g[key].z;
                     }
                 }
             }
-            var kk = j*xl + i;
+            var kk = j * xl + i;
             if (typeof multiplier === 'number') {
                 var halfdiff = (max - min) * 0.5,
                     middle = min + halfdiff;
@@ -300,24 +304,24 @@ THREE.Terrain.SmoothConservative = function(g, options, multiplier) {
  *   The number of steps to divide the terrain into. Defaults to
  *   (g.length/2)^(1/4).
  */
-THREE.Terrain.Step = function(g, levels) {
+export function Step(g: Vector3[], levels?: number) {
     // Calculate the max, min, and avg values for each bucket
+    const l = g.length;
+    if (typeof levels === 'undefined') {
+        levels = Math.floor(Math.pow(l * 0.5, 0.25));
+    }
     var i = 0,
         j = 0,
-        l = g.length,
         inc = Math.floor(l / levels),
         heights = new Array(l),
         buckets = new Array(levels);
-    if (typeof levels === 'undefined') {
-        levels = Math.floor(Math.pow(l*0.5, 0.25));
-    }
     for (i = 0; i < l; i++) {
         heights[i] = g[i].z;
     }
-    heights.sort(function(a, b) { return a - b; });
+    heights.sort(function (a, b) { return a - b; });
     for (i = 0; i < levels; i++) {
         // Bucket by population (bucket size) not range size
-        var subset = heights.slice(i*inc, (i+1)*inc),
+        var subset = heights.slice(i * inc, (i + 1) * inc),
             sum = 0,
             bl = subset.length;
         for (j = 0; j < bl; j++) {
@@ -325,7 +329,7 @@ THREE.Terrain.Step = function(g, levels) {
         }
         buckets[i] = {
             min: subset[0],
-            max: subset[subset.length-1],
+            max: subset[subset.length - 1],
             avg: sum / bl,
         };
     }
@@ -347,7 +351,7 @@ THREE.Terrain.Step = function(g, levels) {
  *
  * Parameters are the same as those for {@link THREE.Terrain.DiamondSquare}.
  */
-THREE.Terrain.Turbulence = function(g, options) {
+export function Turbulence(g: Vector3[], options: TerrainOptions) {
     var range = options.maxHeight - options.minHeight;
     for (var i = 0, l = g.length; i < l; i++) {
         g[i].z = options.minHeight + Math.abs((g[i].z - options.minHeight) * 2 - range);

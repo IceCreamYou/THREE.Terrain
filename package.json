@@ -4,7 +4,9 @@
     "description": "Extends the Three.js web-based 3D graphics framework to support generating random terrains and rendering terrain from predetermined heightmaps.",
     "homepage": "https://github.com/IceCreamYou/THREE.Terrain",
     "bugs": "https://github.com/IceCreamYou/THREE.Terrain/issues",
-    "main": "build/THREE.Terrain.min.js",
+    "main": "dist/THREE.Terrain.cjs.js",
+    "module": "dist/THREE.Terrain.esm.js",
+    "browser": "dist/THREE.Terrain.umd.js",
     "directories": {
         "lib": "build",
         "example": "demo"
@@ -30,7 +32,22 @@
         "grunt-contrib-concat": "~0.5.1",
         "grunt-contrib-jshint": "~0.11.2",
         "grunt-contrib-uglify": "~0.9.1",
+        "grunt-contrib-watch": "^0.6.1",
         "grunt-jscs": "~2.1.0",
-        "grunt-contrib-watch": "^0.6.1"
-    }
+        "rollup": "^1.16.6",
+        "rollup-plugin-terser": "^5.1.1",
+        "rollup-plugin-typescript": "^1.0.1",
+        "tslib": "^1.10.0",
+        "typescript": "^3.5.2"
+    },
+    "scripts": {
+        "build": "rollup -c",
+        "dev": "rollup -c -w"
+    },
+    "dependencies": {
+        "three": "^0.105.2"
+    },
+    "files": [
+        "dist"
+    ]
 }

@@ -1,4 +1,7 @@
-(function() {
+import { Vector3 } from 'three';
+
+import { TerrainOptions } from './basicTypes';
+import { fromArray2D, toArray2D } from './core';
 
 /**
  * Convolve an array with a kernel.
@@ -16,7 +19,7 @@
  * @return {Number[][]}
  *   An array containing the result of the convolution.
  */
-function convolve(src, kernel, tgt) {
+function convolve(src: Float64Array[], kernel: Float64Array[], tgt?: Float64Array[]) {
     // src and kernel must be nonzero rectangular number arrays.
     if (!src.length || !kernel.length) return src;
     // Initialize tracking variables.
@@ -56,9 +59,9 @@ function convolve(src, kernel, tgt) {
                     // with a target smaller than the source. That is
                     // unreasonable for some applications, so we let the caller
                     // make that choice.
-                    if (typeof src[i+a] !== 'undefined' &&
-                        typeof src[i+a][j+b] !== 'undefined') {
-                        last = src[i+a][j+b];
+                    if (typeof src[i + a] !== 'undefined' &&
+                        typeof src[i + a][j + b] !== 'undefined') {
+                        last = src[i + a][j + b];
                     }
                     // Multiply the source and the kernel at this position.
                     // The value at the target position is the sum of these
@@ -74,9 +77,9 @@ function convolve(src, kernel, tgt) {
 /**
  * Returns the value at X of a Gaussian distribution with standard deviation S.
  */
-function gauss(x, s) {
+function gauss(x: number, s: number) {
     // 2.5066282746310005 is sqrt(2*pi)
-    return Math.exp(-0.5 * x*x / (s*s)) / (s * 2.5066282746310005);
+    return Math.exp(-0.5 * x * x / (s * s)) / (s * 2.5066282746310005);
 }
 
 /**
@@ -85,8 +88,7 @@ function gauss(x, s) {
  * Returns a kernel of size N approximating a 1D Gaussian distribution with
  * standard deviation S.
  */
-function gaussianKernel1D(s, n) {
-    if (typeof n !== 'number') n = 7;
+function gaussianKernel1D(s: number, n: number = 7) {
     var kernel = new Float64Array(n),
         halfN = Math.floor(n * 0.5),
         odd = n % 2,
@@ -116,9 +118,7 @@ function gaussianKernel1D(s, n) {
  * @return {Number[][]}
  *   An array containing the result of smoothing the src.
  */
-function gaussian(src, s, kernelSize) {
-    if (typeof s === 'undefined') s = 1;
-    if (typeof kernelSize === 'undefined') kernelSize = 7;
+function gaussian(src: Float64Array[], s: number = 1, kernelSize: number = 7) {
     var kernel = gaussianKernel1D(s, kernelSize),
         l = kernelSize || kernel.length,
         kernelH = [kernel],
@@ -146,8 +146,6 @@ function gaussian(src, s, kernelSize) {
  *   The size of the Gaussian kernel to use. Larger kernels result in slower
  *   but more accurate smoothing.
  */
-THREE.Terrain.Gaussian = function(g, options, s, kernelSize) {
-    THREE.Terrain.fromArray2D(g, gaussian(THREE.Terrain.toArray2D(g, options), s, kernelSize));
+export function Gaussian(g: Vector3[], options: TerrainOptions, s: number = 1, kernelSize: number = 7) {
+    fromArray2D(g, gaussian(toArray2D(g, options), s, kernelSize));
 };
-
-})();

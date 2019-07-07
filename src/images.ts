@@ -1,3 +1,6 @@
+import { Geometry, Vector3 } from "three";
+import { TerrainOptions } from "./basicTypes";
+
 /**
  * Convert an image-based heightmap into vertex-based height data.
  *
@@ -9,7 +12,7 @@
  *   displayed. Valid values are the same as those for the `options` parameter
  *   of {@link THREE.Terrain}().
  */
-THREE.Terrain.fromHeightmap = function(g, options) {
+export function fromHeightmap(g: Vector3[], options: TerrainOptions) {
     var canvas = document.createElement('canvas'),
         context = canvas.getContext('2d'),
         rows = options.ySegments + 1,
@@ -17,13 +20,13 @@ THREE.Terrain.fromHeightmap = function(g, options) {
         spread = options.maxHeight - options.minHeight;
     canvas.width = cols;
     canvas.height = rows;
-    context.drawImage(options.heightmap, 0, 0, canvas.width, canvas.height);
-    var data = context.getImageData(0, 0, canvas.width, canvas.height).data;
+    context!.drawImage(options.heightmap! as HTMLCanvasElement, 0, 0, canvas.width, canvas.height);
+    var data = context!.getImageData(0, 0, canvas.width, canvas.height).data;
     for (var row = 0; row < rows; row++) {
         for (var col = 0; col < cols; col++) {
             var i = row * cols + col,
                 idx = i * 4;
-            g[i].z = (data[idx] + data[idx+1] + data[idx+2]) / 765 * spread + options.minHeight;
+            g[i].z = (data[idx] + data[idx + 1] + data[idx + 2]) / 765 * spread + options.minHeight;
         }
     }
 };
@@ -43,11 +46,11 @@ THREE.Terrain.fromHeightmap = function(g, options) {
  * @return {HTMLCanvasElement}
  *   A canvas with the relevant heightmap painted on it.
  */
-THREE.Terrain.toHeightmap = function(g, options) {
+export function toHeightmap(g: Vector3[], options: TerrainOptions) {
     var hasMax = typeof options.maxHeight !== 'undefined',
         hasMin = typeof options.minHeight !== 'undefined',
         max = hasMax ? options.maxHeight : -Infinity,
-        min = hasMin ? options.minHeight :  Infinity;
+        min = hasMin ? options.minHeight : Infinity;
     if (!hasMax || !hasMin) {
         var max2 = max,
             min2 = min;
@@ -65,16 +68,16 @@ THREE.Terrain.toHeightmap = function(g, options) {
         spread = max - min;
     canvas.width = cols;
     canvas.height = rows;
-    var d = context.createImageData(canvas.width, canvas.height),
+    var d = context!.createImageData(canvas.width, canvas.height),
         data = d.data;
     for (var row = 0; row < rows; row++) {
         for (var col = 0; col < cols; col++) {
             var i = row * cols + col,
-            idx = i * 4;
-            data[idx] = data[idx+1] = data[idx+2] = Math.round(((g[i].z - min) / spread) * 255);
-            data[idx+3] = 255;
+                idx = i * 4;
+            data[idx] = data[idx + 1] = data[idx + 2] = Math.round(((g[i].z - min) / spread) * 255);
+            data[idx + 3] = 255;
         }
     }
-    context.putImageData(d, 0, 0);
+    context!.putImageData(d, 0, 0);
     return canvas;
 };

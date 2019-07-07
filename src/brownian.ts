@@ -1,3 +1,9 @@
+import { Vector3 } from 'three';
+
+import { TerrainOptions } from './basicTypes';
+import { EaseInWeak } from './core';
+import { Smooth } from './filters';
+
 /**
  * Generate random terrain using Brownian motion.
  *
@@ -5,7 +11,7 @@
  *
  * Parameters are the same as those for {@link THREE.Terrain.DiamondSquare}.
  */
-THREE.Terrain.Brownian = function(g, options) {
+export function Brownian(g: Vector3[], options: TerrainOptions) {
     var untouched = [],
         touched = [],
         smallerSideSize = Math.min(options.xSize, options.ySize),
@@ -39,8 +45,8 @@ THREE.Terrain.Brownian = function(g, options) {
         // Mark the untouched neighboring vertices to revisit later.
         for (n = -1; n <= 1; n++) {
             for (m = -1; m <= 1; m++) {
-                key = (j+n)*xl + i + m;
-                if (typeof g[key] !== 'undefined' && touched.indexOf(g[key]) === -1 && i+m >= 0 && j+n >= 0 && i+m < xl && j+n < yl && n && m) {
+                key = (j + n) * xl + i + m;
+                if (typeof g[key] !== 'undefined' && touched.indexOf(g[key]) === -1 && i + m >= 0 && j + n >= 0 && i + m < xl && j + n < yl && n && m) {
                     untouched.push(g[key]);
                 }
             }
@@ -113,8 +119,8 @@ THREE.Terrain.Brownian = function(g, options) {
         c = 0;
         for (n = -1; n <= 1; n++) {
             for (m = -1; m <= 1; m++) {
-                key = (j+n)*xl + i + m;
-                if (typeof g[key] !== 'undefined' && touched.indexOf(g[key]) !== -1 && i+m >= 0 && j+n >= 0 && i+m < xl && j+n < yl && n && m) {
+                key = (j + n) * xl + i + m;
+                if (typeof g[key] !== 'undefined' && touched.indexOf(g[key]) !== -1 && i + m >= 0 && j + n >= 0 && i + m < xl && j + n < yl && n && m) {
                     sum += g[key].z;
                     c++;
                 }
@@ -124,12 +130,12 @@ THREE.Terrain.Brownian = function(g, options) {
             if (!lastAdjust || Math.random() < changeDirectionProbability) {
                 lastAdjust = Math.random();
             }
-            current.z = sum / c + THREE.Terrain.EaseInWeak(lastAdjust) * maxHeightAdjust * 2 - maxHeightAdjust;
+            current.z = sum / c + EaseInWeak(lastAdjust) * maxHeightAdjust * 2 - maxHeightAdjust;
         }
         touched.push(current);
     }
 
     // Erase artifacts.
-    THREE.Terrain.Smooth(g, options);
-    THREE.Terrain.Smooth(g, options);
+    Smooth(g, options);
+    Smooth(g, options);
 };
