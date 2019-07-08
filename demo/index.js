@@ -211,7 +211,7 @@ function setupDatGui() {
         _mesh: typeof terrainScene === 'undefined' ? null : terrainScene.children[0], // internal only
       };
       scene.remove(terrainScene);
-      terrainScene = THREE.Terrain(o);
+      terrainScene = THREE.Terrain.Terrain(o);
       applySmoothing(that.smoothing, o);
       scene.add(terrainScene);
       skyDome.visible = sand.visible = water.visible = that.texture != 'Wireframe';

@@ -4,9 +4,10 @@
     "description": "Extends the Three.js web-based 3D graphics framework to support generating random terrains and rendering terrain from predetermined heightmaps.",
     "homepage": "https://github.com/IceCreamYou/THREE.Terrain",
     "bugs": "https://github.com/IceCreamYou/THREE.Terrain/issues",
+    "browser": "dist/THREE.Terrain.umd.js",
     "main": "dist/THREE.Terrain.cjs.js",
     "module": "dist/THREE.Terrain.esm.js",
-    "browser": "dist/THREE.Terrain.umd.js",
+    "types": "dist/main.d.ts",
     "directories": {
         "lib": "build",
         "example": "demo"
@@ -28,21 +29,17 @@
     "license": "MIT",
     "readmeFilename": "README.md",
     "devDependencies": {
-        "grunt": "~0.4.5",
-        "grunt-contrib-concat": "~0.5.1",
-        "grunt-contrib-jshint": "~0.11.2",
-        "grunt-contrib-uglify": "~0.9.1",
-        "grunt-contrib-watch": "^0.6.1",
-        "grunt-jscs": "~2.1.0",
         "rollup": "^1.16.6",
         "rollup-plugin-terser": "^5.1.1",
         "rollup-plugin-typescript": "^1.0.1",
+        "serve": "^11.0.2",
         "tslib": "^1.10.0",
         "typescript": "^3.5.2"
     },
     "scripts": {
-        "build": "rollup -c",
-        "dev": "rollup -c -w"
+        "ts:defs": "tsc --declaration --outDir ./dist --emitDeclarationOnly",
+        "build": "rm dist/* && yarn ts:defs && rollup -c",
+        "serve": "serve -l 8080"
     },
     "dependencies": {
         "three": "^0.105.2"

@@ -83,7 +83,7 @@ import { fromHeightmap } from './images';
  *     `options.ySegments + 1`.
  */
 
-function Terrain(givenOptions: Partial<TerrainOptions>) {
+export function Terrain(givenOptions: Partial<TerrainOptions>) {
     var defaultOptions: TerrainOptions = {
         after: null,
         easing: Linear,
