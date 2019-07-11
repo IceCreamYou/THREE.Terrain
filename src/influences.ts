@@ -99,16 +99,13 @@ export const Influences = {
  */
 
 export function Influence(g: Vector3[], options: TerrainOptions,
-    f: FeatureFunction,
-    x: number = 0.5, y: number = 0.5,
-    r: number = 64, h: number = 64,
-    t: Blending | BlendingFunction = NormalBlending, e: FalloffFunction = EaseIn) {
-    f = f || Influences.Hill; // feature shape
-    x = typeof x === 'undefined' ? 0.5 : x; // x-location %
-    y = typeof y === 'undefined' ? 0.5 : y; // y-location %
-    r = typeof r === 'undefined' ? 64 : r; // radius
-    h = typeof h === 'undefined' ? 64 : h; // height
-    t = typeof t === 'undefined' ? NormalBlending : t; // blending
+    f: FeatureFunction = Influences.Hill, // feature shape
+    x: number = 0.5, // x-location %
+    y: number = 0.5, // y-location %
+    r: number = 64, // radius
+    h: number = 64, // height
+    t: Blending | BlendingFunction = NormalBlending,
+    e: FalloffFunction = EaseIn) {
     // Find the vertex location of the feature origin
     var xl = options.xSegments + 1, // # x-vertices
         yl = options.ySegments + 1, // # y-vertices

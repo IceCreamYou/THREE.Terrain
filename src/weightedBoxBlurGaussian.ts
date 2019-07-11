@@ -63,8 +63,6 @@ export function GaussianBoxBlur(g: Vector3[], options: TerrainOptions, s: number
  *   An array representing the blurred channel.
  */
 function gaussianBoxBlur(scl: Float64Array, w: number, h: number, r: number = 1, n: number = 3, tcl?: Float64Array) {
-    if (typeof r === 'undefined') r = 1;
-    if (typeof n === 'undefined') n = 3;
     if (typeof tcl === 'undefined') tcl = new Float64Array(scl.length);
     var boxes = boxesForGauss(r, n);
     for (var i = 0; i < n; i++) {
