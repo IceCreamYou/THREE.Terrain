@@ -11,3 +11,5 @@ export * from './influences';
 export * from './materials';
 export * from './noise';
 export * from './scatter';
+export * from './weightedBoxBlurGaussian';
+export * from './worley';
