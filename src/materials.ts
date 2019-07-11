@@ -49,7 +49,7 @@ interface TextureWithGLSL extends TextureBasics {
     glsl: string;
 }
 
-type TextureParam = TextureWithLevels | TextureWithGLSL;
+type TextureParam = TextureBasics | TextureWithLevels | TextureWithGLSL;
 
 export function generateBlendedMaterial(textures: TextureParam[]) {
     // Convert numbers to strings of floats so GLSL doesn't barf on "1" instead of "1.0"
