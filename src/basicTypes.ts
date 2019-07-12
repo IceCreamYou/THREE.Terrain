@@ -7,20 +7,20 @@ export type HeightmapFunction = ((g: Vector3[], options: TerrainOptions) => void
 export interface TerrainOptions {
     after: ((v: Vector3[], options: TerrainOptions) => void) | null;
     easing: EasingFunction;
-    heightmap: HTMLCanvasElement | ImageBitmap | HeightmapFunction,
-    material: Material | null,
-    maxHeight: number,
-    minHeight: number,
-    optimization: Optimization,
-    frequency: number,
-    steps: number,
-    stretch: boolean,
-    turbulent: boolean,
-    useBufferGeometry: boolean,
-    xSegments: number,
-    xSize: number,
-    ySegments: number,
-    ySize: number,
+    heightmap: HTMLCanvasElement | ImageBitmap | HeightmapFunction;
+    material: Material | null;
+    maxHeight: number;
+    minHeight: number;
+    optimization: Optimization;
+    frequency: number;
+    steps: number;
+    stretch: boolean;
+    turbulent: boolean;
+    useBufferGeometry: boolean;
+    xSegments: number;
+    xSize: number;
+    ySegments: number;
+    ySize: number;
 }
 
 /**

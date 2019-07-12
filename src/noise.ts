@@ -8,7 +8,15 @@
 */
 
 class Grad {
-    constructor(private x: number, private y: number, private z: number) { }
+    private x: number;
+    private y: number;
+    private z: number;
+
+    public constructor(x: number, y: number, z: number) {
+        this.x = x;
+        this.y = y;
+        this.z = z;
+    }
 
     public dot2(x: number, y: number): number {
         return this.x * x + this.y * y;
@@ -70,15 +78,13 @@ function fSeed(seed: number) {
     }
 };
 
-export { fSeed as seed };
+export { fSeed as seed };
 
 fSeed(Math.random());
 
-// Skewing and unskewing factors for 2 and 3 dimensions
+// Skewing and unskewing factors for 2 dimensions
 var F2 = 0.5 * (Math.sqrt(3) - 1),
-    G2 = (3 - Math.sqrt(3)) / 6,
-    F3 = 1 / 3,
-    G3 = 1 / 6;
+    G2 = (3 - Math.sqrt(3)) / 6;
 
 // 2D simplex noise
 export function simplex(xin: number, yin: number): number {

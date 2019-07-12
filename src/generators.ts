@@ -146,8 +146,7 @@ export function DiamondSquare(g: Vector3[], options: TerrainOptions): void {
             x,
             y,
             avg,
-            d,
-            e;
+            d;
         smoothing /= 2;
         // square
         for (x = 0; x < segments; x += whole) {
@@ -275,9 +274,6 @@ export function Hill(g: Vector3[], options: TerrainOptions, feature: FeatureFunc
     for (var i = 0; i < numFeatures; i++) {
         var radius = Math.random() * (maxRadius - minRadius) + minRadius,
             height = Math.random() * (maxHeight - minHeight) + minHeight;
-        var min = 0 - radius,
-            maxX = options.xSize + radius,
-            maxY = options.ySize + radius;
         coords.x = Math.random();
         coords.y = Math.random();
         if (typeof shape === 'function') shape(coords);

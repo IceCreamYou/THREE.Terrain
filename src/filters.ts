@@ -70,7 +70,7 @@ export function Clamp(g: Vector3[], options: Pick<TerrainOptions, 'maxHeight' | 
  *   all edges. If passed, should be an object with `top`, `bottom`, `left`,
  *   and `right` Boolean properties specifying which edges to affect.
  */
-export function Edges(g: Vector3[], options: TerrainOptions, direction: boolean, distance: number, easing: EasingFunction, edges: { top: boolean, bottom: boolean, left: boolean, right: boolean }) {
+export function Edges(g: Vector3[], options: TerrainOptions, direction: boolean, distance: number, easing: EasingFunction, edges: { top: boolean; bottom: boolean; left: boolean; right: boolean }) {
     var numXSegments = Math.floor(distance / (options.xSize / options.xSegments)) || 1,
         numYSegments = Math.floor(distance / (options.ySize / options.ySegments)) || 1,
         peak = direction ? options.maxHeight : options.minHeight,

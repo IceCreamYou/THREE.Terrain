@@ -60,7 +60,7 @@ interface ScatterOptions {
     smoothSpread: number;
     scene: Object3D;
     sizeVariance: number;
-    randomness: () => (number | number[]);
+    randomness: () => (number | number[]);
     maxSlope: number;
     maxTilt: number;
     w: number;
@@ -88,21 +88,21 @@ export function ScatterMeshes(geometry: Geometry, inputOptions: Partial<ScatterO
         w: 0,
         h: 0,
         ...inputOptions
-    } as ScatterOptions;    
+    } as ScatterOptions;
 
-    let randomHeightmap: number | number[],
+    let randomHeightmap: number | number[],
         randomness: (k: number) => number = () => 0.0,
         spreadRange = 1 / options.smoothSpread,
         doubleSizeVariance = options.sizeVariance * 2,
         v = geometry.vertices,
         meshes = [],
         up = options.mesh.up.clone().applyAxisAngle(new Vector3(1, 0, 0), 0.5 * Math.PI);
-    
-        if (typeof options.spread === 'number') {
+
+    if (typeof options.spread === 'number') {
         randomHeightmap = options.randomness();
         randomness = typeof randomHeightmap === 'number' ? Math.random : function (k: number) { return (randomHeightmap as number[])[k]; };
     }
-    
+
     // geometry.computeFaceNormals();
     for (var i = 0, w = options.w * 2; i < w; i++) {
         for (var j = 0, h = options.h; j < h; j++) {
@@ -122,7 +122,7 @@ export function ScatterMeshes(geometry: Geometry, inputOptions: Partial<ScatterO
                 }
             }
             else {
-                place = (options.spread as SpreadFunction)(v[f.a], key, /* f, i, j */);  // TODO: why 5 instead of 2 parameters?
+                place = (options.spread as SpreadFunction)(v[f.a], key);  // TODO: why 5 instead of 2 parameters?
             }
             if (place) {
                 // Don't place a mesh if the angle is too steep.
@@ -213,7 +213,7 @@ export function ScatterMeshes(geometry: Geometry, inputOptions: Partial<ScatterO
 export function ScatterHelper(method: HeightmapFunction, options: TerrainOptions, skip: number = 1, threshold: number = 0.25) {
     options.frequency = options.frequency || 2.5;
 
-    let clonedOptions = { ... options } ;
+    let clonedOptions = { ...options };
 
     clonedOptions.xSegments *= 2;
     clonedOptions.stretch = true;

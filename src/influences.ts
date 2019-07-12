@@ -38,6 +38,7 @@ export const Influences = {
         return -(x + 1) * (x - 1);
     },
     // Not meaningful in Additive or Subtractive mode
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     Flat: function (x: number) {
         return 0;
     },

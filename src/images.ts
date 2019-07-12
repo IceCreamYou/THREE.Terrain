@@ -1,4 +1,4 @@
-import { Geometry, Vector3 } from "three";
+import { Vector3 } from "three";
 import { TerrainOptions } from "./basicTypes";
 
 /**
