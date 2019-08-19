@@ -1,3 +1,16 @@
+import {
+    AdditiveBlending,
+    Blending,
+    MultiplyBlending,
+    NoBlending,
+    NormalBlending,
+    SubtractiveBlending,
+    Vector3,
+} from 'three';
+
+import { TerrainOptions, FeatureFunction, BlendingFunction, FalloffFunction } from './basicTypes';
+import { EaseIn } from './core';
+
 // Allows placing geometrically-described features on a terrain.
 // If you want these features to look a little less regular,
 // just apply them before a procedural pass.
@@ -6,29 +19,30 @@
 /**
  * Equations describing geographic features.
  */
-THREE.Terrain.Influences = {
-    Mesa: function(x) {
-        return 1.25 * Math.min(0.8, Math.exp(-(x*x)));
+export const Influences = {
+    Mesa: function (x: number) {
+        return 1.25 * Math.min(0.8, Math.exp(-(x * x)));
     },
-    Hole: function(x) {
-        return -THREE.Terrain.Influences.Mesa(x);
+    Hole: function (x: number) {
+        return -Influences.Mesa(x);
     },
-    Hill: function(x) {
+    Hill: function (x: number) {
         // Same curve as EaseInOut, but mirrored and translated.
-        return x < 0 ? (x+1)*(x+1)*(3-2*(x+1)) : 1-x*x*(3-2*x);
+        return x < 0 ? (x + 1) * (x + 1) * (3 - 2 * (x + 1)) : 1 - x * x * (3 - 2 * x);
     },
-    Valley: function(x) {
-        return -THREE.Terrain.Influences.Hill(x);
+    Valley: function (x: number) {
+        return -Influences.Hill(x);
     },
-    Dome: function(x) {
+    Dome: function (x: number) {
         // Parabola
-        return -(x+1)*(x-1);
+        return -(x + 1) * (x - 1);
     },
     // Not meaningful in Additive or Subtractive mode
-    Flat: function(x) {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    Flat: function (x: number) {
         return 0;
     },
-    Volcano: function(x) {
+    Volcano: function (x: number) {
         return 0.94 - 0.32 * (Math.abs(2 * x) + Math.cos(2 * Math.PI * Math.abs(x) + 0.4));
     },
 };
@@ -71,7 +85,7 @@ THREE.Terrain.Influences = {
  *   origin, and returns the new height for that vertex. (If a custom function
  *   is passed, it can take optional fourth and fifth parameters, which are the
  *   x- and y-distances from the feature's origin, respectively.)
- * @param {Number/Function} [e=THREE.Terrain.EaseIn]
+ * @param {Number | Function} [e=THREE.Terrain.EaseIn]
  *   A function that determines the "falloff" of the feature, i.e. how quickly
  *   the terrain will get close to its height before the feature was applied as
  *   the distance increases from the feature's location. It does this by
@@ -84,14 +98,15 @@ THREE.Terrain.Influences = {
  *   functions can also accept optional second and third parameters, which are
  *   the x- and y-distances to the feature origin, respectively.)
  */
-THREE.Terrain.Influence = function(g, options, f, x, y, r, h, t, e) {
-    f = f || THREE.Terrain.Influences.Hill; // feature shape
-    x = typeof x === 'undefined' ? 0.5 : x; // x-location %
-    y = typeof y === 'undefined' ? 0.5 : y; // y-location %
-    r = typeof r === 'undefined' ? 64  : r; // radius
-    h = typeof h === 'undefined' ? 64  : h; // height
-    t = typeof t === 'undefined' ? THREE.NormalBlending : t; // blending
-    e = e || THREE.Terrain.EaseIn; // falloff
+
+export function Influence(g: Vector3[], options: TerrainOptions,
+    f: FeatureFunction = Influences.Hill, // feature shape
+    x: number = 0.5, // x-location %
+    y: number = 0.5, // y-location %
+    r: number = 64, // radius
+    h: number = 64, // height
+    t: Blending | BlendingFunction = NormalBlending,
+    e: FalloffFunction = EaseIn) {
     // Find the vertex location of the feature origin
     var xl = options.xSegments + 1, // # x-vertices
         yl = options.ySegments + 1, // # y-vertices
@@ -113,7 +128,7 @@ THREE.Terrain.Influence = function(g, options, f, x, y, r, h, t, e) {
                 // distance to the feature origin
                 fdx = (i - vx) * xw,
                 fdy = (j - vy) * yw,
-                fd = Math.sqrt(fdx*fdx + fdy*fdy),
+                fd = Math.sqrt(fdx * fdx + fdy * fdy),
                 fdr = fd * r1,
                 fdxr = fdx * r1,
                 fdyr = fdy * r1,
@@ -121,12 +136,12 @@ THREE.Terrain.Influence = function(g, options, f, x, y, r, h, t, e) {
                 // interpolate using e, then blend according to t.
                 d = f(fdr, fdxr, fdyr) * h * (1 - e(fdr, fdxr, fdyr));
             if (fd > r || typeof g[k] == 'undefined') continue;
-            if      (t === THREE.AdditiveBlending)    g[k].z += d; // jscs:ignore requireSpaceAfterKeywords
-            else if (t === THREE.SubtractiveBlending) g[k].z -= d;
-            else if (t === THREE.MultiplyBlending)    g[k].z *= d;
-            else if (t === THREE.NoBlending)          g[k].z  = d;
-            else if (t === THREE.NormalBlending)      g[k].z  = e(fdr, fdxr, fdyr) * g[k].z + d;
-            else if (typeof t === 'function')         g[k].z  = t(g[k].z, d, fdr, fdxr, fdyr);
+            if (t === AdditiveBlending) g[k].z += d;
+            else if (t === SubtractiveBlending) g[k].z -= d;
+            else if (t === MultiplyBlending) g[k].z *= d;
+            else if (t === NoBlending) g[k].z = d;
+            else if (t === NormalBlending) g[k].z = e(fdr, fdxr, fdyr) * g[k].z + d;
+            else if (typeof t === 'function') g[k].z = t(g[k].z, d, fdr, fdxr, fdyr);
         }
     }
 };

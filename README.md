@@ -5,19 +5,16 @@
 
 ## Usage
 
-You can download the script normally, install it with Bower (`bower install
-THREE.Terrain`), or install it with npm (`npm install three.terrain.js`). To
-include it on a page client-side without a module loader:
+You can download the script normally, or install it with npm or yarn
+(`npm install three.terrain.js`). To include it on a page client-side
+without a module loader:
 
 ```html
 <!-- from a direct download or git clone -->
-<script src="build/THREE.Terrain.min.js"></script>
+<script src="dist/THREE.Terrain.umd.js"></script>
 
-<!-- from Bower -->
-<script src="bower_components/THREE.Terrain/build/THREE.Terrain.min.js"></script>
-
-<!-- from npm -->
-<script src="node_modules/three.terrain.js/build/THREE.Terrain.min.js"></script>
+<!-- from npm or yarn -->
+<script src="node_modules/three.terrain.js/dist/THREE.Terrain.umd.js"></script>
 ```
 
 You then have access to the `THREE.Terrain` object. (Make sure the `three.js`
@@ -65,7 +62,7 @@ terrainScene.add(decoScene);
 ```
 
 All parameters are optional and thoroughly documented in the
-[source code](https://github.com/IceCreamYou/THREE.Terrain/blob/gh-pages/build/THREE.Terrain.js).
+[source code](https://github.com/IceCreamYou/THREE.Terrain/blob/gh-pages/src/).
 You can play around with some of the parameters and see what happens in the
 [demo](https://icecreamyou.github.io/THREE.Terrain/).
 
@@ -146,7 +143,7 @@ Many other utilities are provided, for example for compositing different
 terrain generation methods; creating islands, cliffs, canyons, and plateaus;
 manually influencing the terrain's shape at different locations; different
 kinds of smoothing; and more. These features are all fully documented in the
-[source code](https://github.com/IceCreamYou/THREE.Terrain/blob/gh-pages/build/THREE.Terrain.js).
+[source code](https://github.com/IceCreamYou/THREE.Terrain/blob/gh-pages/src/).
 Additionally, you can create custom methods for generating terrain or affecting
 other processes.
 

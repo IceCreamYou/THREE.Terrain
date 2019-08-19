@@ -1,3 +1,23 @@
+import { BufferGeometry, Geometry, Mesh, Object3D, Vector3, Face3 } from 'three';
+
+import { HeightmapFunction, TerrainOptions } from './basicTypes';
+import { EaseInOut } from './core';
+import { Clamp } from './filters';
+
+type SpreadFunction = (v: Vector3, k: number, f: Face3, faceX: number, faceY: number) => boolean;
+interface ScatterOptions {
+    mesh: Mesh;
+    spread: number | SpreadFunction;
+    smoothSpread: number;
+    scene: Object3D;
+    sizeVariance: number;
+    randomness: () => (number | number[]);
+    maxSlope: number;
+    maxTilt: number;
+    w: number;
+    h: number;
+}
+
 /**
  * Scatter a mesh across the terrain.
  *
@@ -47,19 +67,19 @@
  *   return value of a call to `THREE.Terrain()` or added to that return value;
  *   otherwise the position and rotation of the meshes will be wrong.
  */
-THREE.Terrain.ScatterMeshes = function(geometry, options) {
-    if (!options.mesh) {
+export function ScatterMeshes(geometry: Geometry, inputOptions: Partial<ScatterOptions>) {
+    if (!inputOptions.mesh) {
         console.error('options.mesh is required for THREE.Terrain.ScatterMeshes but was not passed');
         return;
     }
-    if (geometry instanceof THREE.BufferGeometry) {
-        console.warn('The terrain mesh is using BufferGeometry but THREE.Terrain.ScatterMeshes can only work with Geometry.');
+    if (geometry instanceof BufferGeometry) {
+        console.warn('The terrain mesh is using BufferGeometry but ScatterMeshes can only work with Geometry.');
         return;
     }
-    if (!options.scene) {
-        options.scene = new THREE.Object3D();
+    if (!inputOptions.scene) {
+        inputOptions.scene = new Object3D();
     }
-    var defaultOptions = {
+    let options = {
         spread: 0.025,
         smoothSpread: 0,
         sizeVariance: 0.1,
@@ -68,32 +88,29 @@ THREE.Terrain.ScatterMeshes = function(geometry, options) {
         maxTilt: Infinity,
         w: 0,
         h: 0,
-    };
-    for (var opt in defaultOptions) {
-        if (defaultOptions.hasOwnProperty(opt)) {
-            options[opt] = typeof options[opt] === 'undefined' ? defaultOptions[opt] : options[opt];
-        }
-    }
+        ...inputOptions
+    } as ScatterOptions;
 
-    var spreadIsNumber = typeof options.spread === 'number',
-        randomHeightmap,
-        randomness,
+    let randomHeightmap: number | number[],
+        randomness: (k: number) => number = () => 0.0,
         spreadRange = 1 / options.smoothSpread,
         doubleSizeVariance = options.sizeVariance * 2,
         v = geometry.vertices,
         meshes = [],
-        up = options.mesh.up.clone().applyAxisAngle(new THREE.Vector3(1, 0, 0), 0.5*Math.PI);
-    if (spreadIsNumber) {
+        up = options.mesh.up.clone().applyAxisAngle(new Vector3(1, 0, 0), 0.5 * Math.PI);
+
+    if (typeof options.spread === 'number') {
         randomHeightmap = options.randomness();
-        randomness = typeof randomHeightmap === 'number' ? Math.random : function(k) { return randomHeightmap[k]; };
+        randomness = typeof randomHeightmap === 'number' ? Math.random : function (k: number) { return (randomHeightmap as number[])[k]; };
     }
+
     // geometry.computeFaceNormals();
-    for (var i = 0, w = options.w*2; i < w; i++) {
+    for (var i = 0, w = options.w * 2; i < w; i++) {
         for (var j = 0, h = options.h; j < h; j++) {
-            var key = j*w + i,
+            var key = j * w + i,
                 f = geometry.faces[key],
                 place = false;
-            if (spreadIsNumber) {
+            if (typeof options.spread === 'number') {
                 var rv = randomness(key);
                 if (rv < options.spread) {
                     place = true;
@@ -102,11 +119,11 @@ THREE.Terrain.ScatterMeshes = function(geometry, options) {
                     // Interpolate rv between spread and spread + smoothSpread,
                     // then multiply that "easing" value by the probability
                     // that a mesh would get placed on a given face.
-                    place = THREE.Terrain.EaseInOut((rv - options.spread) * spreadRange) * options.spread > Math.random();
+                    place = EaseInOut((rv - options.spread) * spreadRange) * options.spread > Math.random();
                 }
             }
             else {
-                place = options.spread(v[f.a], key, f, i, j);
+                place = (options.spread as SpreadFunction)(v[f.a], key, f, i, j);
             }
             if (place) {
                 // Don't place a mesh if the angle is too steep.
@@ -142,19 +159,19 @@ THREE.Terrain.ScatterMeshes = function(geometry, options) {
 
     // Merge geometries.
     var k, l;
-    if (options.mesh.geometry instanceof THREE.Geometry) {
-        var g = new THREE.Geometry();
+    if (options.mesh.geometry instanceof Geometry) {
+        var g = new Geometry();
         for (k = 0, l = meshes.length; k < l; k++) {
             var m = meshes[k];
             m.updateMatrix();
-            g.merge(m.geometry, m.matrix);
+            g.merge(m.geometry as Geometry, m.matrix);
         }
         /*
         if (!(options.mesh.material instanceof THREE.MeshFaceMaterial)) {
             g = THREE.BufferGeometryUtils.fromGeometry(g);
         }
         */
-        options.scene.add(new THREE.Mesh(g, options.mesh.material));
+        options.scene.add(new Mesh(g, options.mesh.material));
     }
     // There's no BufferGeometry merge method implemented yet.
     else {
@@ -194,30 +211,61 @@ THREE.Terrain.ScatterMeshes = function(geometry, options) {
  *   `options.randomness` parameter to the {@link THREE.Terrain.ScatterMeshes}
  *   function.
  */
-THREE.Terrain.ScatterHelper = function(method, options, skip, threshold) {
-    skip = skip || 1;
-    threshold = threshold || 0.25;
+export function ScatterHelper(method: HeightmapFunction, options: TerrainOptions, skip: number = 1, threshold: number = 0.25) {
     options.frequency = options.frequency || 2.5;
 
-    var clonedOptions = {};
-    for (var opt in options) {
-        if (options.hasOwnProperty(opt)) {
-            clonedOptions[opt] = options[opt];
-        }
-    }
+    let clonedOptions = { ...options };
 
     clonedOptions.xSegments *= 2;
     clonedOptions.stretch = true;
     clonedOptions.maxHeight = 1;
     clonedOptions.minHeight = 0;
-    var heightmap = THREE.Terrain.heightmapArray(method, clonedOptions);
+    var heightmap = heightmapArray(method, clonedOptions);
 
     for (var i = 0, l = heightmap.length; i < l; i++) {
         if (i % skip || Math.random() > threshold) {
             heightmap[i] = 1; // 0 = place, 1 = don't place
         }
     }
-    return function() {
+    return function () {
         return heightmap;
     };
 };
+
+/**
+ * Generate a 1D array containing random heightmap data.
+ *
+ * This is like {@link THREE.Terrain.toHeightmap} except that instead of
+ * generating the Three.js mesh and material information you can just get the
+ * height data.
+ *
+ * @param {Function} method
+ *   The method to use to generate the heightmap data. Works with function that
+ *   would be an acceptable value for the `heightmap` option for the
+ *   {@link THREE.Terrain} function.
+ * @param {Number} options
+ *   The same as the options parameter for the {@link THREE.Terrain} function.
+ */
+export function heightmapArray(method: Function, options: TerrainOptions) {
+    var arr = new Array((options.xSegments + 1) * (options.ySegments + 1)),
+        l = arr.length,
+        i;
+    // The heightmap functions provided by this script operate on THREE.Vector3
+    // objects by changing the z field, so we need to make that available.
+    // Unfortunately that means creating a bunch of objects we're just going to
+    // throw away, but a conscious decision was made here to optimize for the
+    // vector case.
+    for (i = 0; i < l; i++) {
+        arr[i] = { z: 0 };
+    }
+    options.minHeight = options.minHeight || 0;
+    options.maxHeight = typeof options.maxHeight === 'undefined' ? 1 : options.maxHeight;
+    options.stretch = options.stretch || false;
+    method(arr, options);
+    Clamp(arr, options);
+    for (i = 0; i < l; i++) {
+        arr[i] = arr[i].z;
+    }
+    return arr;
+};
+

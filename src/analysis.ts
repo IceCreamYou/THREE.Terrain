@@ -1,4 +1,6 @@
-(function() {
+import { TerrainOptions } from "./basicTypes";
+import { Mesh, PlaneGeometry, Vector3 } from "three";
+import { toArray1D } from "./core";
 
 /**
  * Analyze a terrain using statistical measures.
@@ -13,14 +15,15 @@
  * @return {Object}
  *   An object containing statistical information about the terrain.
  */
-THREE.Terrain.Analyze = function(mesh, options) {
-    if (mesh.geometry.vertices.length < 3) {
+export function Analyze(mesh: Mesh, options: TerrainOptions) {
+    const geometry: PlaneGeometry = mesh.geometry as PlaneGeometry;
+    if (geometry.vertices.length < 3) {
         throw new Error('Not enough vertices to analyze');
     }
 
-    var sortNumeric = function(a, b) { return a - b; },
+    var sortNumeric = function (a: number, b: number) { return a - b; },
         elevations = Array.prototype.sort.call(
-            THREE.Terrain.toArray1D(mesh.geometry.vertices),
+            toArray1D(geometry.vertices),
             sortNumeric
         ),
         numVertices = elevations.length,
@@ -32,9 +35,9 @@ THREE.Terrain.Analyze = function(mesh, options) {
         pearsonSkewElevation = 0,
         groeneveldMeedenSkewElevation = 0,
         kurtosisElevation = 0,
-        up = mesh.up.clone().applyAxisAngle(new THREE.Vector3(1, 0, 0), 0.5*Math.PI), // correct for mesh rotation
-        slopes = mesh.geometry.faces
-            .map(function(v) { return v.normal.angleTo(up) * 180 / Math.PI; })
+        up = mesh.up.clone().applyAxisAngle(new Vector3(1, 0, 0), 0.5 * Math.PI), // correct for mesh rotation
+        slopes = geometry.faces
+            .map(function (v) { return v.normal.angleTo(up) * 180 / Math.PI; })
             .sort(sortNumeric),
         numFaces = slopes.length,
         maxSlope = percentile(slopes, 1),
@@ -42,7 +45,7 @@ THREE.Terrain.Analyze = function(mesh, options) {
         medianSlope = percentile(slopes, 0.5),
         meanSlope = mean(slopes),
         centroid = mesh.position.clone().setZ(meanElevation),
-        fittedPlaneNormal = getFittedPlaneNormal(mesh.geometry.vertices, centroid),
+        fittedPlaneNormal = getFittedPlaneNormal(geometry.vertices, centroid),
         fittedPlaneSlope = fittedPlaneNormal.angleTo(up) * 180 / Math.PI,
         stdevSlope = 0,
         pearsonSkewSlope = 0,
@@ -90,13 +93,13 @@ THREE.Terrain.Analyze = function(mesh, options) {
         for (var j = 0; j < yl; j++) {
             var neighborhoodMax = -Infinity,
                 neighborhoodMin = Infinity,
-                v = mesh.geometry.vertices[j*xl + ii].z,
+                v = geometry.vertices[j * xl + ii].z,
                 sum = 0,
                 c = 0;
             for (var n = -1; n <= 1; n++) {
                 for (var m = -1; m <= 1; m++) {
-                    if (ii+m >= 0 && j+n >= 0 && ii+m < xl && j+n < yl && !(n === 0 && m === 0)) {
-                        var val = mesh.geometry.vertices[(j+n)*xl + ii + m].z;
+                    if (ii + m >= 0 && j + n >= 0 && ii + m < xl && j + n < yl && !(n === 0 && m === 0)) {
+                        var val = geometry.vertices[(j + n) * xl + ii + m].z;
                         sum += val;
                         c++;
                         if (val > neighborhoodMax) neighborhoodMax = val;
@@ -110,7 +113,7 @@ THREE.Terrain.Analyze = function(mesh, options) {
     }
     tri = Math.sqrt(tri / numVertices);
     // ceil(n/2)*ceil(m/2) is the max # of local maxima or minima in an n*m grid
-    jaggedness /= Math.ceil((options.xSegments+1) * 0.5) * Math.ceil((options.ySegments+1) * 0.5) * 2;
+    jaggedness /= Math.ceil((options.xSegments + 1) * 0.5) * Math.ceil((options.ySegments + 1) * 0.5) * 2;
 
     return {
         elevation: {
@@ -133,9 +136,9 @@ THREE.Terrain.Analyze = function(mesh, options) {
                 options.minHeight,
                 options.maxHeight
             ),
-            percentile: function(p) { return percentile(elevations, p); },
-            percentRank: function(v) { return percentRank(elevations, v); },
-            drawHistogram: function(canvas, bucketCount) {
+            percentile: function (p: number) { return percentile(elevations, p); },
+            percentRank: function (v: number) { return percentRank(elevations, v); },
+            drawHistogram: function (canvas: HTMLCanvasElement, bucketCount: number) {
                 drawHistogram(
                     bucketNumbersLinearly(
                         elevations,
@@ -164,9 +167,9 @@ THREE.Terrain.Analyze = function(mesh, options) {
             groeneveldMeedenSkew: groeneveldMeedenSkewSlope,
             kurtosis: kurtosisSlope,
             modes: getModes(slopes, 90, 0, 90),
-            percentile: function(p) { return percentile(slopes, p); },
-            percentRank: function(v) { return percentRank(slopes, v); },
-            drawHistogram: function(canvas, bucketCount) {
+            percentile: function (p: number) { return percentile(slopes, p); },
+            percentRank: function (v: number) { return percentRank(slopes, v); },
+            drawHistogram: function (canvas: HTMLCanvasElement, bucketCount: number) {
                 drawHistogram(
                     bucketNumbersLinearly(
                         slopes,
@@ -191,7 +194,7 @@ THREE.Terrain.Analyze = function(mesh, options) {
             normal: fittedPlaneNormal,
             slope: fittedPlaneSlope,
             pctExplained: percentVariationExplainedByFittedPlane(
-                mesh.geometry.vertices,
+                geometry.vertices,
                 centroid,
                 fittedPlaneNormal,
                 options.maxHeight - options.minHeight
@@ -214,7 +217,7 @@ THREE.Terrain.Analyze = function(mesh, options) {
  * @return {Number}
  *   The value at the given percentile in the given array.
  */
-function percentile(arr, p) {
+function percentile(arr: Float32Array | number[], p: number) {
     if (arr.length === 0) return 0;
     if (typeof p !== 'number') throw new TypeError('p must be a number');
     if (p <= 0) return arr[0];
@@ -240,7 +243,7 @@ function percentile(arr, p) {
  * @return {Number}
  *   The percentile at the given value in the given array.
  */
-function percentRank(arr, v) {
+function percentRank(arr: number[], v: number) {
     if (typeof v !== 'number') throw new TypeError('v must be a number');
     for (var i = 0, l = arr.length; i < l; i++) {
         if (v <= arr[i]) {
@@ -248,8 +251,8 @@ function percentRank(arr, v) {
                 i++;
             }
             if (i === 0) return 0;
-            if (v !== arr[i-1]) {
-                i += (v - arr[i-1]) / (arr[i] - arr[i-1]);
+            if (v !== arr[i - 1]) {
+                i += (v - arr[i - 1]) / (arr[i] - arr[i - 1]);
             }
             return i / l;
         }
@@ -268,7 +271,7 @@ function percentRank(arr, v) {
  * @return {THREE.Vector3}
  *   The normal vector of the fitted plane.
  */
-function getFittedPlaneNormal(points, centroid) {
+function getFittedPlaneNormal(points: Vector3[], centroid: Vector3) {
     var n = points.length,
         xx = 0,
         xy = 0,
@@ -278,7 +281,7 @@ function getFittedPlaneNormal(points, centroid) {
         zz = 0;
     if (n < 3) throw new Error('At least three points are required to fit a plane');
 
-    var r = new THREE.Vector3();
+    var r = new Vector3();
     for (var i = 0, l = points.length; i < l; i++) {
         r.copy(points[i]).sub(centroid);
         xx += r.x * r.x;
@@ -289,30 +292,30 @@ function getFittedPlaneNormal(points, centroid) {
         zz += r.z * r.z;
     }
 
-    var xDeterminant = yy*zz - yz*yz,
-        yDeterminant = xx*zz - xz*xz,
-        zDeterminant = xx*yy - xy*xy,
+    var xDeterminant = yy * zz - yz * yz,
+        yDeterminant = xx * zz - xz * xz,
+        zDeterminant = xx * yy - xy * xy,
         maxDeterminant = Math.max(xDeterminant, yDeterminant, zDeterminant);
     if (maxDeterminant <= 0) throw new Error("The points don't span a plane");
 
     if (maxDeterminant === xDeterminant) {
         r.set(
             1,
-            (xz*yz - xy*zz) / xDeterminant,
-            (xy*yz - xz*yy) / xDeterminant
+            (xz * yz - xy * zz) / xDeterminant,
+            (xy * yz - xz * yy) / xDeterminant
         );
     }
     else if (maxDeterminant === yDeterminant) {
         r.set(
-            (yz*xz - xy*zz) / yDeterminant,
+            (yz * xz - xy * zz) / yDeterminant,
             1,
-            (xy*xz - yz*xx) / yDeterminant
+            (xy * xz - yz * xx) / yDeterminant
         );
     }
     else if (maxDeterminant === zDeterminant) {
         r.set(
-            (yz*xy - xz*yy) / zDeterminant,
-            (xz*xy - yz*xx) / zDeterminant,
+            (yz * xy - xz * yy) / zDeterminant,
+            (xz * xy - yz * xx) / zDeterminant,
             1
         );
     }
@@ -333,7 +336,7 @@ function getFittedPlaneNormal(points, centroid) {
  *
  * @return {Number[][]} An array of buckets of numbers.
  */
-function bucketNumbersLinearly(data, bucketCount, min, max) {
+function bucketNumbersLinearly(data: number[], bucketCount: number, min: number, max: number) {
     var i = 0,
         l = data.length;
     // If min and max aren't given, set them to the highest and lowest data values
@@ -355,9 +358,9 @@ function bucketNumbersLinearly(data, bucketCount, min, max) {
     for (i = 0; i < l; i++) {
         // Buckets include the lower bound but not the higher bound, except the top bucket
         try {
-            if (data[i] === max) buckets[bucketCount-1].push(data[i]);
+            if (data[i] === max) buckets[bucketCount - 1].push(data[i]);
             else buckets[((data[i] - min) / inc) | 0].push(data[i]);
-        } catch(e) {
+        } catch (e) {
             console.warn('Numbers in the data are outside of the min and max values used to bucket the data.');
         }
     }
@@ -379,10 +382,10 @@ function bucketNumbersLinearly(data, bucketCount, min, max) {
  * @return {Number[]}
  *   An array containing the bucketed mode(s).
  */
-function getModes(data, bucketCount, min, max) {
+function getModes(data: number[], bucketCount: number, min: number, max: number) {
     var buckets = bucketNumbersLinearly(data, bucketCount, min, max),
         maxLen = 0,
-        modes = [];
+        modes: number[] = [];
     for (var i = 0, l = buckets.length; i < l; i++) {
         if (buckets[i].length > maxLen) {
             maxLen = buckets[i].length;
@@ -409,7 +412,7 @@ function getModes(data, bucketCount, min, max) {
  * @param {String} [append='']
  *   A string to append to the bar labels. Defaults to the empty string.
  */
-function drawHistogram(buckets, canvas, minV, maxV, append) {
+function drawHistogram(buckets: number[][], canvas: HTMLCanvasElement, minV: number, maxV: number, append: string = '') {
     var context = canvas.getContext('2d'),
         width = 280,
         height = 180,
@@ -419,9 +422,8 @@ function drawHistogram(buckets, canvas, minV, maxV, append) {
         min = typeof minV === 'undefined' ? Infinity : minV,
         l = buckets.length,
         i;
-    canvas.width = width + border*2;
-    canvas.height = height + border*2;
-    if (typeof append === 'undefined') append = '';
+    canvas.width = width + border * 2;
+    canvas.height = height + border * 2;
 
     // If max or min is not set, set them to the highest/lowest value.
     if (max === -Infinity || min === Infinity) {
@@ -452,9 +454,9 @@ function drawHistogram(buckets, canvas, minV, maxV, append) {
         unitSizeX = (width - (buckets.length + 1) * separator) / buckets.length;
     if (unitSizeX >= 1) unitSizeX = Math.floor(unitSizeX);
     if (unitSizeY >= 1) unitSizeY = Math.floor(unitSizeY);
-    context.fillStyle = 'rgba(13, 42, 64, 1)';
+    context!.fillStyle = 'rgba(13, 42, 64, 1)';
     for (i = 0; i < l; i++) {
-        context.fillRect(
+        context!.fillRect(
             border + separator + i * (unitSizeX + separator),
             border + height - (separator + buckets[i].length * unitSizeY),
             unitSizeX,
@@ -463,33 +465,33 @@ function drawHistogram(buckets, canvas, minV, maxV, append) {
     }
 
     // Draw the label text on the bar.
-    context.fillStyle = 'rgba(144, 176, 192, 1)';
-    context.font = '12px Arial';
+    context!.fillStyle = 'rgba(144, 176, 192, 1)';
+    context!.font = '12px Arial';
     for (i = 0; i < l; i++) {
         var text = Math.floor(((i + 0.5) / buckets.length) * (max - min) + min) + '' + append;
-        context.fillText(
+        context!.fillText(
             text,
-            border + separator + i * (unitSizeX + separator) + Math.floor((unitSizeX - context.measureText(text).width) * 0.5),
+            border + separator + i * (unitSizeX + separator) + Math.floor((unitSizeX - context!.measureText(text).width) * 0.5),
             border + height - 8,
             unitSizeX
         );
     }
 
-    context.fillText(
+    context!.fillText(
         Math.round(100 * maxBucketSize / n) + '%',
         border + separator,
         border + separator + 6
     );
 
     // Draw axes.
-    context.strokeStyle = 'rgba(13, 42, 64, 1)';
-    context.lineWidth = 2;
-    context.beginPath();
-    context.moveTo(border, border);
-    context.lineTo(border, height + border);
-    context.moveTo(border, height + border);
-    context.lineTo(width + border, height + border);
-    context.stroke();
+    context!.strokeStyle = 'rgba(13, 42, 64, 1)';
+    context!.lineWidth = 2;
+    context!.beginPath();
+    context!.moveTo(border, border);
+    context!.lineTo(border, height + border);
+    context!.moveTo(border, height + border);
+    context!.lineTo(width + border, height + border);
+    context!.stroke();
 }
 
 /**
@@ -515,20 +517,20 @@ function drawHistogram(buckets, canvas, minV, maxV, append) {
  *   explains the variation in terrain elevation. 1 means entirely explained; 0
  *   means not explained at all.
  */
-function percentVariationExplainedByFittedPlane(vertices, centroid, normal, range) {
+function percentVariationExplainedByFittedPlane(vertices: Vector3[], centroid: Vector3, normal: Vector3, range: number) {
     var numVertices = vertices.length,
         diff = 0;
     for (var i = 0; i < numVertices; i++) {
         var fittedZ = Math.sqrt(
-                (vertices[i].x - centroid.x) * (vertices[i].x - centroid.x) +
-                (vertices[i].y - centroid.y) * (vertices[i].y - centroid.y)
-            ) * Math.tan(normal.z * Math.PI) + centroid.z;
+            (vertices[i].x - centroid.x) * (vertices[i].x - centroid.x) +
+            (vertices[i].y - centroid.y) * (vertices[i].y - centroid.y)
+        ) * Math.tan(normal.z * Math.PI) + centroid.z;
         diff += (vertices[i].z - fittedZ) * (vertices[i].z - fittedZ);
     }
     return 1 - Math.sqrt(diff / numVertices) * 2 / range;
 }
 
-function mean(data) {
+function mean(data: number[]) {
     var sum = 0,
         l = data.length;
     for (var i = 0; i < l; i++) {
@@ -536,5 +538,3 @@ function mean(data) {
     }
     return sum / l;
 }
-
-})();
