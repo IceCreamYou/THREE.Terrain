@@ -31,7 +31,7 @@
     "devDependencies": {
         "@typescript-eslint/eslint-plugin": "^1.11.0",
         "@typescript-eslint/parser": "^1.11.0",
-        "eslint": "^6.0.1",
+        "eslint": "^5.16.0",
         "rollup": "^1.16.6",
         "rollup-plugin-terser": "^5.1.1",
         "rollup-plugin-typescript": "^1.0.1",
@@ -41,7 +41,7 @@
     },
     "scripts": {
         "ts:defs": "tsc --declaration --outDir ./dist --emitDeclarationOnly",
-        "build": "rm dist/* && yarn ts:defs && rollup -c",
+        "build": "rm dist/* && npm run ts:defs && rollup -c",
         "lint": "eslint src/*.ts",
         "serve": "serve -l 8080"
     },
