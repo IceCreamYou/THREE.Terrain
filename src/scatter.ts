@@ -1,10 +1,10 @@
-import { BufferGeometry, Geometry, Mesh, Object3D, Vector3 } from 'three';
+import { BufferGeometry, Geometry, Mesh, Object3D, Vector3, Face3 } from 'three';
 
 import { HeightmapFunction, TerrainOptions } from './basicTypes';
 import { EaseInOut } from './core';
 import { Clamp } from './filters';
 
-type SpreadFunction = (v: Vector3, k: number) => boolean;
+type SpreadFunction = (v: Vector3, k: number, f: Face3, faceX: number, faceY: number) => boolean;
 interface ScatterOptions {
     mesh: Mesh;
     spread: number | SpreadFunction;
@@ -123,7 +123,7 @@ export function ScatterMeshes(geometry: Geometry, inputOptions: Partial<ScatterO
                 }
             }
             else {
-                place = (options.spread as SpreadFunction)(v[f.a], key);  // TODO: why 5 instead of 2 parameters?
+                place = (options.spread as SpreadFunction)(v[f.a], key, f, i, j);
             }
             if (place) {
                 // Don't place a mesh if the angle is too steep.
