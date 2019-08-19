@@ -34,6 +34,7 @@
         "eslint": "^5.16.0",
         "rimraf": "^3.0.0",
         "rollup": "^1.16.6",
+        "rollup-plugin-sourcemaps": "^0.4.2",
         "rollup-plugin-terser": "^5.1.1",
         "rollup-plugin-typescript": "^1.0.1",
         "serve": "^11.0.2",

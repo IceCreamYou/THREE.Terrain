@@ -1,5 +1,6 @@
 import { terser } from 'rollup-plugin-terser';
 import typescript from 'rollup-plugin-typescript';
+import sourceMaps from 'rollup-plugin-sourcemaps'
 import pkg from './package.json';
 
 export default [
@@ -15,6 +16,7 @@ export default [
                 name: 'THREE.Terrain',
                 file: pkg.browser,
                 format: 'umd',
+                sourcemap: true,
                 globals: {
                     three: 'THREE'
                 },
@@ -24,12 +26,16 @@ export default [
     {
         input: 'src/main.ts',
         external: ['three'],
+        watch: {
+            include: 'src/**',
+        },
         plugins: [
             typescript(),
+            sourceMaps()
         ],
         output: [
-            { file: pkg.main, format: 'cjs' },
-            { file: pkg.module, format: 'es' }
+            { file: pkg.main, format: 'cjs', sourcemap: true },
+            { file: pkg.module, format: 'es', sourcemap: true }
         ]
     }
 ];
