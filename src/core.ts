@@ -61,7 +61,7 @@ export function fromArray2D(vertices: Vector3[], src: Float64Array[]) {
  * @return {Number[]}
  *   A 1D array representing the terrain's heightmap.
  */
-export function toArray1D(vertices: Vector3[]) {
+export function toArray1D(vertices: Vector3[]): Float64Array {
     var tgt = new Float64Array(vertices.length);
     for (var i = 0, l = tgt.length; i < l; i++) {
         tgt[i] = vertices[i].z;
