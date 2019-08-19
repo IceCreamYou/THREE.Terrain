@@ -6,6 +6,12 @@ import { Clamp, SmoothMedian } from './filters';
 import { Influence, Influences } from './influences';
 import { perlin, seed, simplex } from './noise';
 
+interface Pass {
+    method: HeightmapFunction;
+    amplitude?: number;
+    frequency?: number;
+}
+
 /**
  * A utility for generating heightmap functions by additive composition.
  *
@@ -29,11 +35,6 @@ import { perlin, seed, simplex } from './noise';
  *     smaller features). Often running multiple generation functions with
  *     different frequencies and amplitudes results in nice detail.
  */
-interface Pass {
-    method: HeightmapFunction;
-    amplitude?: number;
-    frequency?: number;
-}
 export function MultiPass(g: Vector3[], options: TerrainOptions, passes: Pass[]) {
     var clonedOptions = { ...options };
     var range = options.maxHeight - options.minHeight;
@@ -499,14 +500,12 @@ function WhiteNoise(g: Vector3[], options: TerrainOptions, scale: number, segmen
             var k = j * xl + i;
             data[k] = Math.random() * range;
             if (lastX < 0 && lastY < 0) continue;
-            // jscs:disable disallowSpacesInsideBrackets
             /* c b *
              * l t */
             var t = data[k],
                 l = data[j * xl + (i - inc)] || t, // left
                 b = data[(j - inc) * xl + i] || t, // bottom
                 c = data[(j - inc) * xl + (i - inc)] || t; // corner
-            // jscs:enable disallowSpacesInsideBrackets
             // Interpolate between adjacent points to set the height of
             // higher-resolution target data.
             for (var x = lastX; x < i; x++) {

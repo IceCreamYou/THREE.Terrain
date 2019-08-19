@@ -136,7 +136,7 @@ export function Influence(g: Vector3[], options: TerrainOptions,
                 // interpolate using e, then blend according to t.
                 d = f(fdr, fdxr, fdyr) * h * (1 - e(fdr, fdxr, fdyr));
             if (fd > r || typeof g[k] == 'undefined') continue;
-            if (t === AdditiveBlending) g[k].z += d; // jscs:ignore requireSpaceAfterKeywords
+            if (t === AdditiveBlending) g[k].z += d;
             else if (t === SubtractiveBlending) g[k].z -= d;
             else if (t === MultiplyBlending) g[k].z *= d;
             else if (t === NoBlending) g[k].z = d;

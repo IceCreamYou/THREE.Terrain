@@ -165,7 +165,7 @@ function putInGrid(grid: Vector2[][], point: Vector2, cellSize: number): void {
 }
 
 function inRectangle(point: Vector2, width: number, height: number): boolean {
-    return point.x >= 0 && // jscs:ignore requireSpaceAfterKeywords
+    return point.x >= 0 &&
         point.y >= 0 &&
         point.x <= width + 1 &&
         point.y <= height + 1;

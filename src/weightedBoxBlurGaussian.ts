@@ -2,8 +2,6 @@ import { TerrainOptions } from "./basicTypes";
 import { Vector3 } from "three";
 import { fromArray1D, toArray1D } from "./core";
 
-// jscs:disable disallowSpaceBeforeSemicolon, requireBlocksOnNewline
-
 /**
  * Perform Gaussian smoothing on terrain vertices.
  *
