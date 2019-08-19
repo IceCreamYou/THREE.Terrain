@@ -4,6 +4,20 @@ import { HeightmapFunction, TerrainOptions } from './basicTypes';
 import { EaseInOut } from './core';
 import { Clamp } from './filters';
 
+type SpreadFunction = (v: Vector3, k: number) => boolean;
+interface ScatterOptions {
+    mesh: Mesh;
+    spread: number | SpreadFunction;
+    smoothSpread: number;
+    scene: Object3D;
+    sizeVariance: number;
+    randomness: () => (number | number[]);
+    maxSlope: number;
+    maxTilt: number;
+    w: number;
+    h: number;
+}
+
 /**
  * Scatter a mesh across the terrain.
  *
@@ -53,19 +67,6 @@ import { Clamp } from './filters';
  *   return value of a call to `THREE.Terrain()` or added to that return value;
  *   otherwise the position and rotation of the meshes will be wrong.
  */
-type SpreadFunction = (v: Vector3, k: number) => boolean;
-interface ScatterOptions {
-    mesh: Mesh;
-    spread: number | SpreadFunction;
-    smoothSpread: number;
-    scene: Object3D;
-    sizeVariance: number;
-    randomness: () => (number | number[]);
-    maxSlope: number;
-    maxTilt: number;
-    w: number;
-    h: number;
-}
 export function ScatterMeshes(geometry: Geometry, inputOptions: Partial<ScatterOptions>) {
     if (!inputOptions.mesh) {
         console.error('options.mesh is required for THREE.Terrain.ScatterMeshes but was not passed');
