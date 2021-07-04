@@ -1,5 +1,5 @@
 /**
- * THREE.Terrain.js 1.6.0-20180415
+ * THREE.Terrain.js 1.6.0-20210704
  *
  * @author Isaac Sukin (http://www.isaacsukin.com/)
  * @license MIT
@@ -456,12 +456,12 @@ THREE.Terrain.POLYGONREDUCTION = 3;
  *   A 2D array representing the terrain's heightmap.
  */
 THREE.Terrain.toArray2D = function(vertices, options) {
-    var tgt = new Array(options.xSegments),
+    var tgt = new Array(options.xSegments + 1),
         xl = options.xSegments + 1,
         yl = options.ySegments + 1,
         i, j;
     for (i = 0; i < xl; i++) {
-        tgt[i] = new Float64Array(options.ySegments);
+        tgt[i] = new Float64Array(options.ySegments + 1);
         for (j = 0; j < yl; j++) {
             tgt[i][j] = vertices[j * xl + i].z;
         }
@@ -650,8 +650,8 @@ THREE.Terrain.fromHeightmap = function(g, options) {
  *   A canvas with the relevant heightmap painted on it.
  */
 THREE.Terrain.toHeightmap = function(g, options) {
-    var hasMax = typeof options.maxHeight === 'undefined',
-        hasMin = typeof options.minHeight === 'undefined',
+    var hasMax = typeof options.maxHeight !== 'undefined',
+        hasMin = typeof options.minHeight !== 'undefined',
         max = hasMax ? options.maxHeight : -Infinity,
         min = hasMin ? options.minHeight :  Infinity;
     if (!hasMax || !hasMin) {
@@ -668,7 +668,7 @@ THREE.Terrain.toHeightmap = function(g, options) {
         context = canvas.getContext('2d'),
         rows = options.ySegments + 1,
         cols = options.xSegments + 1,
-        spread = options.maxHeight - options.minHeight;
+        spread = max - min;
     canvas.width = cols;
     canvas.height = rows;
     var d = context.createImageData(canvas.width, canvas.height),
@@ -677,7 +677,7 @@ THREE.Terrain.toHeightmap = function(g, options) {
         for (var col = 0; col < cols; col++) {
             var i = row * cols + col,
             idx = i * 4;
-            data[idx] = data[idx+1] = data[idx+2] = Math.round(((g[i].z - options.minHeight) / spread) * 255);
+            data[idx] = data[idx+1] = data[idx+2] = Math.round(((g[i].z - min) / spread) * 255);
             data[idx+3] = 255;
         }
     }
@@ -1156,7 +1156,7 @@ THREE.Terrain.CosineLayers = function(g, options) {
 THREE.Terrain.DiamondSquare = function(g, options) {
     // Set the segment length to the smallest power of 2 that is greater than
     // the number of vertices in either dimension of the plane
-    var segments = THREE.Math.nextPowerOfTwo(Math.max(options.xSegments, options.ySegments) + 1);
+    var segments = THREE.Math.ceilPowerOfTwo(Math.max(options.xSegments, options.ySegments) + 1);
 
     // Initialize heightmap
     var size = segments + 1,
@@ -1686,19 +1686,14 @@ THREE.Terrain.generateBlendedMaterial = function(textures) {
         return n === (n|0) ? n+'.0' : n+'';
     }
 
-    var uniforms = THREE.UniformsUtils.merge([THREE.ShaderLib.lambert.uniforms]),
-        declare = '',
+    var declare = '',
         assign = '',
         t0Repeat = textures[0].texture.repeat,
         t0Offset = textures[0].texture.offset;
     for (var i = 0, l = textures.length; i < l; i++) {
-        // Uniforms
+        // Update textures
         textures[i].texture.wrapS = textures[i].wrapT = THREE.RepeatWrapping;
         textures[i].texture.needsUpdate = true;
-        uniforms['texture_' + i] = {
-            type: 't',
-            value: textures[i].texture,
-        };
 
         // Shader fragments
         // Declare each texture, then mix them together.
@@ -1732,118 +1727,38 @@ THREE.Terrain.generateBlendedMaterial = function(textures) {
         }
     }
 
-    var params = {
-        // I don't know which of these properties have any effect
-        fog: true,
-        lights: true,
-        // shading: THREE.SmoothShading,
-        // blending: THREE.NormalBlending,
-        // depthTest: <bool>,
-        // depthWrite: <bool>,
-        // wireframe: false,
-        // wireframeLinewidth: 1,
-        // vertexColors: THREE.NoColors,
-        // skinning: <bool>,
-        // morphTargets: <bool>,
-        // morphNormals: <bool>,
-        // opacity: 1.0,
-        // transparent: <bool>,
-        // side: THREE.FrontSide,
+    var fragBlend = 'float slope = acos(max(min(dot(myNormal, vec3(0.0, 0.0, 1.0)), 1.0), -1.0));\n' +
+        '    diffuseColor = vec4( diffuse, opacity );\n' +
+        '    vec4 color = texture2D( texture_0, MyvUv * vec2( ' + glslifyNumber(t0Repeat.x) + ', ' + glslifyNumber(t0Repeat.y) + ' ) + vec2( ' + glslifyNumber(t0Offset.x) + ', ' + glslifyNumber(t0Offset.y) + ' ) ); // base\n' +
+            assign +
+        '    diffuseColor = color;\n';
 
-        uniforms: uniforms,
-        vertexShader: THREE.ShaderLib.lambert.vertexShader.replace(
-            'void main() {',
-            'varying vec2 MyvUv;\nvarying vec3 vPosition;\nvarying vec3 myNormal; void main() {\nMyvUv = uv;\nvPosition = position;\nmyNormal = normal;'
-        ),
-        // This is mostly copied from THREE.ShaderLib.lambert.fragmentShader
-        fragmentShader: [
-            'uniform vec3 diffuse;',
-            'uniform vec3 emissive;',
-            'uniform float opacity;',
-            'varying vec3 vLightFront;',
-            '#ifdef DOUBLE_SIDED',
-            '    varying vec3 vLightBack;',
-            '#endif',
+    var fragPars = declare + '\n' +
+            'varying vec2 MyvUv;\n' +
+            'varying vec3 vPosition;\n' +
+            'varying vec3 myNormal;\n';
 
-            THREE.ShaderChunk.common,
-            THREE.ShaderChunk.packing,
-            THREE.ShaderChunk.dithering_pars_fragment,
-            THREE.ShaderChunk.color_pars_fragment,
-            THREE.ShaderChunk.uv_pars_fragment,
-            THREE.ShaderChunk.uv2_pars_fragment,
-            THREE.ShaderChunk.map_pars_fragment,
-            THREE.ShaderChunk.alphamap_pars_fragment,
-            THREE.ShaderChunk.aomap_pars_fragment,
-            THREE.ShaderChunk.lightmap_pars_fragment,
-            THREE.ShaderChunk.emissivemap_pars_fragment,
-            THREE.ShaderChunk.envmap_pars_fragment,
-            THREE.ShaderChunk.bsdfs,
-            THREE.ShaderChunk.lights_pars_begin,
-            THREE.ShaderChunk.lights_pars_maps,
-            THREE.ShaderChunk.fog_pars_fragment,
-            THREE.ShaderChunk.shadowmap_pars_fragment,
-            THREE.ShaderChunk.shadowmask_pars_fragment,
-            THREE.ShaderChunk.specularmap_pars_fragment,
-            THREE.ShaderChunk.logdepthbuf_pars_fragment,
-            THREE.ShaderChunk.clipping_planes_pars_fragment,
+    var mat = new THREE.MeshLambertMaterial();
+    mat.onBeforeCompile = function(shader) {
+        // Patch vertexShader to setup MyUv, vPosition, and myNormal
+        shader.vertexShader = shader.vertexShader.replace('#include <common>',
+            'varying vec2 MyvUv;\nvarying vec3 vPosition;\nvarying vec3 myNormal;\n#include <common>');
+        shader.vertexShader = shader.vertexShader.replace('#include <uv_vertex>',
+            'MyvUv = uv;\nvPosition = position;\nmyNormal = normal;\n#include <uv_vertex>');
 
-            declare,
-            'varying vec2 MyvUv;',
-            'varying vec3 vPosition;',
-            'varying vec3 myNormal;',
+        shader.fragmentShader = shader.fragmentShader.replace('#include <common>', fragPars + '\n#include <common>');
+        shader.fragmentShader = shader.fragmentShader.replace('#include <map_fragment>', fragBlend);
 
-            'void main() {',
-
-            THREE.ShaderChunk.clipping_planes_fragment,
-
-	'ReflectedLight reflectedLight = ReflectedLight( vec3( 0.0 ), vec3( 0.0 ), vec3( 0.0 ), vec3( 0.0 ) );',
-	'vec3 totalEmissiveRadiance = emissive;',
-
-            // TODO: The second vector here is the object's "up" vector. Ideally we'd just pass it in directly.
-            'float slope = acos(max(min(dot(myNormal, vec3(0.0, 0.0, 1.0)), 1.0), -1.0));',
-
-            '    vec4 diffuseColor = vec4( diffuse, opacity );',
-            '    vec4 color = texture2D( texture_0, MyvUv * vec2( ' + glslifyNumber(t0Repeat.x) + ', ' + glslifyNumber(t0Repeat.y) + ' ) + vec2( ' + glslifyNumber(t0Offset.x) + ', ' + glslifyNumber(t0Offset.y) + ' ) ); // base',
-                assign,
-            '    diffuseColor = color;',
-            // '    gl_FragColor = color;',
-
-                THREE.ShaderChunk.logdepthbuf_fragment,
-                THREE.ShaderChunk.map_fragment,
-                THREE.ShaderChunk.color_fragment,
-                THREE.ShaderChunk.alphamap_fragment,
-                THREE.ShaderChunk.alphatest_fragment,
-                THREE.ShaderChunk.specularmap_fragment,
-                THREE.ShaderChunk.emissivemap_fragment,
-
-            // accumulation
-            '   reflectedLight.indirectDiffuse = getAmbientLightIrradiance( ambientLightColor );',
-
-                THREE.ShaderChunk.lightmap_fragment,
-
-            '    reflectedLight.indirectDiffuse *= BRDF_Diffuse_Lambert( diffuseColor.rgb );',
-            '    #ifdef DOUBLE_SIDED',
-            '            reflectedLight.directDiffuse = ( gl_FrontFacing ) ? vLightFront : vLightBack;',
-            '    #else',
-            '            reflectedLight.directDiffuse = vLightFront;',
-            '    #endif',
-            '    reflectedLight.directDiffuse *= BRDF_Diffuse_Lambert( diffuseColor.rgb ) * getShadowMask();',
-
-                // modulation
-                THREE.ShaderChunk.aomap_fragment,
-            '   vec3 outgoingLight = reflectedLight.directDiffuse + reflectedLight.indirectDiffuse + totalEmissiveRadiance;',
-                THREE.ShaderChunk.normal_flip,
-                THREE.ShaderChunk.envmap_fragment,
-            '   gl_FragColor = vec4( outgoingLight, diffuseColor.a );', // This will probably change in future three.js releases
-                THREE.ShaderChunk.tonemapping_fragment,
-                THREE.ShaderChunk.encodings_fragment,
-                THREE.ShaderChunk.fog_fragment,
-                THREE.ShaderChunk.premultiplied_alpha_fragment,
-                THREE.ShaderChunk.dithering_fragment,
-            '}'
-        ].join('\n'),
+        // Add our custom texture uniforms
+        for (var i = 0, l = textures.length; i < l; i++) {
+            shader.uniforms['texture_' + i] = {
+                type: 't',
+                value: textures[i].texture,
+            };
+        }
     };
-    return new THREE.ShaderMaterial(params);
+
+    return mat;
 };
 
 /**
