@@ -232,7 +232,6 @@ function assembleOptions(heightmap, easing, smoothing, turbulent) {
     steps: 1,
     stretch: true,
     turbulent: turbulent || false,
-    useBufferGeometry: false,
     xSize: 1024,
     ySize: 1024,
     xSegments: 63,

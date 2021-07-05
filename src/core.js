@@ -58,9 +58,6 @@
  *     `heightmap` property is smaller. Defaults to true.
  *   - `turbulent`: Whether to perform a turbulence transformation. Defaults to
  *     false.
- *   - `useBufferGeometry`: a Boolean indicating whether to use
- *     THREE.BufferGeometry instead of THREE.Geometry for the Terrain plane.
- *     Defaults to `false`.
  *   - `xSegments`: The number of segments (rows) to divide the terrain plane
  *     into. (This basically determines how detailed the terrain is.) Defaults
  *     to 63.
@@ -87,7 +84,6 @@ THREE.Terrain = function(options) {
         steps: 1,
         stretch: true,
         turbulent: false,
-        useBufferGeometry: false,
         xSegments: 63,
         xSize: 1024,
         ySegments: 63,
@@ -117,8 +113,9 @@ THREE.Terrain = function(options) {
         mesh.material = options.material;
         mesh.scale.x = options.xSize / mesh.geometry.parameters.width;
         mesh.scale.y = options.ySize / mesh.geometry.parameters.height;
-        for (var i = 0, l = mesh.geometry.vertices.length; i < l; i++) {
-            mesh.geometry.vertices[i].z = 0;
+        var vertexPoints = mesh.geometry.attributes.position.array;
+        for (var i = 2, l = vertexPoints.length; i < l; i += 3) {
+            vertexPoints[i] = 0;
         }
     }
     else {
@@ -131,19 +128,15 @@ THREE.Terrain = function(options) {
 
     // Assign elevation data to the terrain plane from a heightmap or function.
     if (options.heightmap instanceof HTMLCanvasElement || options.heightmap instanceof Image) {
-        THREE.Terrain.fromHeightmap(mesh.geometry.vertices, options);
+        THREE.Terrain.fromHeightmap(mesh.geometry.attributes.position.array, options);
     }
     else if (typeof options.heightmap === 'function') {
-        options.heightmap(mesh.geometry.vertices, options);
+        options.heightmap(mesh.geometry.attributes.position.array, options);
     }
     else {
         console.warn('An invalid value was passed for `options.heightmap`: ' + options.heightmap);
     }
     THREE.Terrain.Normalize(mesh, options);
-
-    if (options.useBufferGeometry) {
-        mesh.geometry = (new THREE.BufferGeometry()).fromGeometry(mesh.geometry);
-    }
 
     // lod.addLevel(mesh, options.unit * 10 * Math.pow(2, lodLevel));
 
@@ -165,7 +158,7 @@ THREE.Terrain = function(options) {
  *   displayed. Valid options are the same as for {@link THREE.Terrain}().
  */
 THREE.Terrain.Normalize = function(mesh, options) {
-    var v = mesh.geometry.vertices;
+    var v = mesh.geometry.attributes.position.array;
     if (options.turbulent) {
         THREE.Terrain.Turbulence(v, options);
     }
@@ -180,8 +173,6 @@ THREE.Terrain.Normalize = function(mesh, options) {
         options.after(v, options);
     }
     // Mark the geometry as having changed and needing updates.
-    mesh.geometry.verticesNeedUpdate = true;
-    mesh.geometry.normalsNeedUpdate = true;
     mesh.geometry.computeBoundingSphere();
     mesh.geometry.computeFaceNormals();
     mesh.geometry.computeVertexNormals();
@@ -248,17 +239,16 @@ THREE.Terrain.POLYGONREDUCTION = 3;
 /**
  * Get a 2D array of heightmap values from a 1D array of plane vertices.
  *
- * @param {THREE.Vector3[]} vertices
- *   A 1D array containing the vertices of the plane geometry representing the
- *   terrain, where the z-value of the vertices represent the terrain's
- *   heightmap.
+ * @param {Float32Array} vertices
+ *   A 1D array containing the vertex positions of the geometry representing the
+ *   terrain.
  * @param {Object} options
  *   A map of settings defining properties of the terrain. The only properties
  *   that matter here are `xSegments` and `ySegments`, which represent how many
  *   vertices wide and deep the terrain plane is, respectively (and therefore
  *   also the dimensions of the returned array).
  *
- * @return {Number[][]}
+ * @return {Float32Array[]}
  *   A 2D array representing the terrain's heightmap.
  */
 THREE.Terrain.toArray2D = function(vertices, options) {
@@ -267,9 +257,9 @@ THREE.Terrain.toArray2D = function(vertices, options) {
         yl = options.ySegments + 1,
         i, j;
     for (i = 0; i < xl; i++) {
-        tgt[i] = new Float64Array(options.ySegments + 1);
+        tgt[i] = new Float32Array(options.ySegments + 1);
         for (j = 0; j < yl; j++) {
-            tgt[i][j] = vertices[j * xl + i].z;
+            tgt[i][j] = vertices[(j * xl + i) * 3 + 2];
         }
     }
     return tgt;
@@ -278,17 +268,16 @@ THREE.Terrain.toArray2D = function(vertices, options) {
 /**
  * Set the height of plane vertices from a 2D array of heightmap values.
  *
- * @param {THREE.Vector3[]} vertices
- *   A 1D array containing the vertices of the plane geometry representing the
- *   terrain, where the z-value of the vertices represent the terrain's
- *   heightmap.
+ * @param {Float32Array} vertices
+ *   A 1D array containing the vertex positions of the geometry representing the
+ *   terrain.
  * @param {Number[][]} src
  *   A 2D array representing a heightmap to apply to the terrain.
  */
 THREE.Terrain.fromArray2D = function(vertices, src) {
     for (var i = 0, xl = src.length; i < xl; i++) {
         for (var j = 0, yl = src[i].length; j < yl; j++) {
-            vertices[j * xl + i].z = src[i][j];
+            vertices[(j * xl + i) * 3 + 2] = src[i][j];
         }
     }
 };
@@ -296,23 +285,22 @@ THREE.Terrain.fromArray2D = function(vertices, src) {
 /**
  * Get a 1D array of heightmap values from a 1D array of plane vertices.
  *
- * @param {THREE.Vector3[]} vertices
- *   A 1D array containing the vertices of the plane geometry representing the
- *   terrain, where the z-value of the vertices represent the terrain's
- *   heightmap.
+ * @param {Float32Array} vertices
+ *   A 1D array containing the vertex positions of the geometry representing the
+ *   terrain.
  * @param {Object} options
  *   A map of settings defining properties of the terrain. The only properties
  *   that matter here are `xSegments` and `ySegments`, which represent how many
  *   vertices wide and deep the terrain plane is, respectively (and therefore
  *   also the dimensions of the returned array).
  *
- * @return {Number[]}
+ * @return {Float32Array}
  *   A 1D array representing the terrain's heightmap.
  */
 THREE.Terrain.toArray1D = function(vertices) {
-    var tgt = new Float64Array(vertices.length);
+    var tgt = new Float32Array(vertices.length / 3);
     for (var i = 0, l = tgt.length; i < l; i++) {
-        tgt[i] = vertices[i].z;
+        tgt[i] = vertices[i * 3 + 2];
     }
     return tgt;
 };
@@ -320,16 +308,15 @@ THREE.Terrain.toArray1D = function(vertices) {
 /**
  * Set the height of plane vertices from a 1D array of heightmap values.
  *
- * @param {THREE.Vector3[]} vertices
- *   A 1D array containing the vertices of the plane geometry representing the
- *   terrain, where the z-value of the vertices represent the terrain's
- *   heightmap.
+ * @param {Float32Array} vertices
+ *   A 1D array containing the vertex positions of the geometry representing the
+ *   terrain.
  * @param {Number[]} src
  *   A 1D array representing a heightmap to apply to the terrain.
  */
 THREE.Terrain.fromArray1D = function(vertices, src) {
-    for (var i = 0, l = Math.min(vertices.length, src.length); i < l; i++) {
-        vertices[i].z = src[i];
+    for (var i = 0, l = Math.min(vertices.length / 3, src.length); i < l; i++) {
+        vertices[i * 3 + 2] = src[i];
     }
 };
 
@@ -351,22 +338,12 @@ THREE.Terrain.heightmapArray = function(method, options) {
     var arr = new Array((options.xSegments+1) * (options.ySegments+1)),
         l = arr.length,
         i;
-    // The heightmap functions provided by this script operate on THREE.Vector3
-    // objects by changing the z field, so we need to make that available.
-    // Unfortunately that means creating a bunch of objects we're just going to
-    // throw away, but a conscious decision was made here to optimize for the
-    // vector case.
-    for (i = 0; i < l; i++) {
-        arr[i] = {z: 0};
-    }
+    arr.fill(0);
     options.minHeight = options.minHeight || 0;
     options.maxHeight = typeof options.maxHeight === 'undefined' ? 1 : options.maxHeight;
     options.stretch = options.stretch || false;
     method(arr, options);
     THREE.Terrain.Clamp(arr, options);
-    for (i = 0; i < l; i++) {
-        arr[i] = arr[i].z;
-    }
     return arr;
 };
 

@@ -1,23 +1,3 @@
-var webglExists = ( function () { try { var canvas = document.createElement( 'canvas' ); return !!window.WebGLRenderingContext && ( canvas.getContext( 'webgl' ) || canvas.getContext( 'experimental-webgl' ) ); } catch( e ) { return false; } } )(); // jscs:ignore
-
-if (!webglExists) {
-  alert('Your browser does not appear to support WebGL. You can try viewing this page anyway, but it may be slow and some things may not look as intended. Please try viewing on desktop Firefox or Chrome.');
-}
-
-if (/&?webgl=0\b/g.test(location.hash)) {
-  webglExists = !confirm('Are you sure you want to disable WebGL on this page?');
-  if (webglExists) {
-    location.hash = '#';
-  }
-}
-
-// Workaround: in Chrome, if a page is opened with window.open(),
-// window.innerWidth and window.innerHeight will be zero.
-if ( window.innerWidth === 0 ) {
-  window.innerWidth = parent.innerWidth;
-  window.innerHeight = parent.innerHeight;
-}
-
 var camera, scene, renderer, clock, player, terrainScene, decoScene, lastOptions, controls = {}, fpsCamera, skyDome, skyLight, sand, water; // jscs:ignore requireLineBreakAfterVariableAssignment
 var INV_MAX_FPS = 1 / 100,
     frameDelta = 0,
@@ -70,7 +50,7 @@ function setupThreeJS() {
   scene = new THREE.Scene();
   scene.fog = new THREE.FogExp2(0x868293, 0.0007);
 
-  renderer = webglExists ? new THREE.WebGLRenderer({ antialias: true }) : new THREE.CanvasRenderer();
+  renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setSize(window.innerWidth, window.innerHeight);
   document.body.appendChild(renderer.domElement);
   renderer.domElement.setAttribute('tabindex', -1);
@@ -164,12 +144,12 @@ function setupDatGui() {
     this.heightmap = 'PerlinDiamond';
     this.smoothing = 'None';
     this.maxHeight = 200;
-    this.segments = webglExists ? 63 : 31;
+    this.segments = 63;
     this.steps = 1;
     this.turbulent = false;
     this.size = 1024;
     this.sky = true;
-    this.texture = webglExists ? 'Blended' : 'Wireframe';
+    this.texture = 'Blended';
     this.edgeDirection = 'Normal';
     this.edgeType = 'Box';
     this.edgeDistance = 256;
@@ -203,7 +183,6 @@ function setupDatGui() {
         steps: that.steps,
         stretch: true,
         turbulent: that.turbulent,
-        useBufferGeometry: false,
         xSize: that.size,
         ySize: Math.round(that.size * that['width:length ratio']),
         xSegments: s,
@@ -488,7 +467,7 @@ function buildTree() {
   var c3 = new THREE.Mesh(new THREE.CylinderGeometry(0, 8, 12, 8));
   c3.position.y = 32;
 
-  var g = new THREE.Geometry();
+  var g = new THREE.BufferGeometry();
   c0.updateMatrix();
   c1.updateMatrix();
   c2.updateMatrix();
@@ -498,10 +477,11 @@ function buildTree() {
   g.merge(c2.geometry, c2.matrix);
   g.merge(c3.geometry, c3.matrix);
 
-  var b = c0.geometry.faces.length;
-  for (var i = 0, l = g.faces.length; i < l; i++) {
-    g.faces[i].materialIndex = i < b ? 0 : 1;
-  }
+  // TODO
+  // var b = c0.geometry.faces.length;
+  // for (var i = 0, l = g.faces.length; i < l; i++) {
+  //   g.faces[i].materialIndex = i < b ? 0 : 1;
+  // }
 
   var m = new THREE.Mesh(g, material);
 
