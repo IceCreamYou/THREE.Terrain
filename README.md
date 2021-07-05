@@ -24,7 +24,7 @@ You then have access to the `THREE.Terrain` object. (Make sure the `three.js`
 library is loaded first.)
 
 The latest releases of this project have been tested with three.js
-[r91](https://github.com/mrdoob/three.js/releases/tag/r91).
+[r130](https://github.com/mrdoob/three.js/releases/tag/r130).
 
 ### Procedurally Generate a Terrain
 
@@ -41,7 +41,6 @@ terrainScene = THREE.Terrain({
     maxHeight: 100,
     minHeight: -100,
     steps: 1,
-    useBufferGeometry: false,
     xSegments: xS,
     xSize: 1024,
     ySegments: yS,
@@ -82,10 +81,9 @@ Export a terrain to a heightmap image:
 ```javascript
 // Returns a canvas with the heightmap drawn on it.
 // Append to your document body to view; right click to save as a PNG image.
-// Note: doesn't work if you generated the terrain with `useBufferGeometry` set to `true`.
 var canvas = THREE.Terrain.toHeightmap(
     // terrainScene.children[0] is the most detailed version of the terrain mesh
-    terrainScene.children[0].geometry.vertices,
+    terrainScene.children[0].geometry.attributes.position.array,
     { xSegments: 63, ySegments: 63 }
 );
 ```
@@ -94,26 +92,16 @@ The result will look something like this:
 
 ![Heightmap](https://raw.githubusercontent.com/IceCreamYou/THREE.Terrain/gh-pages/demo/img/heightmap.png)
 
-Of course, the easy way to generate a heightmap (if all you need is a static
-terrain) is to use the [demo](https://icecreamyou.github.io/THREE.Terrain/) and
-save the generated heightmap that appears in the upper-left corner. However,
-if you want to perform custom manipulations on the terrain first you will need
-to export the heightmap yourself.
+If all you need is a static terrain, the easiest way to generate a heightmap is
+to use the [demo](https://icecreamyou.github.io/THREE.Terrain/) and save the
+generated heightmap that appears in the upper-left corner. However, if you want
+to perform custom manipulations on the terrain first, you will need to export
+the heightmap yourself.
 
 To import a heightmap, create a terrain as explained above, but pass the loaded
 heightmap image (or a canvas containing a heightmap) to the `heightmap` option
 for the `THREE.Terrain()` function (instead of passing a procedural generation
 function).
-
-If you want to export and import the scattered foliage with the terrain or if
-you want to export/import the whole scene, you can do this the usual Three.js
-way (currently using
-[SceneExporter](https://github.com/mrdoob/three.js/blob/master/examples/js/exporters/SceneExporter.js)
-and [JSONLoader](http://threejs.org/docs/#Reference/Loaders/JSONLoader)).
-This will work just fine in general with the caveat that the exported files
-will be much larger than a heightmap. Note that if you do it this way and
-you're using the dynamic texture generator, you'll need to re-generate the
-texture in code and apply it to the terrain.
 
 ### Dynamic Terrain Materials
 
@@ -123,20 +111,20 @@ provided that generates such a material (other than blending textures together,
 it is the same as a `MeshLambertMaterial`).
 
 ```javascript
-// t1, t2, t3, and t4 must be textures, e.g. loaded using `THREE.ImageUtils.loadTexture()`.
+// t1, t2, t3, and t4 must be textures, e.g. loaded using `THREE.TextureLoader.load()`.
 // The function takes an array specifying textures to blend together and how to do so.
 // The `levels` property indicates at what height to blend the texture in and out.
 // The `glsl` property allows specifying a GLSL expression for texture blending.
 var material = THREE.Terrain.generateBlendedMaterial([
     // The first texture is the base; other textures are blended in on top.
-    {texture: t1},
+    { texture: t1 },
     // Start blending in at height -80; opaque between -35 and 20; blend out by 50
-    {texture: t2, levels: [-80, -35, 20, 50]},
-    {texture: t3, levels: [20, 50, 60, 85]},
+    { texture: t2, levels: [-80, -35, 20, 50] },
+    { texture: t3, levels: [20, 50, 60, 85] },
     // How quickly this texture is blended in depends on its x-position.
-    {texture: t4, glsl: '1.0 - smoothstep(65.0 + smoothstep(-256.0, 256.0, vPosition.x) * 10.0, 80.0, vPosition.z)'},
+    { texture: t4, glsl: '1.0 - smoothstep(65.0 + smoothstep(-256.0, 256.0, vPosition.x) * 10.0, 80.0, vPosition.z)' },
     // Use this texture if the slope is between 27 and 45 degrees
-    {texture: t3, glsl: 'slope > 0.7853981633974483 ? 0.2 : 1.0 - smoothstep(0.47123889803846897, 0.7853981633974483, slope) + 0.2'},
+    { texture: t3, glsl: 'slope > 0.7853981633974483 ? 0.2 : 1.0 - smoothstep(0.47123889803846897, 0.7853981633974483, slope) + 0.2' },
 ]);
 ```
 
