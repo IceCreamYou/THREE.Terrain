@@ -1,5 +1,5 @@
 /**
- * THREE.Terrain.js 1.6.0-20210704
+ * THREE.Terrain.js 1.6.0-20210705
  *
  * @author Isaac Sukin (http://www.isaacsukin.com/)
  * @license MIT
@@ -1585,7 +1585,7 @@ THREE.Terrain.SimplexLayers = function(g, options) {
     THREE.Terrain.Value = function(g, options) {
         // Set the segment length to the smallest power of 2 that is greater
         // than the number of vertices in either dimension of the plane
-        var segments = THREE.Math.nextPowerOfTwo(Math.max(options.xSegments, options.ySegments) + 1);
+        var segments = THREE.Math.ceilPowerOfTwo(Math.max(options.xSegments, options.ySegments) + 1);
 
         // Store the array of white noise outside of the WhiteNoise function to
         // avoid allocating a bunch of unnecessary arrays; we can just
