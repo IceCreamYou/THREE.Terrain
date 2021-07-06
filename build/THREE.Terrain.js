@@ -1,5 +1,5 @@
 /**
- * THREE.Terrain.js 1.6.0-20210706
+ * THREE.Terrain.js 2.0.0-20210706
  *
  * @author Isaac Sukin (http://www.isaacsukin.com/)
  * @license MIT
@@ -1644,8 +1644,12 @@ THREE.Terrain.Weierstrass = function(g, options) {
  *   The `vec3 vPosition` variable is available to `glsl` expressions; it
  *   contains the coordinates in Three-space of the texel currently being
  *   rendered.
+ * @param {Three.Material} material
+ *   An optional base material. You can use this to pick a different base
+ *   material type such as `MeshStandardMaterial` instead of the default
+ *   `MeshLambertMaterial`.
  */
-THREE.Terrain.generateBlendedMaterial = function(textures) {
+THREE.Terrain.generateBlendedMaterial = function(textures, material) {
     // Convert numbers to strings of floats so GLSL doesn't barf on "1" instead of "1.0"
     function glslifyNumber(n) {
         return n === (n|0) ? n+'.0' : n+'';
@@ -1703,7 +1707,7 @@ THREE.Terrain.generateBlendedMaterial = function(textures) {
             'varying vec3 vPosition;\n' +
             'varying vec3 myNormal;\n';
 
-    var mat = new THREE.MeshLambertMaterial();
+    var mat = material || new THREE.MeshLambertMaterial();
     mat.onBeforeCompile = function(shader) {
         // Patch vertexShader to setup MyUv, vPosition, and myNormal
         shader.vertexShader = shader.vertexShader.replace('#include <common>',
