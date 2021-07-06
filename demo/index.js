@@ -230,12 +230,6 @@ function setupDatGui() {
       return k % 4 === 0 && Math.random() < altitudeProbability(v.z);
     };
     var mesh = buildTree();
-    var decoMat = mesh.material.map(
-      function(mat) {
-        return mat.clone();
-      }); // new THREE.MeshBasicMaterial({color: 0x229966, wireframe: true});
-    decoMat[0].wireframe = true;
-    decoMat[1].wireframe = true;
     this['Scatter meshes'] = function() {
       var s = parseInt(that.segments, 10),
           spread,
@@ -285,12 +279,12 @@ function setupDatGui() {
         maxTilt: 0.15707963267948966, //  9deg or  9 / 180 * Math.PI. Trees grow up regardless of slope but we can allow a small variation
       });
       if (decoScene) {
-        if (that.texture == 'Wireframe') {
-          decoScene.children[0].material = decoMat;
-        }
-        else if (that.texture == 'Grayscale') {
-          decoScene.children[0].material = gray;
-        }
+        // if (that.texture == 'Wireframe') {
+        //   decoScene.children[0].material = decoMat;
+        // }
+        // else if (that.texture == 'Grayscale') {
+        //   decoScene.children[0].material = gray;
+        // }
         terrainScene.add(decoScene);
       }
     };
@@ -399,12 +393,12 @@ function watchFocus() {
   window.addEventListener('focus', function() {
     if (_blurred) {
       _blurred = false;
-      // startAnimating();
-      // controls.enabled = true;
+      startAnimating();
+      controls.enabled = true;
     }
   });
   window.addEventListener('blur', function() {
-    // stopAnimating();
+    stopAnimating();
     _blurred = true;
     controls.enabled = false;
   });
@@ -456,38 +450,29 @@ function applySmoothing(smoothing, o) {
 }
 
 function buildTree() {
-  var material = [
-    new THREE.MeshLambertMaterial({ color: 0x3d2817 }), // brown
-    new THREE.MeshLambertMaterial({ color: 0x2d4c1e }), // green
-  ];
+  var green = new THREE.MeshLambertMaterial({ color: 0x2d4c1e });
 
-  var c0 = new THREE.Mesh(new THREE.CylinderGeometry(2, 2, 12, 6, 1, true));
-  c0.position.y = 6;
-  var c1 = new THREE.Mesh(new THREE.CylinderGeometry(0, 10, 14, 8));
-  c1.position.y = 18;
-  var c2 = new THREE.Mesh(new THREE.CylinderGeometry(0, 9, 13, 8));
-  c2.position.y = 25;
-  var c3 = new THREE.Mesh(new THREE.CylinderGeometry(0, 8, 12, 8));
-  c3.position.y = 32;
+  var c0 = new THREE.Mesh(
+    new THREE.CylinderGeometry(2, 2, 12, 6, 1, true),
+    new THREE.MeshLambertMaterial({ color: 0x3d2817 }) // brown
+  );
+  c0.position.setY(6);
 
-  var g = new THREE.BufferGeometry();
-  c0.updateMatrix();
-  c1.updateMatrix();
-  c2.updateMatrix();
-  c3.updateMatrix();
-  g.merge(c0.geometry, c0.matrix);
-  g.merge(c1.geometry, c1.matrix);
-  g.merge(c2.geometry, c2.matrix);
-  g.merge(c3.geometry, c3.matrix);
+  var c1 = new THREE.Mesh(new THREE.CylinderGeometry(0, 10, 14, 8), green);
+  c1.position.setY(18);
+  var c2 = new THREE.Mesh(new THREE.CylinderGeometry(0, 9, 13, 8), green);
+  c2.position.setY(25);
+  var c3 = new THREE.Mesh(new THREE.CylinderGeometry(0, 8, 12, 8), green);
+  c3.position.setY(32);
 
-  g.addGroup(0, 12, 0);
-  g.addGroup(12, 96, 1);
+  var s = new THREE.Object3D();
+  s.add(c0);
+  s.add(c1);
+  s.add(c2);
+  s.add(c3);
+  s.scale.set(5, 1.25, 5);
 
-  var m = new THREE.Mesh(g, material);
-
-  m.scale.x = m.scale.z = 5;
-  m.scale.y = 1.25;
-  return m;
+  return s;
 }
 
 function customInfluences(g, options) {

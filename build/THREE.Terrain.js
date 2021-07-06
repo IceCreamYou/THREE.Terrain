@@ -1811,8 +1811,6 @@ THREE.Terrain.ScatterMeshes = function(geometry, options) {
         vertextNormal2 = new THREE.Vector3(),
         vertextNormal3 = new THREE.Vector3(),
         faceNormal = new THREE.Vector3(),
-        v = geometry.vertices,
-        meshes = [],
         up = options.mesh.up.clone().applyAxisAngle(new THREE.Vector3(1, 0, 0), 0.5*Math.PI);
     if (spreadIsNumber) {
         randomHeightmap = options.randomness();
@@ -1876,19 +1874,12 @@ THREE.Terrain.ScatterMeshes = function(geometry, options) {
                     mesh.scale.x = mesh.scale.z = 1 + variance;
                     mesh.scale.y += variance;
                 }
-                meshes.push(mesh);
+
+                mesh.updateMatrix();
+                options.scene.add(mesh);
             }
         }
     }
-
-    // Merge geometries.
-    var g = new THREE.BufferGeometry();
-    for (var k = 0, l = meshes.length; k < l; k++) {
-        var m = meshes[k];
-        m.updateMatrix();
-        g.merge(m.geometry, m.matrix);
-    }
-    options.scene.add(new THREE.Mesh(g, options.mesh.material));
 
     return options.scene;
 };
