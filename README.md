@@ -1,3 +1,5 @@
+[![npm version](https://badge.fury.io/js/three.terrain.js.svg)](https://www.npmjs.com/package/three.terrain.js)
+
 `THREE.Terrain` is a **procedural terrain generation engine** for use with the
 [Three.js](https://github.com/mrdoob/three.js) 3D graphics library for the web.
 
