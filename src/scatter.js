@@ -1,7 +1,7 @@
 /**
  * Scatter a mesh across the terrain.
  *
- * @param {THREE.Geometry} geometry
+ * @param {THREE.BufferGeometry} geometry
  *   The terrain's geometry (or the highest-resolution version of it). Must be
  *   indexed. If you have an unindexed geometry, you can use
  *   `BufferGeometryUtils.mergeVertices` from the Three.js examples to set the

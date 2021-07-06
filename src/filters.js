@@ -174,7 +174,7 @@ THREE.Terrain.RadialEdges = function(g, options, direction, distance, easing) {
  *   neighbors.
  */
 THREE.Terrain.Smooth = function(g, options, weight) {
-    var heightmap = new Float64Array(g.length);
+    var heightmap = new Float32Array(g.length);
     for (var i = 0, xl = options.xSegments + 1, yl = options.ySegments + 1; i < xl; i++) {
         for (var j = 0; j < yl; j++) {
             var sum = 0,
@@ -201,10 +201,15 @@ THREE.Terrain.Smooth = function(g, options, weight) {
 /**
  * Smooth the terrain by setting each point to the median of its neighborhood.
  *
- * Parameters are the same as those for {@link THREE.Terrain.DiamondSquare}.
+ * @param {Float32Array} g
+ *   The geometry's z-positions to modify with heightmap data.
+ * @param {Object} options
+ *   A map of settings that control how the terrain is constructed and
+ *   displayed. Valid values are the same as those for the `options` parameter
+ *   of {@link THREE.Terrain}().
  */
 THREE.Terrain.SmoothMedian = function(g, options) {
-    var heightmap = new Float64Array(g.length),
+    var heightmap = new Float32Array(g.length),
         neighborValues = [],
         neighborKeys = [],
         sortByValue = function(a, b) {
@@ -256,7 +261,7 @@ THREE.Terrain.SmoothMedian = function(g, options) {
  *   point can be farther outside the range of its neighbors.
  */
 THREE.Terrain.SmoothConservative = function(g, options, multiplier) {
-    var heightmap = new Float64Array(g.length);
+    var heightmap = new Float32Array(g.length);
     for (var i = 0, xl = options.xSegments + 1, yl = options.ySegments + 1; i < xl; i++) {
         for (var j = 0; j < yl; j++) {
             var max = -Infinity,

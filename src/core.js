@@ -143,20 +143,24 @@ THREE.Terrain = function(options) {
  *   displayed. Valid options are the same as for {@link THREE.Terrain}().
  */
 THREE.Terrain.Normalize = function(mesh, options) {
-    var v = mesh.geometry.attributes.position.array;
+    var zs = THREE.Terrain.toArray1D(mesh.geometry.attributes.position.array);
     if (options.turbulent) {
-        THREE.Terrain.Turbulence(v, options);
+        THREE.Terrain.Turbulence(zs, options);
     }
     if (options.steps > 1) {
-        THREE.Terrain.Step(v, options.steps);
-        THREE.Terrain.Smooth(v, options);
+        THREE.Terrain.Step(zs, options.steps);
+        THREE.Terrain.Smooth(zs, options);
     }
+
     // Keep the terrain within the allotted height range if necessary, and do easing.
-    THREE.Terrain.Clamp(v, options);
+    THREE.Terrain.Clamp(zs, options);
+
     // Call the "after" callback
     if (typeof options.after === 'function') {
-        options.after(v, options);
+        options.after(zs, options);
     }
+    THREE.Terrain.fromArray1D(mesh.geometry.attributes.position.array, zs);
+
     // Mark the geometry as having changed and needing updates.
     mesh.geometry.computeBoundingSphere();
     mesh.geometry.computeFaceNormals();

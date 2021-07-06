@@ -337,20 +337,24 @@ THREE.Terrain = function(options) {
  *   displayed. Valid options are the same as for {@link THREE.Terrain}().
  */
 THREE.Terrain.Normalize = function(mesh, options) {
-    var v = mesh.geometry.attributes.position.array;
+    var zs = THREE.Terrain.toArray1D(mesh.geometry.attributes.position.array);
     if (options.turbulent) {
-        THREE.Terrain.Turbulence(v, options);
+        THREE.Terrain.Turbulence(zs, options);
     }
     if (options.steps > 1) {
-        THREE.Terrain.Step(v, options.steps);
-        THREE.Terrain.Smooth(v, options);
+        THREE.Terrain.Step(zs, options.steps);
+        THREE.Terrain.Smooth(zs, options);
     }
+
     // Keep the terrain within the allotted height range if necessary, and do easing.
-    THREE.Terrain.Clamp(v, options);
+    THREE.Terrain.Clamp(zs, options);
+
     // Call the "after" callback
     if (typeof options.after === 'function') {
-        options.after(v, options);
+        options.after(zs, options);
     }
+    THREE.Terrain.fromArray1D(mesh.geometry.attributes.position.array, zs);
+
     // Mark the geometry as having changed and needing updates.
     mesh.geometry.computeBoundingSphere();
     mesh.geometry.computeFaceNormals();
@@ -824,7 +828,7 @@ THREE.Terrain.RadialEdges = function(g, options, direction, distance, easing) {
  *   neighbors.
  */
 THREE.Terrain.Smooth = function(g, options, weight) {
-    var heightmap = new Float64Array(g.length);
+    var heightmap = new Float32Array(g.length);
     for (var i = 0, xl = options.xSegments + 1, yl = options.ySegments + 1; i < xl; i++) {
         for (var j = 0; j < yl; j++) {
             var sum = 0,
@@ -851,10 +855,15 @@ THREE.Terrain.Smooth = function(g, options, weight) {
 /**
  * Smooth the terrain by setting each point to the median of its neighborhood.
  *
- * Parameters are the same as those for {@link THREE.Terrain.DiamondSquare}.
+ * @param {Float32Array} g
+ *   The geometry's z-positions to modify with heightmap data.
+ * @param {Object} options
+ *   A map of settings that control how the terrain is constructed and
+ *   displayed. Valid values are the same as those for the `options` parameter
+ *   of {@link THREE.Terrain}().
  */
 THREE.Terrain.SmoothMedian = function(g, options) {
-    var heightmap = new Float64Array(g.length),
+    var heightmap = new Float32Array(g.length),
         neighborValues = [],
         neighborKeys = [],
         sortByValue = function(a, b) {
@@ -906,7 +915,7 @@ THREE.Terrain.SmoothMedian = function(g, options) {
  *   point can be farther outside the range of its neighbors.
  */
 THREE.Terrain.SmoothConservative = function(g, options, multiplier) {
-    var heightmap = new Float64Array(g.length);
+    var heightmap = new Float32Array(g.length);
     for (var i = 0, xl = options.xSegments + 1, yl = options.ySegments + 1; i < xl; i++) {
         for (var j = 0; j < yl; j++) {
             var max = -Infinity,
@@ -1720,7 +1729,7 @@ THREE.Terrain.generateBlendedMaterial = function(textures) {
 /**
  * Scatter a mesh across the terrain.
  *
- * @param {THREE.Geometry} geometry
+ * @param {THREE.BufferGeometry} geometry
  *   The terrain's geometry (or the highest-resolution version of it). Must be
  *   indexed. If you have an unindexed geometry, you can use
  *   `BufferGeometryUtils.mergeVertices` from the Three.js examples to set the
