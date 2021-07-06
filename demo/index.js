@@ -1,23 +1,3 @@
-var webglExists = ( function () { try { var canvas = document.createElement( 'canvas' ); return !!window.WebGLRenderingContext && ( canvas.getContext( 'webgl' ) || canvas.getContext( 'experimental-webgl' ) ); } catch( e ) { return false; } } )(); // jscs:ignore
-
-if (!webglExists) {
-  alert('Your browser does not appear to support WebGL. You can try viewing this page anyway, but it may be slow and some things may not look as intended. Please try viewing on desktop Firefox or Chrome.');
-}
-
-if (/&?webgl=0\b/g.test(location.hash)) {
-  webglExists = !confirm('Are you sure you want to disable WebGL on this page?');
-  if (webglExists) {
-    location.hash = '#';
-  }
-}
-
-// Workaround: in Chrome, if a page is opened with window.open(),
-// window.innerWidth and window.innerHeight will be zero.
-if ( window.innerWidth === 0 ) {
-  window.innerWidth = parent.innerWidth;
-  window.innerHeight = parent.innerHeight;
-}
-
 var camera, scene, renderer, clock, player, terrainScene, decoScene, lastOptions, controls = {}, fpsCamera, skyDome, skyLight, sand, water; // jscs:ignore requireLineBreakAfterVariableAssignment
 var INV_MAX_FPS = 1 / 100,
     frameDelta = 0,
@@ -45,7 +25,7 @@ function animate() {
 function startAnimating() {
   if (paused) {
     paused = false;
-    controls.freeze = false;
+    controls.enabled = true;
     clock.start();
     requestAnimationFrame(animate);
   }
@@ -53,7 +33,7 @@ function startAnimating() {
 
 function stopAnimating() {
   paused = true;
-  controls.freeze = true;
+  controls.enabled = false;
   clock.stop();
 }
 
@@ -70,7 +50,7 @@ function setupThreeJS() {
   scene = new THREE.Scene();
   scene.fog = new THREE.FogExp2(0x868293, 0.0007);
 
-  renderer = webglExists ? new THREE.WebGLRenderer({ antialias: true }) : new THREE.CanvasRenderer();
+  renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setSize(window.innerWidth, window.innerHeight);
   document.body.appendChild(renderer.domElement);
   renderer.domElement.setAttribute('tabindex', -1);
@@ -91,7 +71,7 @@ function setupControls() {
   fpsCamera = new THREE.PerspectiveCamera(60, renderer.domElement.width / renderer.domElement.height, 1, 10000);
   scene.add(fpsCamera);
   controls = new THREE.FirstPersonControls(fpsCamera, renderer.domElement);
-  controls.freeze = true;
+  controls.enabled = false;
   controls.movementSpeed = 100;
   controls.lookSpeed = 0.075;
 }
@@ -164,12 +144,12 @@ function setupDatGui() {
     this.heightmap = 'PerlinDiamond';
     this.smoothing = 'None';
     this.maxHeight = 200;
-    this.segments = webglExists ? 63 : 31;
+    this.segments = 63;
     this.steps = 1;
     this.turbulent = false;
     this.size = 1024;
     this.sky = true;
-    this.texture = webglExists ? 'Blended' : 'Wireframe';
+    this.texture = 'Blended';
     this.edgeDirection = 'Normal';
     this.edgeType = 'Box';
     this.edgeDistance = 256;
@@ -203,12 +183,10 @@ function setupDatGui() {
         steps: that.steps,
         stretch: true,
         turbulent: that.turbulent,
-        useBufferGeometry: false,
         xSize: that.size,
         ySize: Math.round(that.size * that['width:length ratio']),
         xSegments: s,
         ySegments: Math.round(s * that['width:length ratio']),
-        _mesh: typeof terrainScene === 'undefined' ? null : terrainScene.children[0], // internal only
       };
       scene.remove(terrainScene);
       terrainScene = THREE.Terrain(o);
@@ -218,7 +196,7 @@ function setupDatGui() {
       var he = document.getElementById('heightmap');
       if (he) {
         o.heightmap = he;
-        THREE.Terrain.toHeightmap(terrainScene.children[0].geometry.vertices, o);
+        THREE.Terrain.toHeightmap(terrainScene.children[0].geometry.attributes.position.array, o);
       }
       that['Scatter meshes']();
       lastOptions = o;
@@ -252,12 +230,6 @@ function setupDatGui() {
       return k % 4 === 0 && Math.random() < altitudeProbability(v.z);
     };
     var mesh = buildTree();
-    var decoMat = mesh.material.map(
-      function(mat) {
-        return mat.clone();
-      }); // new THREE.MeshBasicMaterial({color: 0x229966, wireframe: true});
-    decoMat[0].wireframe = true;
-    decoMat[1].wireframe = true;
     this['Scatter meshes'] = function() {
       var s = parseInt(that.segments, 10),
           spread,
@@ -307,12 +279,12 @@ function setupDatGui() {
         maxTilt: 0.15707963267948966, //  9deg or  9 / 180 * Math.PI. Trees grow up regardless of slope but we can allow a small variation
       });
       if (decoScene) {
-        if (that.texture == 'Wireframe') {
-          decoScene.children[0].material = decoMat;
-        }
-        else if (that.texture == 'Grayscale') {
-          decoScene.children[0].material = gray;
-        }
+        // if (that.texture == 'Wireframe') {
+        //   decoScene.children[0].material = decoMat;
+        // }
+        // else if (that.texture == 'Grayscale') {
+        //   decoScene.children[0].material = gray;
+        // }
         terrainScene.add(decoScene);
       }
     };
@@ -326,7 +298,7 @@ function setupDatGui() {
     applySmoothing(val, lastOptions);
     settings['Scatter meshes']();
     if (lastOptions.heightmap) {
-      THREE.Terrain.toHeightmap(terrainScene.children[0].geometry.vertices, lastOptions);
+      THREE.Terrain.toHeightmap(terrainScene.children[0].geometry.attributes.position.array, lastOptions);
     }
   });
   heightmapFolder.add(settings, 'segments', 7, 127).step(1).onFinishChange(settings.Regenerate);
@@ -354,14 +326,13 @@ function setupDatGui() {
     fpsCamera.position.x = 449;
     fpsCamera.position.y = 311;
     fpsCamera.position.z = 376;
-    controls.lat = -41;
-    controls.lon = -139;
+    controls.lookAt(terrainScene.children[0].position);
     controls.update(0);
-    controls.freeze = true;
+    controls.enabled = false;
     if (useFPS) {
       document.getElementById('fpscontrols').className = 'visible';
       setTimeout(function() {
-        controls.freeze = false;
+        controls.enabled = true;
       }, 1000);
     }
     else {
@@ -403,6 +374,12 @@ function update(delta) {
   if (controls.update) controls.update(delta);
 }
 
+document.addEventListener('keyup', function(event) {
+  if (event.key === 'q' && useFPS) {
+    controls.enabled = !controls.enabled;
+  }
+});
+
 document.addEventListener('mousemove', function(event) {
   if (!paused) {
     mouseX = event.pageX;
@@ -416,14 +393,14 @@ function watchFocus() {
   window.addEventListener('focus', function() {
     if (_blurred) {
       _blurred = false;
-      // startAnimating();
-      // controls.freeze = false;
+      startAnimating();
+      controls.enabled = true;
     }
   });
   window.addEventListener('blur', function() {
-    // stopAnimating();
+    stopAnimating();
     _blurred = true;
-    controls.freeze = true;
+    controls.enabled = false;
   });
 }
 
@@ -449,14 +426,12 @@ function __printCameraData() {
   s += 'camera.rotation.x = ' + Math.round(fpsCamera.rotation.x * 180 / Math.PI) + ' * Math.PI / 180;\n';
   s += 'camera.rotation.y = ' + Math.round(fpsCamera.rotation.y * 180 / Math.PI) + ' * Math.PI / 180;\n';
   s += 'camera.rotation.z = ' + Math.round(fpsCamera.rotation.z * 180 / Math.PI) + ' * Math.PI / 180;\n';
-  s += 'controls.lat = ' + Math.round(controls.lat) + ';\n';
-  s += 'controls.lon = ' + Math.round(controls.lon) + ';\n';
   console.log(s);
 }
 
 function applySmoothing(smoothing, o) {
   var m = terrainScene.children[0];
-  var g = m.geometry.vertices;
+  var g = THREE.Terrain.toArray1D(m.geometry.attributes.position.array);
   if (smoothing === 'Conservative (0.5)') THREE.Terrain.SmoothConservative(g, o, 0.5);
   if (smoothing === 'Conservative (1)') THREE.Terrain.SmoothConservative(g, o, 1);
   if (smoothing === 'Conservative (10)') THREE.Terrain.SmoothConservative(g, o, 10);
@@ -470,44 +445,34 @@ function applySmoothing(smoothing, o) {
   else if (smoothing === 'Mean (1)') THREE.Terrain.Smooth(g, o, 1);
   else if (smoothing === 'Mean (8)') THREE.Terrain.Smooth(g, o, 8);
   else if (smoothing === 'Median') THREE.Terrain.SmoothMedian(g, o);
+  THREE.Terrain.fromArray1D(m.geometry.attributes.position.array, g);
   THREE.Terrain.Normalize(m, o);
 }
 
 function buildTree() {
-  var material = [
-    new THREE.MeshLambertMaterial({ color: 0x3d2817 }), // brown
-    new THREE.MeshLambertMaterial({ color: 0x2d4c1e }), // green
-  ];
+  var green = new THREE.MeshLambertMaterial({ color: 0x2d4c1e });
 
-  var c0 = new THREE.Mesh(new THREE.CylinderGeometry(2, 2, 12, 6, 1, true));
-  c0.position.y = 6;
-  var c1 = new THREE.Mesh(new THREE.CylinderGeometry(0, 10, 14, 8));
-  c1.position.y = 18;
-  var c2 = new THREE.Mesh(new THREE.CylinderGeometry(0, 9, 13, 8));
-  c2.position.y = 25;
-  var c3 = new THREE.Mesh(new THREE.CylinderGeometry(0, 8, 12, 8));
-  c3.position.y = 32;
+  var c0 = new THREE.Mesh(
+    new THREE.CylinderGeometry(2, 2, 12, 6, 1, true),
+    new THREE.MeshLambertMaterial({ color: 0x3d2817 }) // brown
+  );
+  c0.position.setY(6);
 
-  var g = new THREE.Geometry();
-  c0.updateMatrix();
-  c1.updateMatrix();
-  c2.updateMatrix();
-  c3.updateMatrix();
-  g.merge(c0.geometry, c0.matrix);
-  g.merge(c1.geometry, c1.matrix);
-  g.merge(c2.geometry, c2.matrix);
-  g.merge(c3.geometry, c3.matrix);
+  var c1 = new THREE.Mesh(new THREE.CylinderGeometry(0, 10, 14, 8), green);
+  c1.position.setY(18);
+  var c2 = new THREE.Mesh(new THREE.CylinderGeometry(0, 9, 13, 8), green);
+  c2.position.setY(25);
+  var c3 = new THREE.Mesh(new THREE.CylinderGeometry(0, 8, 12, 8), green);
+  c3.position.setY(32);
 
-  var b = c0.geometry.faces.length;
-  for (var i = 0, l = g.faces.length; i < l; i++) {
-    g.faces[i].materialIndex = i < b ? 0 : 1;
-  }
+  var s = new THREE.Object3D();
+  s.add(c0);
+  s.add(c1);
+  s.add(c2);
+  s.add(c3);
+  s.scale.set(5, 1.25, 5);
 
-  var m = new THREE.Mesh(g, material);
-
-  m.scale.x = m.scale.z = 5;
-  m.scale.y = 1.25;
-  return m;
+  return s;
 }
 
 function customInfluences(g, options) {
@@ -577,7 +542,7 @@ function cleanAnalytic(val) {
   while (valIntStr.length + c.length < 5) {
     c += ' ';
   }
-  return c + val.round(3);
+  return c + (typeof val === 'undefined' || val === null ? NaN : val).round(3);
 }
 
 var moments = {

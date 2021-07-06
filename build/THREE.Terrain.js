@@ -1,5 +1,5 @@
 /**
- * THREE.Terrain.js 1.6.0-20210705
+ * THREE.Terrain.js 1.6.0-20210706
  *
  * @author Isaac Sukin (http://www.isaacsukin.com/)
  * @license MIT
@@ -252,9 +252,6 @@
  *     `heightmap` property is smaller. Defaults to true.
  *   - `turbulent`: Whether to perform a turbulence transformation. Defaults to
  *     false.
- *   - `useBufferGeometry`: a Boolean indicating whether to use
- *     THREE.BufferGeometry instead of THREE.Geometry for the Terrain plane.
- *     Defaults to `false`.
  *   - `xSegments`: The number of segments (rows) to divide the terrain plane
  *     into. (This basically determines how detailed the terrain is.) Defaults
  *     to 63.
@@ -281,12 +278,10 @@ THREE.Terrain = function(options) {
         steps: 1,
         stretch: true,
         turbulent: false,
-        useBufferGeometry: false,
         xSegments: 63,
         xSize: 1024,
         ySegments: 63,
         ySize: 1024,
-        _mesh: null, // internal only
     };
     options = options || {};
     for (var opt in defaultOptions) {
@@ -303,41 +298,24 @@ THREE.Terrain = function(options) {
     scene.rotation.x = -0.5 * Math.PI;
 
     // Create the terrain mesh.
-    // To save memory, it is possible to re-use a pre-existing mesh.
-    var mesh = options._mesh;
-    if (mesh && mesh.geometry.type === 'PlaneGeometry' &&
-                mesh.geometry.parameters.widthSegments === options.xSegments &&
-                mesh.geometry.parameters.heightSegments === options.ySegments) {
-        mesh.material = options.material;
-        mesh.scale.x = options.xSize / mesh.geometry.parameters.width;
-        mesh.scale.y = options.ySize / mesh.geometry.parameters.height;
-        for (var i = 0, l = mesh.geometry.vertices.length; i < l; i++) {
-            mesh.geometry.vertices[i].z = 0;
-        }
-    }
-    else {
-        mesh = new THREE.Mesh(
-            new THREE.PlaneGeometry(options.xSize, options.ySize, options.xSegments, options.ySegments),
-            options.material
-        );
-    }
-    delete options._mesh; // Remove the reference for GC
+    var mesh = new THREE.Mesh(
+        new THREE.PlaneGeometry(options.xSize, options.ySize, options.xSegments, options.ySegments),
+        options.material
+    );
 
     // Assign elevation data to the terrain plane from a heightmap or function.
+    var zs = THREE.Terrain.toArray1D(mesh.geometry.attributes.position.array);
     if (options.heightmap instanceof HTMLCanvasElement || options.heightmap instanceof Image) {
-        THREE.Terrain.fromHeightmap(mesh.geometry.vertices, options);
+        THREE.Terrain.fromHeightmap(zs, options);
     }
     else if (typeof options.heightmap === 'function') {
-        options.heightmap(mesh.geometry.vertices, options);
+        options.heightmap(zs, options);
     }
     else {
         console.warn('An invalid value was passed for `options.heightmap`: ' + options.heightmap);
     }
+    THREE.Terrain.fromArray1D(mesh.geometry.attributes.position.array, zs);
     THREE.Terrain.Normalize(mesh, options);
-
-    if (options.useBufferGeometry) {
-        mesh.geometry = (new THREE.BufferGeometry()).fromGeometry(mesh.geometry);
-    }
 
     // lod.addLevel(mesh, options.unit * 10 * Math.pow(2, lodLevel));
 
@@ -359,23 +337,25 @@ THREE.Terrain = function(options) {
  *   displayed. Valid options are the same as for {@link THREE.Terrain}().
  */
 THREE.Terrain.Normalize = function(mesh, options) {
-    var v = mesh.geometry.vertices;
+    var zs = THREE.Terrain.toArray1D(mesh.geometry.attributes.position.array);
     if (options.turbulent) {
-        THREE.Terrain.Turbulence(v, options);
+        THREE.Terrain.Turbulence(zs, options);
     }
     if (options.steps > 1) {
-        THREE.Terrain.Step(v, options.steps);
-        THREE.Terrain.Smooth(v, options);
+        THREE.Terrain.Step(zs, options.steps);
+        THREE.Terrain.Smooth(zs, options);
     }
+
     // Keep the terrain within the allotted height range if necessary, and do easing.
-    THREE.Terrain.Clamp(v, options);
+    THREE.Terrain.Clamp(zs, options);
+
     // Call the "after" callback
     if (typeof options.after === 'function') {
-        options.after(v, options);
+        options.after(zs, options);
     }
+    THREE.Terrain.fromArray1D(mesh.geometry.attributes.position.array, zs);
+
     // Mark the geometry as having changed and needing updates.
-    mesh.geometry.verticesNeedUpdate = true;
-    mesh.geometry.normalsNeedUpdate = true;
     mesh.geometry.computeBoundingSphere();
     mesh.geometry.computeFaceNormals();
     mesh.geometry.computeVertexNormals();
@@ -440,19 +420,18 @@ THREE.Terrain.GEOCLIPMAP = 2;
 THREE.Terrain.POLYGONREDUCTION = 3;
 
 /**
- * Get a 2D array of heightmap values from a 1D array of plane vertices.
+ * Get a 2D array of heightmap values from a 1D array of Z-positions.
  *
- * @param {THREE.Vector3[]} vertices
- *   A 1D array containing the vertices of the plane geometry representing the
- *   terrain, where the z-value of the vertices represent the terrain's
- *   heightmap.
+ * @param {Float32Array} vertices
+ *   A 1D array containing the vertex Z-positions of the geometry representing
+ *   the terrain.
  * @param {Object} options
  *   A map of settings defining properties of the terrain. The only properties
  *   that matter here are `xSegments` and `ySegments`, which represent how many
  *   vertices wide and deep the terrain plane is, respectively (and therefore
  *   also the dimensions of the returned array).
  *
- * @return {Number[][]}
+ * @return {Float32Array[]}
  *   A 2D array representing the terrain's heightmap.
  */
 THREE.Terrain.toArray2D = function(vertices, options) {
@@ -461,9 +440,9 @@ THREE.Terrain.toArray2D = function(vertices, options) {
         yl = options.ySegments + 1,
         i, j;
     for (i = 0; i < xl; i++) {
-        tgt[i] = new Float64Array(options.ySegments + 1);
+        tgt[i] = new Float32Array(options.ySegments + 1);
         for (j = 0; j < yl; j++) {
-            tgt[i][j] = vertices[j * xl + i].z;
+            tgt[i][j] = vertices[j * xl + i];
         }
     }
     return tgt;
@@ -472,17 +451,16 @@ THREE.Terrain.toArray2D = function(vertices, options) {
 /**
  * Set the height of plane vertices from a 2D array of heightmap values.
  *
- * @param {THREE.Vector3[]} vertices
- *   A 1D array containing the vertices of the plane geometry representing the
- *   terrain, where the z-value of the vertices represent the terrain's
- *   heightmap.
+ * @param {Float32Array} vertices
+ *   A 1D array containing the vertex Z-positions of the geometry representing
+ *   the terrain.
  * @param {Number[][]} src
  *   A 2D array representing a heightmap to apply to the terrain.
  */
 THREE.Terrain.fromArray2D = function(vertices, src) {
     for (var i = 0, xl = src.length; i < xl; i++) {
         for (var j = 0, yl = src[i].length; j < yl; j++) {
-            vertices[j * xl + i].z = src[i][j];
+            vertices[j * xl + i] = src[i][j];
         }
     }
 };
@@ -490,23 +468,22 @@ THREE.Terrain.fromArray2D = function(vertices, src) {
 /**
  * Get a 1D array of heightmap values from a 1D array of plane vertices.
  *
- * @param {THREE.Vector3[]} vertices
- *   A 1D array containing the vertices of the plane geometry representing the
- *   terrain, where the z-value of the vertices represent the terrain's
- *   heightmap.
+ * @param {Float32Array} vertices
+ *   A 1D array containing the vertex positions of the geometry representing the
+ *   terrain.
  * @param {Object} options
  *   A map of settings defining properties of the terrain. The only properties
  *   that matter here are `xSegments` and `ySegments`, which represent how many
  *   vertices wide and deep the terrain plane is, respectively (and therefore
  *   also the dimensions of the returned array).
  *
- * @return {Number[]}
+ * @return {Float32Array}
  *   A 1D array representing the terrain's heightmap.
  */
 THREE.Terrain.toArray1D = function(vertices) {
-    var tgt = new Float64Array(vertices.length);
+    var tgt = new Float32Array(vertices.length / 3);
     for (var i = 0, l = tgt.length; i < l; i++) {
-        tgt[i] = vertices[i].z;
+        tgt[i] = vertices[i * 3 + 2];
     }
     return tgt;
 };
@@ -514,16 +491,15 @@ THREE.Terrain.toArray1D = function(vertices) {
 /**
  * Set the height of plane vertices from a 1D array of heightmap values.
  *
- * @param {THREE.Vector3[]} vertices
- *   A 1D array containing the vertices of the plane geometry representing the
- *   terrain, where the z-value of the vertices represent the terrain's
- *   heightmap.
+ * @param {Float32Array} vertices
+ *   A 1D array containing the vertex positions of the geometry representing the
+ *   terrain.
  * @param {Number[]} src
  *   A 1D array representing a heightmap to apply to the terrain.
  */
 THREE.Terrain.fromArray1D = function(vertices, src) {
-    for (var i = 0, l = Math.min(vertices.length, src.length); i < l; i++) {
-        vertices[i].z = src[i];
+    for (var i = 0, l = Math.min(vertices.length / 3, src.length); i < l; i++) {
+        vertices[i * 3 + 2] = src[i];
     }
 };
 
@@ -545,22 +521,12 @@ THREE.Terrain.heightmapArray = function(method, options) {
     var arr = new Array((options.xSegments+1) * (options.ySegments+1)),
         l = arr.length,
         i;
-    // The heightmap functions provided by this script operate on THREE.Vector3
-    // objects by changing the z field, so we need to make that available.
-    // Unfortunately that means creating a bunch of objects we're just going to
-    // throw away, but a conscious decision was made here to optimize for the
-    // vector case.
-    for (i = 0; i < l; i++) {
-        arr[i] = {z: 0};
-    }
+    arr.fill(0);
     options.minHeight = options.minHeight || 0;
     options.maxHeight = typeof options.maxHeight === 'undefined' ? 1 : options.maxHeight;
     options.stretch = options.stretch || false;
     method(arr, options);
     THREE.Terrain.Clamp(arr, options);
-    for (i = 0; i < l; i++) {
-        arr[i] = arr[i].z;
-    }
     return arr;
 };
 
@@ -607,9 +573,8 @@ THREE.Terrain.EaseInStrong = function(x) {
 /**
  * Convert an image-based heightmap into vertex-based height data.
  *
- * @param {THREE.Vector3[]} g
- *   The vertex array for plane geometry to modify with heightmap data. This
- *   method sets the `z` property of each vertex.
+ * @param {Float32Array} g
+ *   The geometry's z-positions to modify with heightmap data.
  * @param {Object} options
  *   A map of settings that control how the terrain is constructed and
  *   displayed. Valid values are the same as those for the `options` parameter
@@ -629,7 +594,7 @@ THREE.Terrain.fromHeightmap = function(g, options) {
         for (var col = 0; col < cols; col++) {
             var i = row * cols + col,
                 idx = i * 4;
-            g[i].z = (data[idx] + data[idx+1] + data[idx+2]) / 765 * spread + options.minHeight;
+            g[i] = (data[idx] + data[idx+1] + data[idx+2]) / 765 * spread + options.minHeight;
         }
     }
 };
@@ -641,10 +606,12 @@ THREE.Terrain.fromHeightmap = function(g, options) {
  * that if `options.heightmap` is a canvas element then the image will be
  * painted onto that canvas; otherwise a new canvas will be created.
  *
- * NOTE: this method performs an operation on an array of vertices, which
- * aren't available when using `BufferGeometry`. So, if you want to use this
- * method, make sure to set the `useBufferGeometry` option to `false` when
- * generating your terrain.
+ * @param {Float32Array} g
+ *   The vertex position array for the geometry to paint to a heightmap.
+ * @param {Object} options
+ *   A map of settings that control how the terrain is constructed and
+ *   displayed. Valid values are the same as those for the `options` parameter
+ *   of {@link THREE.Terrain}().
  *
  * @return {HTMLCanvasElement}
  *   A canvas with the relevant heightmap painted on it.
@@ -657,9 +624,9 @@ THREE.Terrain.toHeightmap = function(g, options) {
     if (!hasMax || !hasMin) {
         var max2 = max,
             min2 = min;
-        for (var k = 0, l = g.length; k < l; k++) {
-            if (g[k].z > max2) max2 = g[k].z;
-            if (g[k].z < min2) min2 = g[k].z;
+        for (var k = 2, l = g.length; k < l; k += 3) {
+            if (g[k] > max2) max2 = g[k];
+            if (g[k] < min2) min2 = g[k];
         }
         if (!hasMax) max = max2;
         if (!hasMin) min = min2;
@@ -677,7 +644,7 @@ THREE.Terrain.toHeightmap = function(g, options) {
         for (var col = 0; col < cols; col++) {
             var i = row * cols + col,
             idx = i * 4;
-            data[idx] = data[idx+1] = data[idx+2] = Math.round(((g[i].z - min) / spread) * 255);
+            data[idx] = data[idx+1] = data[idx+2] = Math.round(((g[i * 3 + 2] - min) / spread) * 255);
             data[idx+3] = 255;
         }
     }
@@ -688,9 +655,8 @@ THREE.Terrain.toHeightmap = function(g, options) {
 /**
  * Rescale the heightmap of a terrain to keep it within the maximum range.
  *
- * @param {THREE.Vector3[]} g
- *   The vertex array for plane geometry to modify with heightmap data. This
- *   method sets the `z` property of each vertex.
+ * @param {Float32Array} g
+ *   The geometry's z-positions to modify with heightmap data.
  * @param {Object} options
  *   A map of settings that control how the terrain is constructed and
  *   displayed. Valid values are the same as those for the `options` parameter
@@ -704,8 +670,8 @@ THREE.Terrain.Clamp = function(g, options) {
         i;
     options.easing = options.easing || THREE.Terrain.Linear;
     for (i = 0; i < l; i++) {
-        if (g[i].z < min) min = g[i].z;
-        if (g[i].z > max) max = g[i].z;
+        if (g[i] < min) min = g[i];
+        if (g[i] > max) max = g[i];
     }
     var actualRange = max - min,
         optMax = typeof options.maxHeight !== 'number' ? max : options.maxHeight,
@@ -718,7 +684,7 @@ THREE.Terrain.Clamp = function(g, options) {
         range = targetMax - targetMin;
     }
     for (i = 0; i < l; i++) {
-        g[i].z = options.easing((g[i].z - min) / actualRange) * range + optMin;
+        g[i] = options.easing((g[i] - min) / actualRange) * range + optMin;
     }
 };
 
@@ -727,9 +693,8 @@ THREE.Terrain.Clamp = function(g, options) {
  *
  * Useful to make islands or enclosing walls/cliffs.
  *
- * @param {THREE.Vector3[]} g
- *   The vertex array for plane geometry to modify with heightmap data. This
- *   method sets the `z` property of each vertex.
+ * @param {Float32Array} g
+ *   The geometry's z-positions to modify with heightmap data.
  * @param {Object} options
  *   A map of settings that control how the terrain is constructed and
  *   displayed. Valid values are the same as those for the `options` parameter
@@ -771,10 +736,10 @@ THREE.Terrain.Edges = function(g, options, direction, distance, easing, edges) {
             k1 = j*xl + i;
             k2 = (options.ySegments-j)*xl + i;
             if (edges.top) {
-                g[k1].z = max(g[k1].z, (peak - g[k1].z) * multiplier + g[k1].z);
+                g[k1] = max(g[k1], (peak - g[k1]) * multiplier + g[k1]);
             }
             if (edges.bottom) {
-                g[k2].z = max(g[k2].z, (peak - g[k2].z) * multiplier + g[k2].z);
+                g[k2] = max(g[k2], (peak - g[k2]) * multiplier + g[k2]);
             }
         }
     }
@@ -784,10 +749,10 @@ THREE.Terrain.Edges = function(g, options, direction, distance, easing, edges) {
             k1 = i*xl+j;
             k2 = (options.ySegments-i)*xl + (options.xSegments-j);
             if (edges.left) {
-                g[k1].z = max(g[k1].z, (peak - g[k1].z) * multiplier + g[k1].z);
+                g[k1] = max(g[k1], (peak - g[k1]) * multiplier + g[k1]);
             }
             if (edges.right) {
-                g[k2].z = max(g[k2].z, (peak - g[k2].z) * multiplier + g[k2].z);
+                g[k2] = max(g[k2], (peak - g[k2]) * multiplier + g[k2]);
             }
         }
     }
@@ -803,9 +768,8 @@ THREE.Terrain.Edges = function(g, options, direction, distance, easing, edges) {
  *
  * Useful to make islands or enclosing walls/cliffs.
  *
- * @param {THREE.Vector3[]} g
- *   The vertex array for plane geometry to modify with heightmap data. This
- *   method sets the `z` property of each vertex.
+ * @param {Float32Array} g
+ *   The geometry's z-positions to modify with heightmap data.
  * @param {Object} options
  *   A map of settings that control how the terrain is constructed and
  *   displayed. Valid values are the same as those for the `options` parameter
@@ -842,10 +806,10 @@ THREE.Terrain.RadialEdges = function(g, options, direction, distance, easing) {
             vertexDistance = Math.min(edgeRadius, Math.sqrt((xl2-i)*xSegmentSize*(xl2-i)*xSegmentSize + (yl2-j)*ySegmentSize*(yl2-j)*ySegmentSize) - distance);
             if (vertexDistance < 0) continue;
             multiplier = easing(vertexDistance / edgeRadius);
-            g[k].z = max(g[k].z, (peak - g[k].z) * multiplier + g[k].z);
+            g[k] = max(g[k], (peak - g[k]) * multiplier + g[k]);
             // Use symmetry to reduce the number of iterations.
             k = (options.ySegments-j)*xl + i;
-            g[k].z = max(g[k].z, (peak - g[k].z) * multiplier + g[k].z);
+            g[k] = max(g[k], (peak - g[k]) * multiplier + g[k]);
         }
     }
 };
@@ -853,9 +817,8 @@ THREE.Terrain.RadialEdges = function(g, options, direction, distance, easing) {
 /**
  * Smooth the terrain by setting each point to the mean of its neighborhood.
  *
- * @param {THREE.Vector3[]} g
- *   The vertex array for plane geometry to modify with heightmap data. This
- *   method sets the `z` property of each vertex.
+ * @param {Float32Array} g
+ *   The geometry's z-positions to modify with heightmap data.
  * @param {Object} options
  *   A map of settings that control how the terrain is constructed and
  *   displayed. Valid values are the same as those for the `options` parameter
@@ -865,7 +828,7 @@ THREE.Terrain.RadialEdges = function(g, options, direction, distance, easing) {
  *   neighbors.
  */
 THREE.Terrain.Smooth = function(g, options, weight) {
-    var heightmap = new Float64Array(g.length);
+    var heightmap = new Float32Array(g.length);
     for (var i = 0, xl = options.xSegments + 1, yl = options.ySegments + 1; i < xl; i++) {
         for (var j = 0; j < yl; j++) {
             var sum = 0,
@@ -874,7 +837,7 @@ THREE.Terrain.Smooth = function(g, options, weight) {
                 for (var m = -1; m <= 1; m++) {
                     var key = (j+n)*xl + i + m;
                     if (typeof g[key] !== 'undefined' && i+m >= 0 && j+n >= 0 && i+m < xl && j+n < yl) {
-                        sum += g[key].z;
+                        sum += g[key];
                         c++;
                     }
                 }
@@ -885,17 +848,22 @@ THREE.Terrain.Smooth = function(g, options, weight) {
     weight = weight || 0;
     var w = 1 / (1 + weight);
     for (var k = 0, l = g.length; k < l; k++) {
-        g[k].z = (heightmap[k] + g[k].z * weight) * w;
+        g[k] = (heightmap[k] + g[k] * weight) * w;
     }
 };
 
 /**
  * Smooth the terrain by setting each point to the median of its neighborhood.
  *
- * Parameters are the same as those for {@link THREE.Terrain.DiamondSquare}.
+ * @param {Float32Array} g
+ *   The geometry's z-positions to modify with heightmap data.
+ * @param {Object} options
+ *   A map of settings that control how the terrain is constructed and
+ *   displayed. Valid values are the same as those for the `options` parameter
+ *   of {@link THREE.Terrain}().
  */
 THREE.Terrain.SmoothMedian = function(g, options) {
-    var heightmap = new Float64Array(g.length),
+    var heightmap = new Float32Array(g.length),
         neighborValues = [],
         neighborKeys = [],
         sortByValue = function(a, b) {
@@ -909,7 +877,7 @@ THREE.Terrain.SmoothMedian = function(g, options) {
                 for (var m = -1; m <= 1; m++) {
                     var key = (j+n)*xl + i + m;
                     if (typeof g[key] !== 'undefined' && i+m >= 0 && j+n >= 0 && i+m < xl && j+n < yl) {
-                        neighborValues.push(g[key].z);
+                        neighborValues.push(g[key]);
                         neighborKeys.push(key);
                     }
                 }
@@ -918,25 +886,24 @@ THREE.Terrain.SmoothMedian = function(g, options) {
             var halfKey = Math.floor(neighborKeys.length*0.5),
                 median;
             if (neighborKeys.length % 2 === 1) {
-                median = g[neighborKeys[halfKey]].z;
+                median = g[neighborKeys[halfKey]];
             }
             else {
-                median = (g[neighborKeys[halfKey-1]].z + g[neighborKeys[halfKey]].z) * 0.5;
+                median = (g[neighborKeys[halfKey-1]] + g[neighborKeys[halfKey]]) * 0.5;
             }
             heightmap[j*xl + i] = median;
         }
     }
     for (var k = 0, l = g.length; k < l; k++) {
-        g[k].z = heightmap[k];
+        g[k] = heightmap[k];
     }
 };
 
 /**
  * Smooth the terrain by clamping each point within its neighbors' extremes.
  *
- * @param {THREE.Vector3[]} g
- *   The vertex array for plane geometry to modify with heightmap data. This
- *   method sets the `z` property of each vertex.
+ * @param {Float32Array} g
+ *   The geometry's z-positions to modify with heightmap data.
  * @param {Object} options
  *   A map of settings that control how the terrain is constructed and
  *   displayed. Valid values are the same as those for the `options` parameter
@@ -948,7 +915,7 @@ THREE.Terrain.SmoothMedian = function(g, options) {
  *   point can be farther outside the range of its neighbors.
  */
 THREE.Terrain.SmoothConservative = function(g, options, multiplier) {
-    var heightmap = new Float64Array(g.length);
+    var heightmap = new Float32Array(g.length);
     for (var i = 0, xl = options.xSegments + 1, yl = options.ySegments + 1; i < xl; i++) {
         for (var j = 0; j < yl; j++) {
             var max = -Infinity,
@@ -957,8 +924,8 @@ THREE.Terrain.SmoothConservative = function(g, options, multiplier) {
                 for (var m = -1; m <= 1; m++) {
                     var key = (j+n)*xl + i + m;
                     if (typeof g[key] !== 'undefined' && n && m && i+m >= 0 && j+n >= 0 && i+m < xl && j+n < yl) {
-                        if (g[key].z < min) min = g[key].z;
-                        if (g[key].z > max) max = g[key].z;
+                        if (g[key] < min) min = g[key];
+                        if (g[key] > max) max = g[key];
                     }
                 }
             }
@@ -969,20 +936,19 @@ THREE.Terrain.SmoothConservative = function(g, options, multiplier) {
                 max = middle + halfdiff * multiplier;
                 min = middle - halfdiff * multiplier;
             }
-            heightmap[kk] = g[kk].z > max ? max : (g[kk].z < min ? min : g[kk].z);
+            heightmap[kk] = g[kk] > max ? max : (g[kk] < min ? min : g[kk]);
         }
     }
     for (var k = 0, l = g.length; k < l; k++) {
-        g[k].z = heightmap[k];
+        g[k] = heightmap[k];
     }
 };
 
 /**
  * Partition a terrain into flat steps.
  *
- * @param {THREE.Vector3[]} g
- *   The vertex array for plane geometry to modify with heightmap data. This
- *   method sets the `z` property of each vertex.
+ * @param {Float32Array} g
+ *   The geometry's z-positions to modify with heightmap data.
  * @param {Number} [levels]
  *   The number of steps to divide the terrain into. Defaults to
  *   (g.length/2)^(1/4).
@@ -999,7 +965,7 @@ THREE.Terrain.Step = function(g, levels) {
         levels = Math.floor(Math.pow(l*0.5, 0.25));
     }
     for (i = 0; i < l; i++) {
-        heights[i] = g[i].z;
+        heights[i] = g[i];
     }
     heights.sort(function(a, b) { return a - b; });
     for (i = 0; i < levels; i++) {
@@ -1019,10 +985,10 @@ THREE.Terrain.Step = function(g, levels) {
 
     // Set the height of each vertex to the average height of its bucket
     for (i = 0; i < l; i++) {
-        var startHeight = g[i].z;
+        var startHeight = g[i];
         for (j = 0; j < levels; j++) {
             if (startHeight >= buckets[j].min && startHeight <= buckets[j].max) {
-                g[i].z = buckets[j].avg;
+                g[i] = buckets[j].avg;
                 break;
             }
         }
@@ -1032,21 +998,24 @@ THREE.Terrain.Step = function(g, levels) {
 /**
  * Transform to turbulent noise.
  *
- * Parameters are the same as those for {@link THREE.Terrain.DiamondSquare}.
+ * @param {Float32Array} g
+ *   The geometry's z-positions to modify with heightmap data.
+ * @param {Object} [options]
+ *   The same map of settings you'd pass to {@link THREE.Terrain()}. Only
+ *   `minHeight` and `maxHeight` are used (and required) here.
  */
 THREE.Terrain.Turbulence = function(g, options) {
     var range = options.maxHeight - options.minHeight;
     for (var i = 0, l = g.length; i < l; i++) {
-        g[i].z = options.minHeight + Math.abs((g[i].z - options.minHeight) * 2 - range);
+        g[i] = options.minHeight + Math.abs((g[i] - options.minHeight) * 2 - range);
     }
 };
 
 /**
  * A utility for generating heightmap functions by additive composition.
  *
- * @param {THREE.Vector3[]} g
- *   The vertex array for plane geometry to modify with heightmap data. This
- *   method sets the `z` property of each vertex.
+ * @param {Float32Array} g
+ *   The geometry's z-positions to modify with heightmap data.
  * @param {Object} [options]
  *   A map of settings that control how the terrain is constructed and
  *   displayed. Valid values are the same as those for the `options` parameter
@@ -1085,9 +1054,8 @@ THREE.Terrain.MultiPass = function(g, options, passes) {
 /**
  * Generate random terrain using a curve.
  *
- * @param {THREE.Vector3[]} g
- *   The vertex array for plane geometry to modify with heightmap data. This
- *   method sets the `z` property of each vertex.
+ * @param {Float32Array} g
+ *   The geometry's z-positions to modify with heightmap data.
  * @param {Object} options
  *   A map of settings that control how the terrain is constructed and
  *   displayed. Valid values are the same as those for the `options` parameter
@@ -1105,7 +1073,7 @@ THREE.Terrain.Curve = function(g, options, curve) {
         scalar = options.frequency / (Math.min(options.xSegments, options.ySegments) + 1);
     for (var i = 0, xl = options.xSegments + 1, yl = options.ySegments + 1; i < xl; i++) {
         for (var j = 0; j < yl; j++) {
-            g[j * xl + i].z += curve(i * scalar, j * scalar) * range;
+            g[j * xl + i] += curve(i * scalar, j * scalar) * range;
         }
     }
 };
@@ -1121,7 +1089,7 @@ THREE.Terrain.Cosine = function(g, options) {
         phase = Math.random() * Math.PI * 2;
     for (var i = 0, xl = options.xSegments + 1; i < xl; i++) {
         for (var j = 0, yl = options.ySegments + 1; j < yl; j++) {
-            g[j * xl + i].z += amplitude * (Math.cos(i * frequencyScalar + phase) + Math.cos(j * frequencyScalar + phase));
+            g[j * xl + i] += amplitude * (Math.cos(i * frequencyScalar + phase) + Math.cos(j * frequencyScalar + phase));
         }
     }
 };
@@ -1145,9 +1113,8 @@ THREE.Terrain.CosineLayers = function(g, options) {
  *
  * Based on https://github.com/srchea/Terrain-Generation/blob/master/js/classes/TerrainGeneration.js
  *
- * @param {THREE.Vector3[]} g
- *   The vertex array for plane geometry to modify with heightmap data. This
- *   method sets the `z` property of each vertex.
+ * @param {Float32Array} g
+ *   The geometry's z-positions to modify with heightmap data.
  * @param {Object} options
  *   A map of settings that control how the terrain is constructed and
  *   displayed. Valid values are the same as those for the `options` parameter
@@ -1213,7 +1180,7 @@ THREE.Terrain.DiamondSquare = function(g, options) {
     // Apply heightmap
     for (i = 0; i < xl; i++) {
         for (j = 0; j < yl; j++) {
-            g[j * xl + i].z += heightmap[i][j];
+            g[j * xl + i] += heightmap[i][j];
         }
     }
 
@@ -1244,13 +1211,13 @@ THREE.Terrain.Fault = function(g, options) {
             for (var j = 0, yl = options.ySegments + 1; j < yl; j++) {
                 var distance = a*i + b*j - c;
                 if (distance > smoothDistance) {
-                    g[j * xl + i].z += displacement;
+                    g[j * xl + i] += displacement;
                 }
                 else if (distance < -smoothDistance) {
-                    g[j * xl + i].z -= displacement;
+                    g[j * xl + i] -= displacement;
                 }
                 else {
-                    g[j * xl + i].z += Math.cos(distance / smoothDistance * Math.PI * 2) * displacement;
+                    g[j * xl + i] += Math.cos(distance / smoothDistance * Math.PI * 2) * displacement;
                 }
             }
         }
@@ -1265,9 +1232,8 @@ THREE.Terrain.Fault = function(g, options) {
  * terrain and raise a small hill around those points. Those small hills
  * eventually accumulate into large hills with distinct features.
  *
- * @param {THREE.Vector3[]} g
- *   The vertex array for plane geometry to modify with heightmap data. This
- *   method sets the `z` property of each vertex.
+ * @param {Float32Array} g
+ *   The geometry's z-positions to modify with heightmap data.
  * @param {Object} options
  *   A map of settings that control how the terrain is constructed and
  *   displayed. Valid values are the same as those for the `options` parameter
@@ -1328,9 +1294,8 @@ THREE.Terrain.Hill = function(g, options, feature, shape) {
  * of the points to place small hills are not uniformly randomly distributed
  * but instead are more likely to occur close to the center of the terrain.
  *
- * @param {THREE.Vector3[]} g
- *   The vertex array for plane geometry to modify with heightmap data. This
- *   method sets the `z` property of each vertex.
+ * @param {Float32Array} g
+ *   The geometry's z-positions to modify with heightmap data.
  * @param {Object} options
  *   A map of settings that control how the terrain is constructed and
  *   displayed. Valid values are the same as those for the `options` parameter
@@ -1378,18 +1343,18 @@ THREE.Terrain.HillIsland = (function() {
             var neighborKey = j * xl + i;
             // If the neighbor is lower, move the particle to that neighbor and re-evaluate.
             if (typeof g[neighborKey] !== 'undefined') {
-                if (g[neighborKey].z < g[currentKey].z) {
+                if (g[neighborKey] < g[currentKey]) {
                     deposit(g, i, j, xl, displacement);
                     return;
                 }
             }
             // Deposit some particles on the edge.
             else if (Math.random() < 0.2) {
-                g[currentKey].z += displacement;
+                g[currentKey] += displacement;
                 return;
             }
         }
-        g[currentKey].z += displacement;
+        g[currentKey] += displacement;
     }
 
     /**
@@ -1442,7 +1407,7 @@ THREE.Terrain.Perlin = function(g, options) {
         divisor = (Math.min(options.xSegments, options.ySegments) + 1) / options.frequency;
     for (var i = 0, xl = options.xSegments + 1; i < xl; i++) {
         for (var j = 0, yl = options.ySegments + 1; j < yl; j++) {
-            g[j * xl + i].z += noise.perlin(i / divisor, j / divisor) * range;
+            g[j * xl + i] += noise.perlin(i / divisor, j / divisor) * range;
         }
     }
 };
@@ -1488,7 +1453,7 @@ THREE.Terrain.Simplex = function(g, options) {
         divisor = (Math.min(options.xSegments, options.ySegments) + 1) * 2 / options.frequency;
     for (var i = 0, xl = options.xSegments + 1; i < xl; i++) {
         for (var j = 0, yl = options.ySegments + 1; j < yl; j++) {
-            g[j * xl + i].z += noise.simplex(i / divisor, j / divisor) * range;
+            g[j * xl + i] += noise.simplex(i / divisor, j / divisor) * range;
         }
     }
 };
@@ -1568,7 +1533,7 @@ THREE.Terrain.SimplexLayers = function(g, options) {
                 // http://stackoverflow.com/q/23708306/843621
                 var kg = j * xl + i,
                     kd = j * segments + i;
-                g[kg].z += data[kd];
+                g[kg] += data[kd];
             }
         }
     }
@@ -1637,7 +1602,7 @@ THREE.Terrain.Weierstrass = function(g, options) {
                 var y = Math.pow(1+r21, -k) * Math.sin(Math.pow(1+r22, k) * (j + 0.25*Math.cos(i) + r24*i) * r23);
                 sum -= Math.exp(dir1*x*x + dir2*y*y);
             }
-            g[j * xl + i].z += sum * range;
+            g[j * xl + i] += sum * range;
         }
     }
     THREE.Terrain.Clamp(g, options);
@@ -1764,7 +1729,7 @@ THREE.Terrain.generateBlendedMaterial = function(textures) {
 /**
  * Scatter a mesh across the terrain.
  *
- * @param {THREE.Geometry} geometry
+ * @param {THREE.BufferGeometry} geometry
  *   The terrain's geometry (or the highest-resolution version of it).
  * @param {Object} options
  *   A map of settings that controls how the meshes are scattered, with the
@@ -1815,10 +1780,6 @@ THREE.Terrain.ScatterMeshes = function(geometry, options) {
         console.error('options.mesh is required for THREE.Terrain.ScatterMeshes but was not passed');
         return;
     }
-    if (geometry instanceof THREE.BufferGeometry) {
-        console.warn('The terrain mesh is using BufferGeometry but THREE.Terrain.ScatterMeshes can only work with Geometry.');
-        return;
-    }
     if (!options.scene) {
         options.scene = new THREE.Object3D();
     }
@@ -1843,86 +1804,68 @@ THREE.Terrain.ScatterMeshes = function(geometry, options) {
         randomness,
         spreadRange = 1 / options.smoothSpread,
         doubleSizeVariance = options.sizeVariance * 2,
-        v = geometry.vertices,
-        meshes = [],
+        vertex1 = new THREE.Vector3(),
+        vertex2 = new THREE.Vector3(),
+        vertex3 = new THREE.Vector3(),
+        faceNormal = new THREE.Vector3(),
         up = options.mesh.up.clone().applyAxisAngle(new THREE.Vector3(1, 0, 0), 0.5*Math.PI);
     if (spreadIsNumber) {
         randomHeightmap = options.randomness();
         randomness = typeof randomHeightmap === 'number' ? Math.random : function(k) { return randomHeightmap[k]; };
     }
-    // geometry.computeFaceNormals();
-    for (var i = 0, w = options.w*2; i < w; i++) {
-        for (var j = 0, h = options.h; j < h; j++) {
-            var key = j*w + i,
-                f = geometry.faces[key],
-                place = false;
-            if (spreadIsNumber) {
-                var rv = randomness(key);
-                if (rv < options.spread) {
-                    place = true;
-                }
-                else if (rv < options.spread + options.smoothSpread) {
-                    // Interpolate rv between spread and spread + smoothSpread,
-                    // then multiply that "easing" value by the probability
-                    // that a mesh would get placed on a given face.
-                    place = THREE.Terrain.EaseInOut((rv - options.spread) * spreadRange) * options.spread > Math.random();
-                }
-            }
-            else {
-                place = options.spread(v[f.a], key, f, i, j);
-            }
-            if (place) {
-                // Don't place a mesh if the angle is too steep.
-                if (f.normal.angleTo(up) > options.maxSlope) {
-                    continue;
-                }
-                var mesh = options.mesh.clone();
-                // mesh.geometry.computeBoundingBox();
-                mesh.position.copy(v[f.a]).add(v[f.b]).add(v[f.c]).divideScalar(3);
-                // mesh.translateZ((mesh.geometry.boundingBox.max.z - mesh.geometry.boundingBox.min.z) * 0.5);
-                if (options.maxTilt > 0) {
-                    var normal = mesh.position.clone().add(f.normal);
-                    mesh.lookAt(normal);
-                    var tiltAngle = f.normal.angleTo(up);
-                    if (tiltAngle > options.maxTilt) {
-                        var ratio = options.maxTilt / tiltAngle;
-                        mesh.rotation.x *= ratio;
-                        mesh.rotation.y *= ratio;
-                        mesh.rotation.z *= ratio;
-                    }
-                }
-                mesh.rotation.x += 90 / 180 * Math.PI;
-                mesh.rotateY(Math.random() * 2 * Math.PI);
-                if (options.sizeVariance) {
-                    var variance = Math.random() * doubleSizeVariance - options.sizeVariance;
-                    mesh.scale.x = mesh.scale.z = 1 + variance;
-                    mesh.scale.y += variance;
-                }
-                meshes.push(mesh);
-            }
-        }
-    }
 
-    // Merge geometries.
-    var k, l;
-    if (options.mesh.geometry instanceof THREE.Geometry) {
-        var g = new THREE.Geometry();
-        for (k = 0, l = meshes.length; k < l; k++) {
-            var m = meshes[k];
-            m.updateMatrix();
-            g.merge(m.geometry, m.matrix);
+    geometry = geometry.toNonIndexed();
+    var gArray = geometry.attributes.position.array;
+    for (var i = 0; i < geometry.attributes.position.array.length; i += 9) {
+        vertex1.set(gArray[i + 0], gArray[i + 1], gArray[i + 2]);
+        vertex2.set(gArray[i + 3], gArray[i + 4], gArray[i + 5]);
+        vertex3.set(gArray[i + 6], gArray[i + 7], gArray[i + 8]);
+        THREE.Triangle.getNormal(vertex1, vertex2, vertex3, faceNormal);
+
+        var place = false;
+        if (spreadIsNumber) {
+            var rv = randomness(key);
+            if (rv < options.spread) {
+                place = true;
+            }
+            else if (rv < options.spread + options.smoothSpread) {
+                // Interpolate rv between spread and spread + smoothSpread,
+                // then multiply that "easing" value by the probability
+                // that a mesh would get placed on a given face.
+                place = THREE.Terrain.EaseInOut((rv - options.spread) * spreadRange) * options.spread > Math.random();
+            }
         }
-        /*
-        if (!(options.mesh.material instanceof THREE.MeshFaceMaterial)) {
-            g = THREE.BufferGeometryUtils.fromGeometry(g);
+        else {
+            place = options.spread(vertex1, i / 9, faceNormal, i);
         }
-        */
-        options.scene.add(new THREE.Mesh(g, options.mesh.material));
-    }
-    // There's no BufferGeometry merge method implemented yet.
-    else {
-        for (k = 0, l = meshes.length; k < l; k++) {
-            options.scene.add(meshes[k]);
+        if (place) {
+            // Don't place a mesh if the angle is too steep.
+            if (faceNormal.angleTo(up) > options.maxSlope) {
+                continue;
+            }
+            var mesh = options.mesh.clone();
+            mesh.position.addVectors(vertex1, vertex2).add(vertex3).divideScalar(3);
+            if (options.maxTilt > 0) {
+                var normal = mesh.position.clone().add(faceNormal);
+                mesh.lookAt(normal);
+                var tiltAngle = faceNormal.angleTo(up);
+                if (tiltAngle > options.maxTilt) {
+                    var ratio = options.maxTilt / tiltAngle;
+                    mesh.rotation.x *= ratio;
+                    mesh.rotation.y *= ratio;
+                    mesh.rotation.z *= ratio;
+                }
+            }
+            mesh.rotation.x += 90 / 180 * Math.PI;
+            mesh.rotateY(Math.random() * 2 * Math.PI);
+            if (options.sizeVariance) {
+                var variance = Math.random() * doubleSizeVariance - options.sizeVariance;
+                mesh.scale.x = mesh.scale.z = 1 + variance;
+                mesh.scale.y += variance;
+            }
+
+            mesh.updateMatrix();
+            options.scene.add(mesh);
         }
     }
 
@@ -1986,9 +1929,8 @@ THREE.Terrain.ScatterHelper = function(method, options, skip, threshold) {
 };
 
 // Allows placing geometrically-described features on a terrain.
-// If you want these features to look a little less regular,
-// just apply them before a procedural pass.
-// If you want more complex influence, you can just composite heightmaps.
+// If you want these features to look a little less regular, apply them before a procedural pass.
+// If you want more complex influence, you can composite heightmaps.
 
 /**
  * Equations describing geographic features.
@@ -2108,12 +2050,12 @@ THREE.Terrain.Influence = function(g, options, f, x, y, r, h, t, e) {
                 // interpolate using e, then blend according to t.
                 d = f(fdr, fdxr, fdyr) * h * (1 - e(fdr, fdxr, fdyr));
             if (fd > r || typeof g[k] == 'undefined') continue;
-            if      (t === THREE.AdditiveBlending)    g[k].z += d; // jscs:ignore requireSpaceAfterKeywords
-            else if (t === THREE.SubtractiveBlending) g[k].z -= d;
-            else if (t === THREE.MultiplyBlending)    g[k].z *= d;
-            else if (t === THREE.NoBlending)          g[k].z  = d;
-            else if (t === THREE.NormalBlending)      g[k].z  = e(fdr, fdxr, fdyr) * g[k].z + d;
-            else if (typeof t === 'function')         g[k].z  = t(g[k].z, d, fdr, fdxr, fdyr);
+            if      (t === THREE.AdditiveBlending)    g[k] += d; // jscs:ignore requireSpaceAfterKeywords
+            else if (t === THREE.SubtractiveBlending) g[k] -= d;
+            else if (t === THREE.MultiplyBlending)    g[k] *= d;
+            else if (t === THREE.NoBlending)          g[k]  = d;
+            else if (t === THREE.NormalBlending)      g[k]  = e(fdr, fdxr, fdyr) * g[k] + d;
+            else if (typeof t === 'function')         g[k]  = t(g[k].z, d, fdr, fdxr, fdyr);
         }
     }
 };

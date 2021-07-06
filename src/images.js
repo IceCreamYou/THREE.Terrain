@@ -1,9 +1,8 @@
 /**
  * Convert an image-based heightmap into vertex-based height data.
  *
- * @param {THREE.Vector3[]} g
- *   The vertex array for plane geometry to modify with heightmap data. This
- *   method sets the `z` property of each vertex.
+ * @param {Float32Array} g
+ *   The geometry's z-positions to modify with heightmap data.
  * @param {Object} options
  *   A map of settings that control how the terrain is constructed and
  *   displayed. Valid values are the same as those for the `options` parameter
@@ -23,7 +22,7 @@ THREE.Terrain.fromHeightmap = function(g, options) {
         for (var col = 0; col < cols; col++) {
             var i = row * cols + col,
                 idx = i * 4;
-            g[i].z = (data[idx] + data[idx+1] + data[idx+2]) / 765 * spread + options.minHeight;
+            g[i] = (data[idx] + data[idx+1] + data[idx+2]) / 765 * spread + options.minHeight;
         }
     }
 };
@@ -35,10 +34,12 @@ THREE.Terrain.fromHeightmap = function(g, options) {
  * that if `options.heightmap` is a canvas element then the image will be
  * painted onto that canvas; otherwise a new canvas will be created.
  *
- * NOTE: this method performs an operation on an array of vertices, which
- * aren't available when using `BufferGeometry`. So, if you want to use this
- * method, make sure to set the `useBufferGeometry` option to `false` when
- * generating your terrain.
+ * @param {Float32Array} g
+ *   The vertex position array for the geometry to paint to a heightmap.
+ * @param {Object} options
+ *   A map of settings that control how the terrain is constructed and
+ *   displayed. Valid values are the same as those for the `options` parameter
+ *   of {@link THREE.Terrain}().
  *
  * @return {HTMLCanvasElement}
  *   A canvas with the relevant heightmap painted on it.
@@ -51,9 +52,9 @@ THREE.Terrain.toHeightmap = function(g, options) {
     if (!hasMax || !hasMin) {
         var max2 = max,
             min2 = min;
-        for (var k = 0, l = g.length; k < l; k++) {
-            if (g[k].z > max2) max2 = g[k].z;
-            if (g[k].z < min2) min2 = g[k].z;
+        for (var k = 2, l = g.length; k < l; k += 3) {
+            if (g[k] > max2) max2 = g[k];
+            if (g[k] < min2) min2 = g[k];
         }
         if (!hasMax) max = max2;
         if (!hasMin) min = min2;
@@ -71,7 +72,7 @@ THREE.Terrain.toHeightmap = function(g, options) {
         for (var col = 0; col < cols; col++) {
             var i = row * cols + col,
             idx = i * 4;
-            data[idx] = data[idx+1] = data[idx+2] = Math.round(((g[i].z - min) / spread) * 255);
+            data[idx] = data[idx+1] = data[idx+2] = Math.round(((g[i * 3 + 2] - min) / spread) * 255);
             data[idx+3] = 255;
         }
     }
