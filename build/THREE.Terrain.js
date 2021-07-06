@@ -1730,10 +1730,7 @@ THREE.Terrain.generateBlendedMaterial = function(textures) {
  * Scatter a mesh across the terrain.
  *
  * @param {THREE.BufferGeometry} geometry
- *   The terrain's geometry (or the highest-resolution version of it). Must be
- *   indexed. If you have an unindexed geometry, you can use
- *   `BufferGeometryUtils.mergeVertices` from the Three.js examples to set the
- *   indexes.
+ *   The terrain's geometry (or the highest-resolution version of it).
  * @param {Object} options
  *   A map of settings that controls how the meshes are scattered, with the
  *   following properties:
@@ -1807,77 +1804,68 @@ THREE.Terrain.ScatterMeshes = function(geometry, options) {
         randomness,
         spreadRange = 1 / options.smoothSpread,
         doubleSizeVariance = options.sizeVariance * 2,
-        vertextNormal1 = new THREE.Vector3(),
-        vertextNormal2 = new THREE.Vector3(),
-        vertextNormal3 = new THREE.Vector3(),
+        vertex1 = new THREE.Vector3(),
+        vertex2 = new THREE.Vector3(),
+        vertex3 = new THREE.Vector3(),
         faceNormal = new THREE.Vector3(),
         up = options.mesh.up.clone().applyAxisAngle(new THREE.Vector3(1, 0, 0), 0.5*Math.PI);
     if (spreadIsNumber) {
         randomHeightmap = options.randomness();
         randomness = typeof randomHeightmap === 'number' ? Math.random : function(k) { return randomHeightmap[k]; };
     }
-    for (var i = 0, w = options.w*2; i < w; i++) {
-        for (var j = 0, h = options.h; j < h; j++) {
-            var key = j*w + i,
-                place = false,
-                v1Idx = geometry.index.array[3 * key + 0],
-                v2Idx = geometry.index.array[3 * key + 1],
-                v3Idx = geometry.index.array[3 * key + 2],
-                v1 = geometry.attributes.position.array.slice(v1Idx, v1Idx + 3),
-                v2 = geometry.attributes.position.array.slice(v2Idx, v2Idx + 3),
-                v3 = geometry.attributes.position.array.slice(v3Idx, v3Idx + 3);
-            vertextNormal1.fromBufferAttribute(geometry.attributes.normal, v1Idx);
-            vertextNormal2.fromBufferAttribute(geometry.attributes.normal, v2Idx);
-            vertextNormal3.fromBufferAttribute(geometry.attributes.normal, v3Idx);
-            faceNormal.copy(vertextNormal1).add(vertextNormal2).add(vertextNormal3).divideScalar(3);
-            if (spreadIsNumber) {
-                var rv = randomness(key);
-                if (rv < options.spread) {
-                    place = true;
-                }
-                else if (rv < options.spread + options.smoothSpread) {
-                    // Interpolate rv between spread and spread + smoothSpread,
-                    // then multiply that "easing" value by the probability
-                    // that a mesh would get placed on a given face.
-                    place = THREE.Terrain.EaseInOut((rv - options.spread) * spreadRange) * options.spread > Math.random();
-                }
-            }
-            else {
-                place = options.spread(new THREE.Vector3(v1[0], v1[1], v1[2]), key, faceNormal, i, j);
-            }
-            if (place) {
-                // Don't place a mesh if the angle is too steep.
-                if (faceNormal.angleTo(up) > options.maxSlope) {
-                    continue;
-                }
-                var mesh = options.mesh.clone();
-                mesh.position.set(
-                    (v1[0] + v2[0] + v3[0]) / 3,
-                    (v1[1] + v2[1] + v3[1]) / 3,
-                    (v1[2] + v2[2] + v3[2]) / 3
-                );
-                if (options.maxTilt > 0) {
-                    var normal = mesh.position.clone().add(faceNormal);
-                    mesh.lookAt(normal);
-                    var tiltAngle = faceNormal.angleTo(up);
-                    if (tiltAngle > options.maxTilt) {
-                        var ratio = options.maxTilt / tiltAngle;
-                        mesh.rotation.x *= ratio;
-                        mesh.rotation.y *= ratio;
-                        mesh.rotation.z *= ratio;
-                    }
-                }
-                mesh.rotation.x += 90 / 180 * Math.PI;
-                mesh.rotateY(Math.random() * 2 * Math.PI);
-                if (options.sizeVariance) {
-                    var variance = Math.random() * doubleSizeVariance - options.sizeVariance;
-                    mesh.scale.x = mesh.scale.z = 1 + variance;
-                    mesh.scale.y += variance;
-                }
 
-                mesh.updateMatrix();
-                options.scene.add(mesh);
+    geometry = geometry.toNonIndexed();
+    var gArray = geometry.attributes.position.array;
+    for (var i = 0; i < geometry.attributes.position.array.length; i += 9) {
+        vertex1.set(gArray[i + 0], gArray[i + 1], gArray[i + 2]);
+        vertex2.set(gArray[i + 3], gArray[i + 4], gArray[i + 5]);
+        vertex3.set(gArray[i + 6], gArray[i + 7], gArray[i + 8]);
+        THREE.Triangle.getNormal(vertex1, vertex2, vertex3, faceNormal);
+
+        var place = false;
+        if (spreadIsNumber) {
+            var rv = randomness(key);
+            if (rv < options.spread) {
+                place = true;
             }
+            else if (rv < options.spread + options.smoothSpread) {
+                // Interpolate rv between spread and spread + smoothSpread,
+                // then multiply that "easing" value by the probability
+                // that a mesh would get placed on a given face.
+                place = THREE.Terrain.EaseInOut((rv - options.spread) * spreadRange) * options.spread > Math.random();
+            }
+        }
+        else {
+            place = options.spread(vertex1, i / 9, faceNormal, i);
+        }
+        if (place) {
+            // Don't place a mesh if the angle is too steep.
+            if (faceNormal.angleTo(up) > options.maxSlope) {
+                continue;
+            }
+            var mesh = options.mesh.clone();
+            mesh.position.addVectors(vertex1, vertex2).add(vertex3).divideScalar(3);
+            if (options.maxTilt > 0) {
+                var normal = mesh.position.clone().add(faceNormal);
+                mesh.lookAt(normal);
+                var tiltAngle = faceNormal.angleTo(up);
+                if (tiltAngle > options.maxTilt) {
+                    var ratio = options.maxTilt / tiltAngle;
+                    mesh.rotation.x *= ratio;
+                    mesh.rotation.y *= ratio;
+                    mesh.rotation.z *= ratio;
+                }
+            }
+            mesh.rotation.x += 90 / 180 * Math.PI;
+            mesh.rotateY(Math.random() * 2 * Math.PI);
+            if (options.sizeVariance) {
+                var variance = Math.random() * doubleSizeVariance - options.sizeVariance;
+                mesh.scale.x = mesh.scale.z = 1 + variance;
+                mesh.scale.y += variance;
+            }
+
+            mesh.updateMatrix();
+            options.scene.add(mesh);
         }
     }
 
