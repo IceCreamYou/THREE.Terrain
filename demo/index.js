@@ -542,7 +542,7 @@ function cleanAnalytic(val) {
   while (valIntStr.length + c.length < 5) {
     c += ' ';
   }
-  return c + val.round(3);
+  return c + (typeof val === 'undefined' || val === null ? NaN : val).round(3);
 }
 
 var moments = {

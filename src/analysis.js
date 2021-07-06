@@ -267,27 +267,21 @@ function percentRank(arr, v) {
  *   segments of the plane geometry.
  */
 function faceNormals(geometry, options) {
-    var normals = new Array(geometry.length),
-        vertextNormal1 = new THREE.Vector3(),
-        vertextNormal2 = new THREE.Vector3(),
-        vertextNormal3 = new THREE.Vector3(),
-        faceNormal = new THREE.Vector3();
-    for (var i = 0, w = options.xSegments*2; i < w; i++) {
-        for (var j = 0, h = options.ySegments; j < h; j++) {
-            var key = j*w + i,
-                place = false,
-                v1Idx = geometry.index.array[3 * key + 0],
-                v2Idx = geometry.index.array[3 * key + 1],
-                v3Idx = geometry.index.array[3 * key + 2],
-                v1 = geometry.attributes.position.array.slice(v1Idx, v1Idx + 3),
-                v2 = geometry.attributes.position.array.slice(v2Idx, v2Idx + 3),
-                v3 = geometry.attributes.position.array.slice(v3Idx, v3Idx + 3);
-            vertextNormal1.fromBufferAttribute(geometry.attributes.normal, v1Idx);
-            vertextNormal2.fromBufferAttribute(geometry.attributes.normal, v2Idx);
-            vertextNormal3.fromBufferAttribute(geometry.attributes.normal, v3Idx);
-            faceNormal.copy(vertextNormal1).add(vertextNormal2).add(vertextNormal3).divideScalar(3);
-            normals[key] = faceNormal;
-        }
+    geometry = geometry.toNonIndexed();
+    var normals = new Array(Math.round(geometry.attributes.position.array.length / 9)),
+        gArray = geometry.attributes.position.array,
+        vertex1 = new THREE.Vector3(),
+        vertex2 = new THREE.Vector3(),
+        vertex3 = new THREE.Vector3();
+
+    for (var i = 0, j = 0; i < geometry.attributes.position.array.length; i += 9, j++) {
+        vertex1.set(gArray[i + 0], gArray[i + 1], gArray[i + 2]);
+        vertex2.set(gArray[i + 3], gArray[i + 4], gArray[i + 5]);
+        vertex3.set(gArray[i + 6], gArray[i + 7], gArray[i + 8]);
+
+        var faceNormal = new THREE.Vector3();
+        THREE.Triangle.getNormal(vertex1, vertex2, vertex3, faceNormal);
+        normals[j] = faceNormal;
     }
     return normals;
 }
