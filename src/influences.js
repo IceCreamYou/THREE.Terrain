@@ -1,7 +1,6 @@
 // Allows placing geometrically-described features on a terrain.
-// If you want these features to look a little less regular,
-// just apply them before a procedural pass.
-// If you want more complex influence, you can just composite heightmaps.
+// If you want these features to look a little less regular, apply them before a procedural pass.
+// If you want more complex influence, you can composite heightmaps.
 
 /**
  * Equations describing geographic features.
@@ -121,12 +120,12 @@ THREE.Terrain.Influence = function(g, options, f, x, y, r, h, t, e) {
                 // interpolate using e, then blend according to t.
                 d = f(fdr, fdxr, fdyr) * h * (1 - e(fdr, fdxr, fdyr));
             if (fd > r || typeof g[k] == 'undefined') continue;
-            if      (t === THREE.AdditiveBlending)    g[k].z += d; // jscs:ignore requireSpaceAfterKeywords
-            else if (t === THREE.SubtractiveBlending) g[k].z -= d;
-            else if (t === THREE.MultiplyBlending)    g[k].z *= d;
-            else if (t === THREE.NoBlending)          g[k].z  = d;
-            else if (t === THREE.NormalBlending)      g[k].z  = e(fdr, fdxr, fdyr) * g[k].z + d;
-            else if (typeof t === 'function')         g[k].z  = t(g[k].z, d, fdr, fdxr, fdyr);
+            if      (t === THREE.AdditiveBlending)    g[k] += d; // jscs:ignore requireSpaceAfterKeywords
+            else if (t === THREE.SubtractiveBlending) g[k] -= d;
+            else if (t === THREE.MultiplyBlending)    g[k] *= d;
+            else if (t === THREE.NoBlending)          g[k]  = d;
+            else if (t === THREE.NormalBlending)      g[k]  = e(fdr, fdxr, fdyr) * g[k] + d;
+            else if (typeof t === 'function')         g[k]  = t(g[k].z, d, fdr, fdxr, fdyr);
         }
     }
 };

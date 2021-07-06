@@ -1,9 +1,8 @@
 /**
  * A utility for generating heightmap functions by additive composition.
  *
- * @param {THREE.Vector3[]} g
- *   The vertex array for plane geometry to modify with heightmap data. This
- *   method sets the `z` property of each vertex.
+ * @param {Float32Array} g
+ *   The geometry's z-positions to modify with heightmap data.
  * @param {Object} [options]
  *   A map of settings that control how the terrain is constructed and
  *   displayed. Valid values are the same as those for the `options` parameter
@@ -42,9 +41,8 @@ THREE.Terrain.MultiPass = function(g, options, passes) {
 /**
  * Generate random terrain using a curve.
  *
- * @param {THREE.Vector3[]} g
- *   The vertex array for plane geometry to modify with heightmap data. This
- *   method sets the `z` property of each vertex.
+ * @param {Float32Array} g
+ *   The geometry's z-positions to modify with heightmap data.
  * @param {Object} options
  *   A map of settings that control how the terrain is constructed and
  *   displayed. Valid values are the same as those for the `options` parameter
@@ -62,7 +60,7 @@ THREE.Terrain.Curve = function(g, options, curve) {
         scalar = options.frequency / (Math.min(options.xSegments, options.ySegments) + 1);
     for (var i = 0, xl = options.xSegments + 1, yl = options.ySegments + 1; i < xl; i++) {
         for (var j = 0; j < yl; j++) {
-            g[j * xl + i].z += curve(i * scalar, j * scalar) * range;
+            g[j * xl + i] += curve(i * scalar, j * scalar) * range;
         }
     }
 };
@@ -78,7 +76,7 @@ THREE.Terrain.Cosine = function(g, options) {
         phase = Math.random() * Math.PI * 2;
     for (var i = 0, xl = options.xSegments + 1; i < xl; i++) {
         for (var j = 0, yl = options.ySegments + 1; j < yl; j++) {
-            g[j * xl + i].z += amplitude * (Math.cos(i * frequencyScalar + phase) + Math.cos(j * frequencyScalar + phase));
+            g[j * xl + i] += amplitude * (Math.cos(i * frequencyScalar + phase) + Math.cos(j * frequencyScalar + phase));
         }
     }
 };
@@ -102,9 +100,8 @@ THREE.Terrain.CosineLayers = function(g, options) {
  *
  * Based on https://github.com/srchea/Terrain-Generation/blob/master/js/classes/TerrainGeneration.js
  *
- * @param {THREE.Vector3[]} g
- *   The vertex array for plane geometry to modify with heightmap data. This
- *   method sets the `z` property of each vertex.
+ * @param {Float32Array} g
+ *   The geometry's z-positions to modify with heightmap data.
  * @param {Object} options
  *   A map of settings that control how the terrain is constructed and
  *   displayed. Valid values are the same as those for the `options` parameter
@@ -170,7 +167,7 @@ THREE.Terrain.DiamondSquare = function(g, options) {
     // Apply heightmap
     for (i = 0; i < xl; i++) {
         for (j = 0; j < yl; j++) {
-            g[j * xl + i].z += heightmap[i][j];
+            g[j * xl + i] += heightmap[i][j];
         }
     }
 
@@ -201,13 +198,13 @@ THREE.Terrain.Fault = function(g, options) {
             for (var j = 0, yl = options.ySegments + 1; j < yl; j++) {
                 var distance = a*i + b*j - c;
                 if (distance > smoothDistance) {
-                    g[j * xl + i].z += displacement;
+                    g[j * xl + i] += displacement;
                 }
                 else if (distance < -smoothDistance) {
-                    g[j * xl + i].z -= displacement;
+                    g[j * xl + i] -= displacement;
                 }
                 else {
-                    g[j * xl + i].z += Math.cos(distance / smoothDistance * Math.PI * 2) * displacement;
+                    g[j * xl + i] += Math.cos(distance / smoothDistance * Math.PI * 2) * displacement;
                 }
             }
         }
@@ -222,9 +219,8 @@ THREE.Terrain.Fault = function(g, options) {
  * terrain and raise a small hill around those points. Those small hills
  * eventually accumulate into large hills with distinct features.
  *
- * @param {THREE.Vector3[]} g
- *   The vertex array for plane geometry to modify with heightmap data. This
- *   method sets the `z` property of each vertex.
+ * @param {Float32Array} g
+ *   The geometry's z-positions to modify with heightmap data.
  * @param {Object} options
  *   A map of settings that control how the terrain is constructed and
  *   displayed. Valid values are the same as those for the `options` parameter
@@ -285,9 +281,8 @@ THREE.Terrain.Hill = function(g, options, feature, shape) {
  * of the points to place small hills are not uniformly randomly distributed
  * but instead are more likely to occur close to the center of the terrain.
  *
- * @param {THREE.Vector3[]} g
- *   The vertex array for plane geometry to modify with heightmap data. This
- *   method sets the `z` property of each vertex.
+ * @param {Float32Array} g
+ *   The geometry's z-positions to modify with heightmap data.
  * @param {Object} options
  *   A map of settings that control how the terrain is constructed and
  *   displayed. Valid values are the same as those for the `options` parameter
@@ -335,18 +330,18 @@ THREE.Terrain.HillIsland = (function() {
             var neighborKey = j * xl + i;
             // If the neighbor is lower, move the particle to that neighbor and re-evaluate.
             if (typeof g[neighborKey] !== 'undefined') {
-                if (g[neighborKey].z < g[currentKey].z) {
+                if (g[neighborKey] < g[currentKey]) {
                     deposit(g, i, j, xl, displacement);
                     return;
                 }
             }
             // Deposit some particles on the edge.
             else if (Math.random() < 0.2) {
-                g[currentKey].z += displacement;
+                g[currentKey] += displacement;
                 return;
             }
         }
-        g[currentKey].z += displacement;
+        g[currentKey] += displacement;
     }
 
     /**
@@ -399,7 +394,7 @@ THREE.Terrain.Perlin = function(g, options) {
         divisor = (Math.min(options.xSegments, options.ySegments) + 1) / options.frequency;
     for (var i = 0, xl = options.xSegments + 1; i < xl; i++) {
         for (var j = 0, yl = options.ySegments + 1; j < yl; j++) {
-            g[j * xl + i].z += noise.perlin(i / divisor, j / divisor) * range;
+            g[j * xl + i] += noise.perlin(i / divisor, j / divisor) * range;
         }
     }
 };
@@ -445,7 +440,7 @@ THREE.Terrain.Simplex = function(g, options) {
         divisor = (Math.min(options.xSegments, options.ySegments) + 1) * 2 / options.frequency;
     for (var i = 0, xl = options.xSegments + 1; i < xl; i++) {
         for (var j = 0, yl = options.ySegments + 1; j < yl; j++) {
-            g[j * xl + i].z += noise.simplex(i / divisor, j / divisor) * range;
+            g[j * xl + i] += noise.simplex(i / divisor, j / divisor) * range;
         }
     }
 };
@@ -525,7 +520,7 @@ THREE.Terrain.SimplexLayers = function(g, options) {
                 // http://stackoverflow.com/q/23708306/843621
                 var kg = j * xl + i,
                     kd = j * segments + i;
-                g[kg].z += data[kd];
+                g[kg] += data[kd];
             }
         }
     }
@@ -594,7 +589,7 @@ THREE.Terrain.Weierstrass = function(g, options) {
                 var y = Math.pow(1+r21, -k) * Math.sin(Math.pow(1+r22, k) * (j + 0.25*Math.cos(i) + r24*i) * r23);
                 sum -= Math.exp(dir1*x*x + dir2*y*y);
             }
-            g[j * xl + i].z += sum * range;
+            g[j * xl + i] += sum * range;
         }
     }
     THREE.Terrain.Clamp(g, options);

@@ -18,7 +18,10 @@ THREE.Terrain.Brownian = function(g, options) {
         x = i,
         y = j,
         numVertices = g.length,
-        current = g[j * xl + i],
+        vertices = g.map(function(z) {
+            return { z: z };
+        }),
+        current = vertices[j * xl + i],
         randomDirection = Math.random() * Math.PI * 2,
         addX = Math.cos(randomDirection),
         addY = Math.sin(randomDirection),
@@ -40,8 +43,8 @@ THREE.Terrain.Brownian = function(g, options) {
         for (n = -1; n <= 1; n++) {
             for (m = -1; m <= 1; m++) {
                 key = (j+n)*xl + i + m;
-                if (typeof g[key] !== 'undefined' && touched.indexOf(g[key]) === -1 && i+m >= 0 && j+n >= 0 && i+m < xl && j+n < yl && n && m) {
-                    untouched.push(g[key]);
+                if (typeof vertices[key] !== 'undefined' && touched.indexOf(vertices[key]) === -1 && i+m >= 0 && j+n >= 0 && i+m < xl && j+n < yl && n && m) {
+                    untouched.push(vertices[key]);
                 }
             }
         }
@@ -52,7 +55,7 @@ THREE.Terrain.Brownian = function(g, options) {
             randomDirection = Math.random() * Math.PI * 2;
             addX = Math.cos(randomDirection);
             addY = Math.sin(randomDirection);
-            index = g.indexOf(current);
+            index = vertices.indexOf(current);
             i = index % xl;
             j = Math.floor(index / xl);
             x = i;
@@ -70,7 +73,7 @@ THREE.Terrain.Brownian = function(g, options) {
             j = Math.round(u);
 
             // If we hit a touched vertex, look in different directions to try to find an untouched one.
-            for (var k = 0; i >= 0 && j >= 0 && i < xl && j < yl && touched.indexOf(g[j * xl + i]) !== -1 && k < 9; k++) {
+            for (var k = 0; i >= 0 && j >= 0 && i < xl && j < yl && touched.indexOf(vertices[j * xl + i]) !== -1 && k < 9; k++) {
                 randomDirection = Math.random() * Math.PI * 2;
                 addX = Math.cos(randomDirection);
                 addY = Math.sin(randomDirection);
@@ -83,10 +86,10 @@ THREE.Terrain.Brownian = function(g, options) {
             }
 
             // If we found an untouched vertex, make it the current one.
-            if (i >= 0 && j >= 0 && i < xl && j < yl && touched.indexOf(g[j * xl + i]) === -1) {
+            if (i >= 0 && j >= 0 && i < xl && j < yl && touched.indexOf(vertices[j * xl + i]) === -1) {
                 x = u;
                 y = v;
-                current = g[j * xl + i];
+                current = vertices[j * xl + i];
                 var io = untouched.indexOf(current);
                 if (io !== -1) {
                     untouched.splice(io, 1);
@@ -100,7 +103,7 @@ THREE.Terrain.Brownian = function(g, options) {
                 randomDirection = Math.random() * Math.PI * 2;
                 addX = Math.cos(randomDirection);
                 addY = Math.sin(randomDirection);
-                index = g.indexOf(current);
+                index = vertices.indexOf(current);
                 i = index % xl;
                 j = Math.floor(index / xl);
                 x = i;
@@ -114,8 +117,8 @@ THREE.Terrain.Brownian = function(g, options) {
         for (n = -1; n <= 1; n++) {
             for (m = -1; m <= 1; m++) {
                 key = (j+n)*xl + i + m;
-                if (typeof g[key] !== 'undefined' && touched.indexOf(g[key]) !== -1 && i+m >= 0 && j+n >= 0 && i+m < xl && j+n < yl && n && m) {
-                    sum += g[key].z;
+                if (typeof vertices[key] !== 'undefined' && touched.indexOf(vertices[key]) !== -1 && i+m >= 0 && j+n >= 0 && i+m < xl && j+n < yl && n && m) {
+                    sum += vertices[key].z;
                     c++;
                 }
             }
@@ -127,6 +130,10 @@ THREE.Terrain.Brownian = function(g, options) {
             current.z = sum / c + THREE.Terrain.EaseInWeak(lastAdjust) * maxHeightAdjust * 2 - maxHeightAdjust;
         }
         touched.push(current);
+    }
+
+    for (i = vertices.length - 1; i >= 0; i--) {
+        g[i] = vertices[i].z;
     }
 
     // Erase artifacts.

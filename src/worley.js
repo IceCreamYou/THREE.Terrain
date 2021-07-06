@@ -49,9 +49,8 @@
      * scattered point (or the nth-closest point, but this results in
      * heightmaps that don't look much like terrain).
      *
-     * @param {THREE.Vector3[]} g
-     *   The vertex array for plane geometry to modify with heightmap data.
-     *   This method sets the `z` property of each vertex.
+     * @param {Float32Array} g
+     *   The geometry's z-positions to modify with heightmap data.
      * @param {Object} options
      *   A map of settings that control how the terrain is constructed and
      *   displayed. Valid values are the same as those for the `options`
@@ -88,7 +87,7 @@
             for (var j = 0; j < options.ySegments + 1; j++) {
                 currentCoords.x = i;
                 currentCoords.y = j;
-                g[j*xl+i].z = transform(distanceToNearest(currentCoords, points, options.distanceType || ''));
+                g[j*xl+i] = transform(distanceToNearest(currentCoords, points, options.distanceType || ''));
             }
         }
         // We set the heights to distances so now we need to normalize

@@ -127,15 +127,17 @@ THREE.Terrain = function(options) {
     delete options._mesh; // Remove the reference for GC
 
     // Assign elevation data to the terrain plane from a heightmap or function.
+    var zs = THREE.Terrain.toArray1D(mesh.geometry.attributes.position.array);
     if (options.heightmap instanceof HTMLCanvasElement || options.heightmap instanceof Image) {
-        THREE.Terrain.fromHeightmap(mesh.geometry.attributes.position.array, options);
+        THREE.Terrain.fromHeightmap(zs, options);
     }
     else if (typeof options.heightmap === 'function') {
-        options.heightmap(mesh.geometry.attributes.position.array, options);
+        options.heightmap(zs, options);
     }
     else {
         console.warn('An invalid value was passed for `options.heightmap`: ' + options.heightmap);
     }
+    THREE.Terrain.fromArray1D(mesh.geometry.attributes.position.array, zs);
     THREE.Terrain.Normalize(mesh, options);
 
     // lod.addLevel(mesh, options.unit * 10 * Math.pow(2, lodLevel));
@@ -237,11 +239,11 @@ THREE.Terrain.GEOCLIPMAP = 2;
 THREE.Terrain.POLYGONREDUCTION = 3;
 
 /**
- * Get a 2D array of heightmap values from a 1D array of plane vertices.
+ * Get a 2D array of heightmap values from a 1D array of Z-positions.
  *
  * @param {Float32Array} vertices
- *   A 1D array containing the vertex positions of the geometry representing the
- *   terrain.
+ *   A 1D array containing the vertex Z-positions of the geometry representing
+ *   the terrain.
  * @param {Object} options
  *   A map of settings defining properties of the terrain. The only properties
  *   that matter here are `xSegments` and `ySegments`, which represent how many
@@ -259,7 +261,7 @@ THREE.Terrain.toArray2D = function(vertices, options) {
     for (i = 0; i < xl; i++) {
         tgt[i] = new Float32Array(options.ySegments + 1);
         for (j = 0; j < yl; j++) {
-            tgt[i][j] = vertices[(j * xl + i) * 3 + 2];
+            tgt[i][j] = vertices[j * xl + i];
         }
     }
     return tgt;
@@ -269,15 +271,15 @@ THREE.Terrain.toArray2D = function(vertices, options) {
  * Set the height of plane vertices from a 2D array of heightmap values.
  *
  * @param {Float32Array} vertices
- *   A 1D array containing the vertex positions of the geometry representing the
- *   terrain.
+ *   A 1D array containing the vertex Z-positions of the geometry representing
+ *   the terrain.
  * @param {Number[][]} src
  *   A 2D array representing a heightmap to apply to the terrain.
  */
 THREE.Terrain.fromArray2D = function(vertices, src) {
     for (var i = 0, xl = src.length; i < xl; i++) {
         for (var j = 0, yl = src[i].length; j < yl; j++) {
-            vertices[(j * xl + i) * 3 + 2] = src[i][j];
+            vertices[j * xl + i] = src[i][j];
         }
     }
 };

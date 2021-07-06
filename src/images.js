@@ -2,8 +2,7 @@
  * Convert an image-based heightmap into vertex-based height data.
  *
  * @param {Float32Array} g
- *   The vertex position array for geometry to modify with heightmap data. This
- *   method sets the `z` position of each vertex.
+ *   The geometry's z-positions to modify with heightmap data.
  * @param {Object} options
  *   A map of settings that control how the terrain is constructed and
  *   displayed. Valid values are the same as those for the `options` parameter
@@ -23,7 +22,7 @@ THREE.Terrain.fromHeightmap = function(g, options) {
         for (var col = 0; col < cols; col++) {
             var i = row * cols + col,
                 idx = i * 4;
-            g[i * 3 + 2] = (data[idx] + data[idx+1] + data[idx+2]) / 765 * spread + options.minHeight;
+            g[i] = (data[idx] + data[idx+1] + data[idx+2]) / 765 * spread + options.minHeight;
         }
     }
 };

@@ -14,13 +14,13 @@
  *   An object containing statistical information about the terrain.
  */
 THREE.Terrain.Analyze = function(mesh, options) {
-    if (mesh.geometry.vertices.length < 3) {
+    if (mesh.geometry.attributes.position.count < 3) {
         throw new Error('Not enough vertices to analyze');
     }
 
     var sortNumeric = function(a, b) { return a - b; },
         elevations = Array.prototype.sort.call(
-            THREE.Terrain.toArray1D(mesh.geometry.vertices),
+            THREE.Terrain.toArray1D(mesh.geometry.attributes.position.array),
             sortNumeric
         ),
         numVertices = elevations.length,
@@ -33,8 +33,8 @@ THREE.Terrain.Analyze = function(mesh, options) {
         groeneveldMeedenSkewElevation = 0,
         kurtosisElevation = 0,
         up = mesh.up.clone().applyAxisAngle(new THREE.Vector3(1, 0, 0), 0.5*Math.PI), // correct for mesh rotation
-        slopes = mesh.geometry.faces
-            .map(function(v) { return v.normal.angleTo(up) * 180 / Math.PI; })
+        slopes = faceNormals(mesh.geometry)
+            .map(function(normal) { return normal.angleTo(up) * 180 / Math.PI; })
             .sort(sortNumeric),
         numFaces = slopes.length,
         maxSlope = percentile(slopes, 1),
@@ -42,7 +42,7 @@ THREE.Terrain.Analyze = function(mesh, options) {
         medianSlope = percentile(slopes, 0.5),
         meanSlope = mean(slopes),
         centroid = mesh.position.clone().setZ(meanElevation),
-        fittedPlaneNormal = getFittedPlaneNormal(mesh.geometry.vertices, centroid),
+        fittedPlaneNormal = getFittedPlaneNormal(mesh.geometry.attributes.position.array, centroid),
         fittedPlaneSlope = fittedPlaneNormal.angleTo(up) * 180 / Math.PI,
         stdevSlope = 0,
         pearsonSkewSlope = 0,
@@ -90,13 +90,13 @@ THREE.Terrain.Analyze = function(mesh, options) {
         for (var j = 0; j < yl; j++) {
             var neighborhoodMax = -Infinity,
                 neighborhoodMin = Infinity,
-                v = mesh.geometry.vertices[j*xl + ii].z,
+                v = mesh.geometry.attributes.position.array[(j*xl + ii) * 3 + 2],
                 sum = 0,
                 c = 0;
             for (var n = -1; n <= 1; n++) {
                 for (var m = -1; m <= 1; m++) {
                     if (ii+m >= 0 && j+n >= 0 && ii+m < xl && j+n < yl && !(n === 0 && m === 0)) {
-                        var val = mesh.geometry.vertices[(j+n)*xl + ii + m].z;
+                        var val = mesh.geometry.attributes.position.array[((j+n)*xl + ii + m) * 3 + 2];
                         sum += val;
                         c++;
                         if (val > neighborhoodMax) neighborhoodMax = val;
@@ -191,7 +191,7 @@ THREE.Terrain.Analyze = function(mesh, options) {
             normal: fittedPlaneNormal,
             slope: fittedPlaneSlope,
             pctExplained: percentVariationExplainedByFittedPlane(
-                mesh.geometry.vertices,
+                mesh.geometry.attributes.position.array,
                 centroid,
                 fittedPlaneNormal,
                 options.maxHeight - options.minHeight
@@ -258,10 +258,45 @@ function percentRank(arr, v) {
 }
 
 /**
+ * Returns the face normals for the specified geometry.
+ *
+ * @param {THREE.BufferGeometry} geometry
+ *   The indexed geometry to analyze.
+ * @param {Object} options
+ *   Includes the `w` and `h` - the number of row and column segments of the
+ *   plane geometry.
+ */
+function faceNormals(geometry, options) {
+    var normals = new Array(geometry.length),
+        vertextNormal1 = new THREE.Vector3(),
+        vertextNormal2 = new THREE.Vector3(),
+        vertextNormal3 = new THREE.Vector3(),
+        faceNormal = new THREE.Vector3();
+    for (var i = 0, w = options.w*2; i < w; i++) {
+        for (var j = 0, h = options.h; j < h; j++) {
+            var key = j*w + i,
+                place = false,
+                v1Idx = geometry.index.array[3 * key + 0],
+                v2Idx = geometry.index.array[3 * key + 1],
+                v3Idx = geometry.index.array[3 * key + 2],
+                v1 = geometry.attributes.position.array.slice(v1Idx, v1Idx + 3),
+                v2 = geometry.attributes.position.array.slice(v2Idx, v2Idx + 3),
+                v3 = geometry.attributes.position.array.slice(v3Idx, v3Idx + 3);
+            vertextNormal1.fromBufferAttribute(geometry.attributes.normal, v1Idx);
+            vertextNormal2.fromBufferAttribute(geometry.attributes.normal, v2Idx);
+            vertextNormal3.fromBufferAttribute(geometry.attributes.normal, v3Idx);
+            faceNormal.copy(vertextNormal1).add(vertextNormal2).add(vertextNormal3).divideScalar(3);
+            normals.push(faceNormal);
+        }
+    }
+    return normals;
+}
+
+/**
  * Gets the normal vector of the fitted plane of a 3D array of points.
  *
- * @param {THREE.Vector3[]} points
- *   A 3D array of vertices to which to fit a plane.
+ * @param {Float32Array} points
+ *   The vertex positions of the geometry to analyze.
  * @param {THREE.Vector3} centroid
  *   The centroid of the vertex cloud.
  *
@@ -279,8 +314,8 @@ function getFittedPlaneNormal(points, centroid) {
     if (n < 3) throw new Error('At least three points are required to fit a plane');
 
     var r = new THREE.Vector3();
-    for (var i = 0, l = points.length; i < l; i++) {
-        r.copy(points[i]).sub(centroid);
+    for (var i = 0, l = points.length; i < l; i += 3) {
+        r.set(points[i], points[i+1], points[i+2]).sub(centroid);
         xx += r.x * r.x;
         xy += r.x * r.y;
         xz += r.x * r.z;
@@ -501,8 +536,8 @@ function drawHistogram(buckets, canvas, minV, maxV, append) {
  * the terrain elevations and the fitted plane at each vertex, and divides by
  * half the range to arrive at a dimensionless value.
  *
- * @param {THREE.Vector3[]} vertices
- *   The terrain vertices.
+ * @param {Float32Array} vertices
+ *   The terrain vertex positions.
  * @param {THREE.Vector3} centroid
  *   The fitted plane centroid.
  * @param {THREE.Vector3} normal
@@ -518,12 +553,12 @@ function drawHistogram(buckets, canvas, minV, maxV, append) {
 function percentVariationExplainedByFittedPlane(vertices, centroid, normal, range) {
     var numVertices = vertices.length,
         diff = 0;
-    for (var i = 0; i < numVertices; i++) {
+    for (var i = 0; i < numVertices; i += 3) {
         var fittedZ = Math.sqrt(
-                (vertices[i].x - centroid.x) * (vertices[i].x - centroid.x) +
-                (vertices[i].y - centroid.y) * (vertices[i].y - centroid.y)
+                (vertices[i + 0] - centroid.x) * (vertices[i + 0] - centroid.x) +
+                (vertices[i + 1] - centroid.y) * (vertices[i + 1] - centroid.y)
             ) * Math.tan(normal.z * Math.PI) + centroid.z;
-        diff += (vertices[i].z - fittedZ) * (vertices[i].z - fittedZ);
+        diff += (vertices[i + 2] - fittedZ) * (vertices[i + 2] - fittedZ);
     }
     return 1 - Math.sqrt(diff / numVertices) * 2 / range;
 }

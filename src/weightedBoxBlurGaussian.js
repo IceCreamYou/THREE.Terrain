@@ -4,9 +4,8 @@
 /**
  * Perform Gaussian smoothing on terrain vertices.
  *
- * @param {THREE.Vector3[]} g
- *   The vertex array for plane geometry to modify with heightmap data. This
- *   method sets the `z` property of each vertex.
+ * @param {Float32Array} g
+ *   The geometry's z-positions to modify with heightmap data.
  * @param {Object} options
  *   A map of settings that control how the terrain is constructed and
  *   displayed. Valid values are the same as those for the `options` parameter
@@ -19,13 +18,13 @@
  *   in slower but more accurate smoothing.
  */
 THREE.Terrain.GaussianBoxBlur = function(g, options, s, n) {
-    THREE.Terrain.fromArray1D(g, gaussianBoxBlur(
-        THREE.Terrain.toArray1D(g, options),
+    gaussianBoxBlur(
+        g,
         options.xSegments+1,
         options.ySegments+1,
         s,
         n
-    ));
+    );
 };
 
 /**
@@ -62,7 +61,7 @@ THREE.Terrain.GaussianBoxBlur = function(g, options, s, n) {
 function gaussianBoxBlur(scl, w, h, r, n, tcl) {
     if (typeof r === 'undefined') r = 1;
     if (typeof n === 'undefined') n = 3;
-    if (typeof tcl === 'undefined') tcl = new Float64Array(scl.length);
+    if (typeof tcl === 'undefined') tcl = new Float32Array(scl.length);
     var boxes = boxesForGauss(r, n);
     for (var i = 0; i < n; i++) {
         boxBlur(scl, tcl, w, h, (boxes[i]-1)/2);

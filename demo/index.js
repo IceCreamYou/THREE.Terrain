@@ -477,11 +477,8 @@ function buildTree() {
   g.merge(c2.geometry, c2.matrix);
   g.merge(c3.geometry, c3.matrix);
 
-  // TODO
-  // var b = c0.geometry.faces.length;
-  // for (var i = 0, l = g.faces.length; i < l; i++) {
-  //   g.faces[i].materialIndex = i < b ? 0 : 1;
-  // }
+  g.addGroup(0, 12, 0);
+  g.addGroup(12, 96, 1);
 
   var m = new THREE.Mesh(g, material);
 

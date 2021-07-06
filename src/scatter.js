@@ -2,7 +2,10 @@
  * Scatter a mesh across the terrain.
  *
  * @param {THREE.Geometry} geometry
- *   The terrain's geometry (or the highest-resolution version of it).
+ *   The terrain's geometry (or the highest-resolution version of it). Must be
+ *   indexed. If you have an unindexed geometry, you can use
+ *   `BufferGeometryUtils.mergeVertices` from the Three.js examples to set the
+ *   indexes.
  * @param {Object} options
  *   A map of settings that controls how the meshes are scattered, with the
  *   following properties:
@@ -52,10 +55,6 @@ THREE.Terrain.ScatterMeshes = function(geometry, options) {
         console.error('options.mesh is required for THREE.Terrain.ScatterMeshes but was not passed');
         return;
     }
-    if (geometry instanceof THREE.BufferGeometry) {
-        console.warn('The terrain mesh is using BufferGeometry but THREE.Terrain.ScatterMeshes can only work with Geometry.');
-        return;
-    }
     if (!options.scene) {
         options.scene = new THREE.Object3D();
     }
@@ -80,6 +79,10 @@ THREE.Terrain.ScatterMeshes = function(geometry, options) {
         randomness,
         spreadRange = 1 / options.smoothSpread,
         doubleSizeVariance = options.sizeVariance * 2,
+        vertextNormal1 = new THREE.Vector3(),
+        vertextNormal2 = new THREE.Vector3(),
+        vertextNormal3 = new THREE.Vector3(),
+        faceNormal = new THREE.Vector3(),
         v = geometry.vertices,
         meshes = [],
         up = options.mesh.up.clone().applyAxisAngle(new THREE.Vector3(1, 0, 0), 0.5*Math.PI);
@@ -87,12 +90,20 @@ THREE.Terrain.ScatterMeshes = function(geometry, options) {
         randomHeightmap = options.randomness();
         randomness = typeof randomHeightmap === 'number' ? Math.random : function(k) { return randomHeightmap[k]; };
     }
-    // geometry.computeFaceNormals();
     for (var i = 0, w = options.w*2; i < w; i++) {
         for (var j = 0, h = options.h; j < h; j++) {
             var key = j*w + i,
-                f = geometry.faces[key],
-                place = false;
+                place = false,
+                v1Idx = geometry.index.array[3 * key + 0],
+                v2Idx = geometry.index.array[3 * key + 1],
+                v3Idx = geometry.index.array[3 * key + 2],
+                v1 = geometry.attributes.position.array.slice(v1Idx, v1Idx + 3),
+                v2 = geometry.attributes.position.array.slice(v2Idx, v2Idx + 3),
+                v3 = geometry.attributes.position.array.slice(v3Idx, v3Idx + 3);
+            vertextNormal1.fromBufferAttribute(geometry.attributes.normal, v1Idx);
+            vertextNormal2.fromBufferAttribute(geometry.attributes.normal, v2Idx);
+            vertextNormal3.fromBufferAttribute(geometry.attributes.normal, v3Idx);
+            faceNormal.copy(vertextNormal1).add(vertextNormal2).add(vertextNormal3).divideScalar(3);
             if (spreadIsNumber) {
                 var rv = randomness(key);
                 if (rv < options.spread) {
@@ -106,21 +117,23 @@ THREE.Terrain.ScatterMeshes = function(geometry, options) {
                 }
             }
             else {
-                place = options.spread(v[f.a], key, f, i, j);
+                place = options.spread(new THREE.Vector3(v1[0], v1[1], v1[2]), key, f, i, j);
             }
             if (place) {
                 // Don't place a mesh if the angle is too steep.
-                if (f.normal.angleTo(up) > options.maxSlope) {
+                if (faceNormal.angleTo(up) > options.maxSlope) {
                     continue;
                 }
                 var mesh = options.mesh.clone();
-                // mesh.geometry.computeBoundingBox();
-                mesh.position.copy(v[f.a]).add(v[f.b]).add(v[f.c]).divideScalar(3);
-                // mesh.translateZ((mesh.geometry.boundingBox.max.z - mesh.geometry.boundingBox.min.z) * 0.5);
+                mesh.position.set(
+                    (v1[0] + v2[0] + v3[0]) / 3,
+                    (v1[1] + v2[1] + v3[1]) / 3,
+                    (v1[2] + v2[2] + v3[2]) / 3
+                );
                 if (options.maxTilt > 0) {
-                    var normal = mesh.position.clone().add(f.normal);
+                    var normal = mesh.position.clone().add(faceNormal);
                     mesh.lookAt(normal);
-                    var tiltAngle = f.normal.angleTo(up);
+                    var tiltAngle = faceNormal.angleTo(up);
                     if (tiltAngle > options.maxTilt) {
                         var ratio = options.maxTilt / tiltAngle;
                         mesh.rotation.x *= ratio;
@@ -141,27 +154,13 @@ THREE.Terrain.ScatterMeshes = function(geometry, options) {
     }
 
     // Merge geometries.
-    var k, l;
-    if (options.mesh.geometry instanceof THREE.Geometry) {
-        var g = new THREE.Geometry();
-        for (k = 0, l = meshes.length; k < l; k++) {
-            var m = meshes[k];
-            m.updateMatrix();
-            g.merge(m.geometry, m.matrix);
-        }
-        /*
-        if (!(options.mesh.material instanceof THREE.MeshFaceMaterial)) {
-            g = THREE.BufferGeometryUtils.fromGeometry(g);
-        }
-        */
-        options.scene.add(new THREE.Mesh(g, options.mesh.material));
+    var g = new THREE.BufferGeometry();
+    for (var k = 0, l = meshes.length; k < l; k++) {
+        var m = meshes[k];
+        m.updateMatrix();
+        g.merge(m.geometry, m.matrix);
     }
-    // There's no BufferGeometry merge method implemented yet.
-    else {
-        for (k = 0, l = meshes.length; k < l; k++) {
-            options.scene.add(meshes[k]);
-        }
-    }
+    options.scene.add(new THREE.Mesh(g, options.mesh.material));
 
     return options.scene;
 };
