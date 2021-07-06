@@ -25,7 +25,7 @@ function animate() {
 function startAnimating() {
   if (paused) {
     paused = false;
-    controls.freeze = false;
+    controls.enabled = true;
     clock.start();
     requestAnimationFrame(animate);
   }
@@ -33,7 +33,7 @@ function startAnimating() {
 
 function stopAnimating() {
   paused = true;
-  controls.freeze = true;
+  controls.enabled = false;
   clock.stop();
 }
 
@@ -71,7 +71,7 @@ function setupControls() {
   fpsCamera = new THREE.PerspectiveCamera(60, renderer.domElement.width / renderer.domElement.height, 1, 10000);
   scene.add(fpsCamera);
   controls = new THREE.FirstPersonControls(fpsCamera, renderer.domElement);
-  controls.freeze = true;
+  controls.enabled = false;
   controls.movementSpeed = 100;
   controls.lookSpeed = 0.075;
 }
@@ -187,7 +187,6 @@ function setupDatGui() {
         ySize: Math.round(that.size * that['width:length ratio']),
         xSegments: s,
         ySegments: Math.round(s * that['width:length ratio']),
-        _mesh: typeof terrainScene === 'undefined' ? null : terrainScene.children[0], // internal only
       };
       scene.remove(terrainScene);
       terrainScene = THREE.Terrain(o);
@@ -197,7 +196,7 @@ function setupDatGui() {
       var he = document.getElementById('heightmap');
       if (he) {
         o.heightmap = he;
-        THREE.Terrain.toHeightmap(terrainScene.children[0].geometry.vertices, o);
+        THREE.Terrain.toHeightmap(terrainScene.children[0].geometry.attributes.position.array, o);
       }
       that['Scatter meshes']();
       lastOptions = o;
@@ -305,7 +304,7 @@ function setupDatGui() {
     applySmoothing(val, lastOptions);
     settings['Scatter meshes']();
     if (lastOptions.heightmap) {
-      THREE.Terrain.toHeightmap(terrainScene.children[0].geometry.vertices, lastOptions);
+      THREE.Terrain.toHeightmap(terrainScene.children[0].geometry.attributes.position.array, lastOptions);
     }
   });
   heightmapFolder.add(settings, 'segments', 7, 127).step(1).onFinishChange(settings.Regenerate);
@@ -333,14 +332,13 @@ function setupDatGui() {
     fpsCamera.position.x = 449;
     fpsCamera.position.y = 311;
     fpsCamera.position.z = 376;
-    controls.lat = -41;
-    controls.lon = -139;
+    controls.lookAt(terrainScene.children[0].position);
     controls.update(0);
-    controls.freeze = true;
+    controls.enabled = false;
     if (useFPS) {
       document.getElementById('fpscontrols').className = 'visible';
       setTimeout(function() {
-        controls.freeze = false;
+        controls.enabled = true;
       }, 1000);
     }
     else {
@@ -382,6 +380,12 @@ function update(delta) {
   if (controls.update) controls.update(delta);
 }
 
+document.addEventListener('keyup', function(event) {
+  if (event.key === 'q' && useFPS) {
+    controls.enabled = !controls.enabled;
+  }
+});
+
 document.addEventListener('mousemove', function(event) {
   if (!paused) {
     mouseX = event.pageX;
@@ -396,13 +400,13 @@ function watchFocus() {
     if (_blurred) {
       _blurred = false;
       // startAnimating();
-      // controls.freeze = false;
+      // controls.enabled = true;
     }
   });
   window.addEventListener('blur', function() {
     // stopAnimating();
     _blurred = true;
-    controls.freeze = true;
+    controls.enabled = false;
   });
 }
 
@@ -428,14 +432,12 @@ function __printCameraData() {
   s += 'camera.rotation.x = ' + Math.round(fpsCamera.rotation.x * 180 / Math.PI) + ' * Math.PI / 180;\n';
   s += 'camera.rotation.y = ' + Math.round(fpsCamera.rotation.y * 180 / Math.PI) + ' * Math.PI / 180;\n';
   s += 'camera.rotation.z = ' + Math.round(fpsCamera.rotation.z * 180 / Math.PI) + ' * Math.PI / 180;\n';
-  s += 'controls.lat = ' + Math.round(controls.lat) + ';\n';
-  s += 'controls.lon = ' + Math.round(controls.lon) + ';\n';
   console.log(s);
 }
 
 function applySmoothing(smoothing, o) {
   var m = terrainScene.children[0];
-  var g = m.geometry.vertices;
+  var g = THREE.Terrain.toArray1D(m.geometry.attributes.position.array);
   if (smoothing === 'Conservative (0.5)') THREE.Terrain.SmoothConservative(g, o, 0.5);
   if (smoothing === 'Conservative (1)') THREE.Terrain.SmoothConservative(g, o, 1);
   if (smoothing === 'Conservative (10)') THREE.Terrain.SmoothConservative(g, o, 10);
@@ -449,6 +451,7 @@ function applySmoothing(smoothing, o) {
   else if (smoothing === 'Mean (1)') THREE.Terrain.Smooth(g, o, 1);
   else if (smoothing === 'Mean (8)') THREE.Terrain.Smooth(g, o, 8);
   else if (smoothing === 'Median') THREE.Terrain.SmoothMedian(g, o);
+  THREE.Terrain.fromArray1D(m.geometry.attributes.position.array, g);
   THREE.Terrain.Normalize(m, o);
 }
 

@@ -1,5 +1,5 @@
 /**
- * THREE.Terrain.js 1.6.0-20210705
+ * THREE.Terrain.js 1.6.0-20210706
  *
  * @author Isaac Sukin (http://www.isaacsukin.com/)
  * @license MIT
@@ -282,7 +282,6 @@ THREE.Terrain = function(options) {
         xSize: 1024,
         ySegments: 63,
         ySize: 1024,
-        _mesh: null, // internal only
     };
     options = options || {};
     for (var opt in defaultOptions) {
@@ -299,26 +298,10 @@ THREE.Terrain = function(options) {
     scene.rotation.x = -0.5 * Math.PI;
 
     // Create the terrain mesh.
-    // To save memory, it is possible to re-use a pre-existing mesh.
-    var mesh = options._mesh;
-    if (mesh && mesh.geometry.type === 'PlaneGeometry' &&
-                mesh.geometry.parameters.widthSegments === options.xSegments &&
-                mesh.geometry.parameters.heightSegments === options.ySegments) {
-        mesh.material = options.material;
-        mesh.scale.x = options.xSize / mesh.geometry.parameters.width;
-        mesh.scale.y = options.ySize / mesh.geometry.parameters.height;
-        var vertexPoints = mesh.geometry.attributes.position.array;
-        for (var i = 2, l = vertexPoints.length; i < l; i += 3) {
-            vertexPoints[i] = 0;
-        }
-    }
-    else {
-        mesh = new THREE.Mesh(
-            new THREE.PlaneGeometry(options.xSize, options.ySize, options.xSegments, options.ySegments),
-            options.material
-        );
-    }
-    delete options._mesh; // Remove the reference for GC
+    var mesh = new THREE.Mesh(
+        new THREE.PlaneGeometry(options.xSize, options.ySize, options.xSegments, options.ySegments),
+        options.material
+    );
 
     // Assign elevation data to the terrain plane from a heightmap or function.
     var zs = THREE.Terrain.toArray1D(mesh.geometry.attributes.position.array);
@@ -1853,7 +1836,7 @@ THREE.Terrain.ScatterMeshes = function(geometry, options) {
                 }
             }
             else {
-                place = options.spread(new THREE.Vector3(v1[0], v1[1], v1[2]), key, f, i, j);
+                place = options.spread(new THREE.Vector3(v1[0], v1[1], v1[2]), key, faceNormal, i, j);
             }
             if (place) {
                 // Don't place a mesh if the angle is too steep.

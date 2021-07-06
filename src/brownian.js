@@ -18,7 +18,7 @@ THREE.Terrain.Brownian = function(g, options) {
         x = i,
         y = j,
         numVertices = g.length,
-        vertices = g.map(function(z) {
+        vertices = Array.from(g).map(function(z) {
             return { z: z };
         }),
         current = vertices[j * xl + i],

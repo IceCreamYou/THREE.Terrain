@@ -117,7 +117,7 @@ THREE.Terrain.ScatterMeshes = function(geometry, options) {
                 }
             }
             else {
-                place = options.spread(new THREE.Vector3(v1[0], v1[1], v1[2]), key, f, i, j);
+                place = options.spread(new THREE.Vector3(v1[0], v1[1], v1[2]), key, faceNormal, i, j);
             }
             if (place) {
                 // Don't place a mesh if the angle is too steep.

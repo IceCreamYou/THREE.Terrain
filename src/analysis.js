@@ -33,7 +33,7 @@ THREE.Terrain.Analyze = function(mesh, options) {
         groeneveldMeedenSkewElevation = 0,
         kurtosisElevation = 0,
         up = mesh.up.clone().applyAxisAngle(new THREE.Vector3(1, 0, 0), 0.5*Math.PI), // correct for mesh rotation
-        slopes = faceNormals(mesh.geometry)
+        slopes = faceNormals(mesh.geometry, options)
             .map(function(normal) { return normal.angleTo(up) * 180 / Math.PI; })
             .sort(sortNumeric),
         numFaces = slopes.length,
@@ -263,8 +263,8 @@ function percentRank(arr, v) {
  * @param {THREE.BufferGeometry} geometry
  *   The indexed geometry to analyze.
  * @param {Object} options
- *   Includes the `w` and `h` - the number of row and column segments of the
- *   plane geometry.
+ *   Includes the `xSegments` and `ySegments` - the number of row and column
+ *   segments of the plane geometry.
  */
 function faceNormals(geometry, options) {
     var normals = new Array(geometry.length),
@@ -272,8 +272,8 @@ function faceNormals(geometry, options) {
         vertextNormal2 = new THREE.Vector3(),
         vertextNormal3 = new THREE.Vector3(),
         faceNormal = new THREE.Vector3();
-    for (var i = 0, w = options.w*2; i < w; i++) {
-        for (var j = 0, h = options.h; j < h; j++) {
+    for (var i = 0, w = options.xSegments*2; i < w; i++) {
+        for (var j = 0, h = options.ySegments; j < h; j++) {
             var key = j*w + i,
                 place = false,
                 v1Idx = geometry.index.array[3 * key + 0],
@@ -286,7 +286,7 @@ function faceNormals(geometry, options) {
             vertextNormal2.fromBufferAttribute(geometry.attributes.normal, v2Idx);
             vertextNormal3.fromBufferAttribute(geometry.attributes.normal, v3Idx);
             faceNormal.copy(vertextNormal1).add(vertextNormal2).add(vertextNormal3).divideScalar(3);
-            normals.push(faceNormal);
+            normals[key] = faceNormal;
         }
     }
     return normals;
