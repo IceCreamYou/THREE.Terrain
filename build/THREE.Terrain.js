@@ -1,5 +1,5 @@
 /**
- * THREE.Terrain.js 2.0.0-20210706
+ * THREE.Terrain.js 2.0.0-20220705
  *
  * @author Isaac Sukin (http://www.isaacsukin.com/)
  * @license MIT
@@ -1828,7 +1828,7 @@ THREE.Terrain.ScatterMeshes = function(geometry, options) {
 
         var place = false;
         if (spreadIsNumber) {
-            var rv = randomness(key);
+            var rv = randomness(i/9);
             if (rv < options.spread) {
                 place = true;
             }

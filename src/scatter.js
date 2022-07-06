@@ -96,7 +96,7 @@ THREE.Terrain.ScatterMeshes = function(geometry, options) {
 
         var place = false;
         if (spreadIsNumber) {
-            var rv = randomness(key);
+            var rv = randomness(i/9);
             if (rv < options.spread) {
                 place = true;
             }
