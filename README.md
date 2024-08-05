@@ -28,6 +28,9 @@ library is loaded first.)
 The latest releases of this project have been tested with three.js
 [r130](https://github.com/mrdoob/three.js/releases/tag/r130).
 
+For compatibility with r160 and later, which require the use of ES Modules,
+check out [this fork](https://github.com/oliver408i/THREE.Terrain).
+
 ### Procedurally Generate a Terrain
 
 In your own script, generate a terrain and add it to your scene:
