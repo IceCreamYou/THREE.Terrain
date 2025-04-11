@@ -149,8 +149,8 @@ function setupDatGui() {
     loader.load('demo/img/sand1.jpg', function(t1) {
       t1.wrapS = t1.wrapT = THREE.RepeatWrapping;
       t1.repeat.set(4, 4); // Repeat the texture more for better detail
-      t1.encoding = THREE.sRGBEncoding;
       t1.colorSpace = THREE.SRGBColorSpace;
+      t1.encoding = THREE.sRGBEncoding;
       t1.anisotropy = renderer.capabilities.getMaxAnisotropy();
       sand = new THREE.Mesh(
         new THREE.PlaneGeometry(16384+1024, 16384+1024, 64, 64), // Use PlaneGeometry

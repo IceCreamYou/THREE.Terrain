@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite';
 import topLevelAwait from 'vite-plugin-top-level-await';
 import wasm from 'vite-plugin-wasm';
+import { resolve } from 'path';
 
 export default defineConfig({
   plugins: [
@@ -18,11 +19,20 @@ export default defineConfig({
     outDir: 'dist/demo',
     rollupOptions: {
       input: {
-        main: 'demo/index.html'
+        main: resolve(__dirname, 'index.html')
       }
     }
   },
   // Specify the entry point
   root: './',
   publicDir: 'demo',
+  resolve: {
+    alias: {
+      'three': 'three',
+      'three/examples/': 'three/examples/'
+    }
+  },
+  optimizeDeps: {
+    include: ['three', 'dat.gui']
+  }
 }); 

@@ -1,23 +1,20 @@
-import * as w from "three";
-const g = {};
-console.log("TerrainNS initialized in core.js");
-g.ceilPowerOfTwo = function(r) {
-  return Math.pow(2, Math.ceil(Math.log(r) / Math.log(2)));
-};
-const Me = function(r) {
-  var e = {
+import * as s from "three";
+const M = {};
+function xr(e) {
+  return Math.pow(2, Math.ceil(Math.log(e) / Math.log(2)));
+}
+const dr = function(e) {
+  var r = {
     after: null,
-    easing: g.Linear,
-    // Use a simple default heightmap function if DiamondSquare is not available
-    heightmap: function(l, v) {
-      console.log("Using fallback heightmap function");
-      for (var o = 0; o < l.length; o++)
-        l[o] = Math.random() * (v.maxHeight - v.minHeight) + v.minHeight;
+    easing: M.Linear,
+    heightmap: function(u, h) {
+      for (var m = 0; m < u.length; m++)
+        u[m] = Math.random() * (h.maxHeight - h.minHeight) + h.minHeight;
     },
     material: null,
     maxHeight: 100,
     minHeight: -100,
-    optimization: g.NONE,
+    optimization: M.NONE,
     frequency: 2.5,
     steps: 1,
     stretch: true,
@@ -27,264 +24,205 @@ const Me = function(r) {
     ySegments: 63,
     ySize: 1024
   };
-  console.log("Default heightmap function type:", typeof e.heightmap), r = r || {};
-  for (var a in e)
-    e.hasOwnProperty(a) && (r[a] = typeof r[a] > "u" ? e[a] : r[a]);
-  r.material = r.material || new w.MeshPhongMaterial({
-    color: 15623731,
-    flatShading: true,
-    shininess: 0,
-    side: w.DoubleSide
-  });
-  var t = new w.Object3D();
-  t.rotation.x = -0.5 * Math.PI, console.log("Creating terrain mesh with size:", r.xSize, r.ySize, "segments:", r.xSegments, r.ySegments);
-  try {
-    var n = new w.PlaneGeometry(
-      r.xSize,
-      r.ySize,
-      r.xSegments,
-      r.ySegments
-    );
-    console.log("Geometry created:", n), console.log("Geometry attributes:", n.attributes), console.log("Position array length:", n.attributes.position.array.length);
-    var f = new w.Mesh(
-      n,
-      r.material || new w.MeshBasicMaterial({ color: 15623731 })
-    );
-    console.log("Mesh created:", f);
-  } catch (l) {
-    throw console.error("Error creating geometry or mesh:", l), l;
-  }
-  console.log("Getting position array from geometry:", f.geometry.attributes.position);
-  var h = g.toArray1D(f.geometry.attributes.position.array);
-  if (console.log("Generated zs array:", h.length), r.heightmap instanceof HTMLCanvasElement || r.heightmap instanceof Image)
-    console.log("Using image heightmap"), g.fromHeightmap(h, r, r.heightmap);
-  else if (typeof r.heightmap == "function")
-    console.log("Using function heightmap:", r.heightmap.name), r.heightmap(h, r);
-  else {
-    console.warn("An invalid value was passed for `options.heightmap`: " + r.heightmap), console.log("Applying fallback random heightmap");
-    for (var i = 0; i < h.length; i++)
-      h[i] = Math.random() * (r.maxHeight - r.minHeight) + r.minHeight;
-  }
-  g.fromArray1D(f.geometry.attributes.position.array, h), g.Normalize(f, r), t.add(f), console.log("Scene created with children:", t.children.length), console.log("Mesh position:", f.position), console.log("Mesh rotation:", f.rotation), console.log("Mesh scale:", f.scale);
-  for (var m = 1 / 0, u = -1 / 0, i = 0; i < h.length; i++)
-    h[i] < m && (m = h[i]), h[i] > u && (u = h[i]);
-  return console.log("Terrain height range:", m, "to", u), t;
+  e = e || {};
+  for (var a in r)
+    r.hasOwnProperty(a) && (e[a] = typeof e[a] > "u" ? r[a] : e[a]);
+  e.material = e.material || new s.MeshBasicMaterial({ color: 15623731 });
+  var t = new s.Object3D();
+  t.rotation.x = -0.5 * Math.PI;
+  var n = new s.Mesh(
+    new s.PlaneGeometry(e.xSize, e.ySize, e.xSegments, e.ySegments),
+    e.material
+  ), f = M.toArray1D(n.geometry.attributes.position.array);
+  return e.heightmap instanceof HTMLCanvasElement || e.heightmap instanceof Image ? M.fromHeightmap(f, e, e.heightmap) : typeof e.heightmap == "function" ? e.heightmap(f, e) : console.warn("An invalid value was passed for `options.heightmap`: " + e.heightmap), M.fromArray1D(n.geometry.attributes.position.array, f), M.Normalize(n, e), t.add(n), t;
 };
-g.Normalize = function(r, e) {
-  var a = g.toArray1D(r.geometry.attributes.position.array);
-  e.turbulent && g.Turbulence(a, e), e.steps > 1 && (g.Step(a, e.steps), g.Smooth(a, e)), g.Clamp(a, e), typeof e.after == "function" && e.after(a, e), g.fromArray1D(r.geometry.attributes.position.array, a), r.geometry.computeBoundingSphere(), r.geometry.computeVertexNormals();
+M.Normalize = function(e, r) {
+  var a = M.toArray1D(e.geometry.attributes.position.array);
+  r.turbulent && M.Turbulence(a, r), r.steps > 1 && (M.Step(a, r.steps), M.Smooth(a, r)), M.Clamp(a, r), typeof r.after == "function" && r.after(a, r), M.fromArray1D(e.geometry.attributes.position.array, a), e.geometry.computeBoundingSphere(), e.geometry.computeVertexNormals();
 };
-g.NONE = 0;
-g.GEOMIPMAP = 1;
-g.GEOCLIPMAP = 2;
-g.POLYGONREDUCTION = 3;
-g.toArray2D = function(r, e) {
-  var a = new Array(e.xSegments + 1), t = e.xSegments + 1, n = e.ySegments + 1, f, h;
+M.NONE = 0;
+M.GEOMIPMAP = 1;
+M.GEOCLIPMAP = 2;
+M.POLYGONREDUCTION = 3;
+M.toArray2D = function(e, r) {
+  var a = new Array(r.xSegments + 1), t = r.xSegments + 1, n = r.ySegments + 1, f, u;
   for (f = 0; f < t; f++)
-    for (a[f] = new Float32Array(e.ySegments + 1), h = 0; h < n; h++)
-      a[f][h] = r[h * t + f];
+    for (a[f] = new Float32Array(r.ySegments + 1), u = 0; u < n; u++)
+      a[f][u] = e[u * t + f];
   return a;
 };
-g.fromArray2D = function(r, e) {
-  for (var a = 0, t = e.length; a < t; a++)
-    for (var n = 0, f = e[a].length; n < f; n++)
-      r[n * t + a] = e[a][n];
+M.fromArray2D = function(e, r) {
+  for (var a = 0, t = r.length; a < t; a++)
+    for (var n = 0, f = r[a].length; n < f; n++)
+      e[n * t + a] = r[a][n];
 };
-g.toArray1D = function(r) {
-  for (var e = new Float32Array(r.length / 3), a = 0, t = e.length; a < t; a++)
-    e[a] = r[a * 3 + 2];
-  return e;
-};
-g.fromArray1D = function(r, e) {
-  for (var a = 0, t = Math.min(r.length / 3, e.length); a < t; a++)
-    r[a * 3 + 2] = e[a];
-};
-g.heightmapArray = function(r, e) {
-  var a = new Array((e.xSegments + 1) * (e.ySegments + 1));
-  return a.length, a.fill(0), e.minHeight = e.minHeight || 0, e.maxHeight = typeof e.maxHeight > "u" ? 1 : e.maxHeight, e.stretch = e.stretch || false, r(a, e), g.Clamp(a, e), a;
-};
-g.Linear = function(r) {
+M.toArray1D = function(e) {
+  for (var r = new Float32Array(e.length / 3), a = 0, t = r.length; a < t; a++)
+    r[a] = e[a * 3 + 2];
   return r;
 };
-g.EaseIn = function(r) {
-  return r * r;
+M.fromArray1D = function(e, r) {
+  for (var a = 0, t = Math.min(e.length / 3, r.length); a < t; a++)
+    e[a * 3 + 2] = r[a];
 };
-g.EaseOut = function(r) {
-  return -r * (r - 2);
+M.heightmapArray = function(e, r) {
+  var a = new Array((r.xSegments + 1) * (r.ySegments + 1));
+  return a.length, a.fill(0), r.minHeight = r.minHeight || 0, r.maxHeight = typeof r.maxHeight > "u" ? 1 : r.maxHeight, r.stretch = r.stretch || false, e(a, r), M.Clamp(a, r), a;
 };
-g.EaseInOut = function(r) {
-  return r * r * (3 - 2 * r);
+M.Linear = function(e) {
+  return e;
 };
-g.InEaseOut = function(r) {
-  var e = 2 * r - 1;
-  return 0.5 * e * e * e + 0.5;
+M.EaseIn = function(e) {
+  return e * e;
 };
-g.EaseInWeak = function(r) {
-  return Math.pow(r, 1.55);
+M.EaseOut = function(e) {
+  return -e * (e - 2);
 };
-g.EaseInStrong = function(r) {
-  return r * r * r * r * r * r * r;
+M.EaseInOut = function(e) {
+  return e * e * (3 - 2 * e);
 };
-g.Terrain = Me;
-g.Clamp = function(r, e) {
-  var a = 1 / 0, t = -1 / 0, n = r.length, f;
-  for (e.easing = e.easing || g.Linear, f = 0; f < n; f++)
-    r[f] < a && (a = r[f]), r[f] > t && (t = r[f]);
-  var h = t - a, i = typeof e.maxHeight != "number" ? t : e.maxHeight, m = typeof e.minHeight != "number" ? a : e.minHeight, u = e.stretch ? i : t < i ? t : i, l = e.stretch ? m : a > m ? a : m, v = u - l;
-  for (u < l && (u = i, v = u - l), f = 0; f < n; f++)
-    r[f] = e.easing((r[f] - a) / h) * v + m;
+M.InEaseOut = function(e) {
+  var r = 2 * e - 1;
+  return 0.5 * r * r * r + 0.5;
 };
-g.Edges = function(r, e, a, t, n, f) {
-  var h = Math.floor(t / (e.xSize / e.xSegments)) || 1, i = Math.floor(t / (e.ySize / e.ySegments)) || 1, m = a ? e.maxHeight : e.minHeight, u = a ? Math.max : Math.min, l = e.xSegments + 1, v = e.ySegments + 1, o, c, d, y, M;
-  for (n = n || g.EaseInOut, typeof f != "object" && (f = { top: true, bottom: true, left: true, right: true }), o = 0; o < l; o++)
-    for (c = 0; c < i; c++)
-      d = n(1 - c / i), y = c * l + o, M = (e.ySegments - c) * l + o, f.top && (r[y] = u(r[y], (m - r[y]) * d + r[y])), f.bottom && (r[M] = u(r[M], (m - r[M]) * d + r[M]));
-  for (o = 0; o < v; o++)
+M.EaseInWeak = function(e) {
+  return Math.pow(e, 1.55);
+};
+M.EaseInStrong = function(e) {
+  return e * e * e * e * e * e * e;
+};
+M.Terrain = dr;
+M.Clamp = function(e, r) {
+  var a = 1 / 0, t = -1 / 0, n = e.length, f;
+  for (r.easing = r.easing || M.Linear, f = 0; f < n; f++)
+    e[f] < a && (a = e[f]), e[f] > t && (t = e[f]);
+  var u = t - a, h = typeof r.maxHeight != "number" ? t : r.maxHeight, m = typeof r.minHeight != "number" ? a : r.minHeight, i = r.stretch ? h : t < h ? t : h, g = r.stretch ? m : a > m ? a : m, o = i - g;
+  for (i < g && (i = h, o = i - g), f = 0; f < n; f++)
+    e[f] = r.easing((e[f] - a) / u) * o + m;
+};
+M.Edges = function(e, r, a, t, n, f) {
+  var u = Math.floor(t / (r.xSize / r.xSegments)) || 1, h = Math.floor(t / (r.ySize / r.ySegments)) || 1, m = a ? r.maxHeight : r.minHeight, i = a ? Math.max : Math.min, g = r.xSegments + 1, o = r.ySegments + 1, l, c, d, y, v;
+  for (n = n || M.EaseInOut, typeof f != "object" && (f = { top: true, bottom: true, left: true, right: true }), l = 0; l < g; l++)
     for (c = 0; c < h; c++)
-      d = n(1 - c / h), y = o * l + c, M = (e.ySegments - o) * l + (e.xSegments - c), f.left && (r[y] = u(r[y], (m - r[y]) * d + r[y])), f.right && (r[M] = u(r[M], (m - r[M]) * d + r[M]));
-  g.Clamp(r, {
-    maxHeight: e.maxHeight,
-    minHeight: e.minHeight,
+      d = n(1 - c / h), y = c * g + l, v = (r.ySegments - c) * g + l, f.top && (e[y] = i(e[y], (m - e[y]) * d + e[y])), f.bottom && (e[v] = i(e[v], (m - e[v]) * d + e[v]));
+  for (l = 0; l < o; l++)
+    for (c = 0; c < u; c++)
+      d = n(1 - c / u), y = l * g + c, v = (r.ySegments - l) * g + (r.xSegments - c), f.left && (e[y] = i(e[y], (m - e[y]) * d + e[y])), f.right && (e[v] = i(e[v], (m - e[v]) * d + e[v]));
+  M.Clamp(e, {
+    maxHeight: r.maxHeight,
+    minHeight: r.minHeight,
     stretch: true
   });
 };
-g.RadialEdges = function(r, e, a, t, n) {
-  var f = a ? e.maxHeight : e.minHeight, h = a ? Math.max : Math.min, i = e.xSegments + 1, m = e.ySegments + 1, u = i * 0.5, l = m * 0.5, v = e.xSize / e.xSegments, o = e.ySize / e.ySegments, c = Math.min(e.xSize, e.ySize) * 0.5 - t, d, y, M, S, s;
-  for (d = 0; d < i; d++)
-    for (y = 0; y < l; y++)
-      S = y * i + d, s = Math.min(c, Math.sqrt((u - d) * v * (u - d) * v + (l - y) * o * (l - y) * o) - t), !(s < 0) && (M = n(s / c), r[S] = h(r[S], (f - r[S]) * M + r[S]), S = (e.ySegments - y) * i + d, r[S] = h(r[S], (f - r[S]) * M + r[S]));
+M.RadialEdges = function(e, r, a, t, n) {
+  var f = a ? r.maxHeight : r.minHeight, u = a ? Math.max : Math.min, h = r.xSegments + 1, m = r.ySegments + 1, i = h * 0.5, g = m * 0.5, o = r.xSize / r.xSegments, l = r.ySize / r.ySegments, c = Math.min(r.xSize, r.ySize) * 0.5 - t, d, y, v, H, S;
+  for (d = 0; d < h; d++)
+    for (y = 0; y < g; y++)
+      H = y * h + d, S = Math.min(c, Math.sqrt((i - d) * o * (i - d) * o + (g - y) * l * (g - y) * l) - t), !(S < 0) && (v = n(S / c), e[H] = u(e[H], (f - e[H]) * v + e[H]), H = (r.ySegments - y) * h + d, e[H] = u(e[H], (f - e[H]) * v + e[H]));
 };
-g.Smooth = function(r, e, a) {
-  for (var t = new Float32Array(r.length), n = 0, f = e.xSegments + 1, h = e.ySegments + 1; n < f; n++)
-    for (var i = 0; i < h; i++) {
-      for (var m = 0, u = 0, l = -1; l <= 1; l++)
-        for (var v = -1; v <= 1; v++) {
-          var o = (i + l) * f + n + v;
-          typeof r[o] < "u" && n + v >= 0 && i + l >= 0 && n + v < f && i + l < h && (m += r[o], u++);
+M.Smooth = function(e, r, a) {
+  for (var t = new Float32Array(e.length), n = 0, f = r.xSegments + 1, u = r.ySegments + 1; n < f; n++)
+    for (var h = 0; h < u; h++) {
+      for (var m = 0, i = 0, g = -1; g <= 1; g++)
+        for (var o = -1; o <= 1; o++) {
+          var l = (h + g) * f + n + o;
+          typeof e[l] < "u" && n + o >= 0 && h + g >= 0 && n + o < f && h + g < u && (m += e[l], i++);
         }
-      t[i * f + n] = m / u;
+      t[h * f + n] = m / i;
     }
   a = a || 0;
-  for (var c = 1 / (1 + a), d = 0, y = r.length; d < y; d++)
-    r[d] = (t[d] + r[d] * a) * c;
+  for (var c = 1 / (1 + a), d = 0, y = e.length; d < y; d++)
+    e[d] = (t[d] + e[d] * a) * c;
 };
-g.SmoothMedian = function(r, e) {
-  for (var a = new Float32Array(r.length), t = [], n = [], f = function(S, s) {
-    return t[S] - t[s];
-  }, h = 0, i = e.xSegments + 1, m = e.ySegments + 1; h < i; h++)
-    for (var u = 0; u < m; u++) {
+M.SmoothMedian = function(e, r) {
+  for (var a = new Float32Array(e.length), t = [], n = [], f = function(H, S) {
+    return t[H] - t[S];
+  }, u = 0, h = r.xSegments + 1, m = r.ySegments + 1; u < h; u++)
+    for (var i = 0; i < m; i++) {
       t.length = 0, n.length = 0;
-      for (var l = -1; l <= 1; l++)
-        for (var v = -1; v <= 1; v++) {
-          var o = (u + l) * i + h + v;
-          typeof r[o] < "u" && h + v >= 0 && u + l >= 0 && h + v < i && u + l < m && (t.push(r[o]), n.push(o));
+      for (var g = -1; g <= 1; g++)
+        for (var o = -1; o <= 1; o++) {
+          var l = (i + g) * h + u + o;
+          typeof e[l] < "u" && u + o >= 0 && i + g >= 0 && u + o < h && i + g < m && (t.push(e[l]), n.push(l));
         }
       n.sort(f);
       var c = Math.floor(n.length * 0.5), d;
-      n.length % 2 === 1 ? d = r[n[c]] : d = (r[n[c - 1]] + r[n[c]]) * 0.5, a[u * i + h] = d;
+      n.length % 2 === 1 ? d = e[n[c]] : d = (e[n[c - 1]] + e[n[c]]) * 0.5, a[i * h + u] = d;
     }
-  for (var y = 0, M = r.length; y < M; y++)
-    r[y] = a[y];
+  for (var y = 0, v = e.length; y < v; y++)
+    e[y] = a[y];
 };
-g.SmoothConservative = function(r, e, a) {
-  for (var t = new Float32Array(r.length), n = 0, f = e.xSegments + 1, h = e.ySegments + 1; n < f; n++)
-    for (var i = 0; i < h; i++) {
-      for (var m = -1 / 0, u = 1 / 0, l = -1; l <= 1; l++)
-        for (var v = -1; v <= 1; v++) {
-          var o = (i + l) * f + n + v;
-          typeof r[o] < "u" && l && v && n + v >= 0 && i + l >= 0 && n + v < f && i + l < h && (r[o] < u && (u = r[o]), r[o] > m && (m = r[o]));
+M.SmoothConservative = function(e, r, a) {
+  for (var t = new Float32Array(e.length), n = 0, f = r.xSegments + 1, u = r.ySegments + 1; n < f; n++)
+    for (var h = 0; h < u; h++) {
+      for (var m = -1 / 0, i = 1 / 0, g = -1; g <= 1; g++)
+        for (var o = -1; o <= 1; o++) {
+          var l = (h + g) * f + n + o;
+          typeof e[l] < "u" && g && o && n + o >= 0 && h + g >= 0 && n + o < f && h + g < u && (e[l] < i && (i = e[l]), e[l] > m && (m = e[l]));
         }
-      var c = i * f + n;
+      var c = h * f + n;
       if (typeof a == "number") {
-        var d = (m - u) * 0.5, y = u + d;
-        m = y + d * a, u = y - d * a;
+        var d = (m - i) * 0.5, y = i + d;
+        m = y + d * a, i = y - d * a;
       }
-      t[c] = r[c] > m ? m : r[c] < u ? u : r[c];
+      t[c] = e[c] > m ? m : e[c] < i ? i : e[c];
     }
-  for (var M = 0, S = r.length; M < S; M++)
-    r[M] = t[M];
+  for (var v = 0, H = e.length; v < H; v++)
+    e[v] = t[v];
 };
-g.Step = function(r, e) {
-  var a = 0, t = 0, n = r.length, f = Math.floor(n / e), h = new Array(n), i = new Array(e);
-  for (typeof e > "u" && (e = Math.floor(Math.pow(n * 0.5, 0.25))), a = 0; a < n; a++)
-    h[a] = r[a];
-  for (h.sort(function(o, c) {
-    return o - c;
-  }), a = 0; a < e; a++) {
-    var m = h.slice(a * f, (a + 1) * f), u = 0, l = m.length;
-    for (t = 0; t < l; t++)
-      u += m[t];
-    i[a] = {
+M.Step = function(e, r) {
+  var a = 0, t = 0, n = e.length, f = Math.floor(n / r), u = new Array(n), h = new Array(r);
+  for (typeof r > "u" && (r = Math.floor(Math.pow(n * 0.5, 0.25))), a = 0; a < n; a++)
+    u[a] = e[a];
+  for (u.sort(function(l, c) {
+    return l - c;
+  }), a = 0; a < r; a++) {
+    var m = u.slice(a * f, (a + 1) * f), i = 0, g = m.length;
+    for (t = 0; t < g; t++)
+      i += m[t];
+    h[a] = {
       min: m[0],
       max: m[m.length - 1],
-      avg: u / l
+      avg: i / g
     };
   }
   for (a = 0; a < n; a++) {
-    var v = r[a];
-    for (t = 0; t < e; t++)
-      if (v >= i[t].min && v <= i[t].max) {
-        r[a] = i[t].avg;
+    var o = e[a];
+    for (t = 0; t < r; t++)
+      if (o >= h[t].min && o <= h[t].max) {
+        e[a] = h[t].avg;
         break;
       }
   }
 };
-g.Turbulence = function(r, e) {
-  for (var a = e.maxHeight - e.minHeight, t = 0, n = r.length; t < n; t++)
-    r[t] = e.minHeight + Math.abs((r[t] - e.minHeight) * 2 - a);
+M.Turbulence = function(e, r) {
+  for (var a = r.maxHeight - r.minHeight, t = 0, n = e.length; t < n; t++)
+    e[t] = r.minHeight + Math.abs((e[t] - r.minHeight) * 2 - a);
 };
-const j = {
-  seed: function(r) {
-    r > 0 && r < 1 && (r *= 65536), r = Math.floor(r), r < 256 && (r |= r << 8);
-    for (var e = 0; e < 256; e++) {
-      var a;
-      e & 1 ? a = oe[e] ^ r & 255 : a = oe[e] ^ r >> 8 & 255, B[e] = B[e + 256] = a, L[e] = L[e + 256] = He[a % 12];
-    }
-  },
-  simplex: function(r, e) {
-    var a, t, n, f = (r + e) * we, h = Math.floor(r + f), i = Math.floor(e + f), m = (h + i) * p, u = r - h + m, l = e - i + m, v, o;
-    u > l ? (v = 1, o = 0) : (v = 0, o = 1);
-    var c = u - v + p, d = l - o + p, y = u - 1 + 2 * p, M = l - 1 + 2 * p;
-    h &= 255, i &= 255;
-    var S = L[h + B[i]], s = L[h + v + B[i + o]], x = L[h + 1 + B[i + 1]], H = 0.5 - u * u - l * l;
-    H < 0 ? a = 0 : (H *= H, a = H * H * S.dot2(u, l));
-    var b = 0.5 - c * c - d * d;
-    b < 0 ? t = 0 : (b *= b, t = b * b * s.dot2(c, d));
-    var I = 0.5 - y * y - M * M;
-    return I < 0 ? n = 0 : (I *= I, n = I * I * x.dot2(y, M)), 70 * (a + t + n);
-  },
-  perlin: function(r, e) {
-    var a = Math.floor(r), t = Math.floor(e);
-    r = r - a, e = e - t, a = a & 255, t = t & 255;
-    var n = L[a + B[t]].dot2(r, e), f = L[a + B[t + 1]].dot2(r, e - 1), h = L[a + 1 + B[t]].dot2(r - 1, e), i = L[a + 1 + B[t + 1]].dot2(r - 1, e - 1), m = ve(r);
-    return he(
-      he(n, h, m),
-      he(f, i, m),
-      ve(e)
-    );
-  },
-  simplex3: function(r, e, a) {
-    var t, n, f, h, i = (r + e + a) * Ie, m = Math.floor(r + i), u = Math.floor(e + i), l = Math.floor(a + i), v = (m + u + l) * Y, o = r - m + v, c = e - u + v, d = a - l + v, y, M, S, s, x, H;
-    o >= c ? c >= d ? (y = 1, M = 0, S = 0, s = 1, x = 1, H = 0) : o >= d ? (y = 1, M = 0, S = 0, s = 1, x = 0, H = 1) : (y = 0, M = 0, S = 1, s = 1, x = 0, H = 1) : c < d ? (y = 0, M = 0, S = 1, s = 0, x = 1, H = 1) : o < d ? (y = 0, M = 1, S = 0, s = 0, x = 1, H = 1) : (y = 0, M = 1, S = 0, s = 1, x = 1, H = 0);
-    var b = o - y + Y, I = c - M + Y, q = d - S + Y, A = o - s + 2 * Y, V = c - x + 2 * Y, T = d - H + 2 * Y, C = o - 1 + 3 * Y, F = c - 1 + 3 * Y, R = d - 1 + 3 * Y;
-    m &= 255, u &= 255, l &= 255;
-    var O = L[m + B[u + B[l]]], G = L[m + y + B[u + M + B[l + S]]], X = L[m + s + B[u + x + B[l + H]]], Q = L[m + 1 + B[u + 1 + B[l + 1]]], N = 0.6 - o * o - c * c - d * d;
-    N < 0 ? t = 0 : (N *= N, t = N * N * O.dot3(o, c, d));
-    var z = 0.6 - b * b - I * I - q * q;
-    z < 0 ? n = 0 : (z *= z, n = z * z * G.dot3(b, I, q));
-    var U = 0.6 - A * A - V * V - T * T;
-    U < 0 ? f = 0 : (U *= U, f = U * U * X.dot3(A, V, T));
-    var _ = 0.6 - C * C - F * F - R * R;
-    return _ < 0 ? h = 0 : (_ *= _, h = _ * _ * Q.dot3(C, F, R)), 32 * (t + n + f + h);
-  },
-  // Add the expected noise2D and noise3D functions
-  noise2D: function(r, e) {
-    return this.perlin(r, e);
-  },
-  noise3D: function(r, e, a) {
-    return this.simplex3(r, e, a);
-  }
-}, oe = [
+const Y = {};
+function C(e, r, a) {
+  this.x = e, this.y = r, this.z = a;
+}
+C.prototype.dot2 = function(e, r) {
+  return this.x * e + this.y * r;
+};
+C.prototype.dot3 = function(e, r, a) {
+  return this.x * e + this.y * r + this.z * a;
+};
+var wr = [
+  new C(1, 1, 0),
+  new C(-1, 1, 0),
+  new C(1, -1, 0),
+  new C(-1, -1, 0),
+  new C(1, 0, 1),
+  new C(-1, 0, 1),
+  new C(1, 0, -1),
+  new C(-1, 0, -1),
+  new C(0, 1, 1),
+  new C(0, -1, 1),
+  new C(0, 1, -1),
+  new C(0, -1, -1)
+], lr = [
   151,
   160,
   137,
@@ -541,134 +479,135 @@ const j = {
   61,
   156,
   180
-], B = new Array(512), L = new Array(512), He = [
-  new E(1, 1, 0),
-  new E(-1, 1, 0),
-  new E(1, -1, 0),
-  new E(-1, -1, 0),
-  new E(1, 0, 1),
-  new E(-1, 0, 1),
-  new E(1, 0, -1),
-  new E(-1, 0, -1),
-  new E(0, 1, 1),
-  new E(0, -1, 1),
-  new E(0, 1, -1),
-  new E(0, -1, -1)
-];
-function E(r, e, a) {
-  this.x = r, this.y = e, this.z = a;
-}
-E.prototype.dot2 = function(r, e) {
-  return this.x * r + this.y * e;
-};
-E.prototype.dot3 = function(r, e, a) {
-  return this.x * r + this.y * e + this.z * a;
-};
-function ve(r) {
-  return r * r * r * (r * (r * 6 - 15) + 10);
-}
-function he(r, e, a) {
-  return (1 - a) * r + a * e;
-}
-const we = 0.5 * (Math.sqrt(3) - 1), p = (3 - Math.sqrt(3)) / 6, Ie = 1 / 3, Y = 1 / 6;
-j.seed(Math.random());
-console.log("TerrainNS in generators.js:", g);
-g.MultiPass = function(r, e, a) {
-  var t = {};
-  for (var n in e)
-    e.hasOwnProperty(n) && (t[n] = e[n]);
-  for (var f = e.maxHeight - e.minHeight, h = 0, i = a.length; h < i; h++) {
-    var m = typeof a[h].amplitude > "u" ? 1 : a[h].amplitude, u = 0.5 * (f - f * m);
-    t.maxHeight = e.maxHeight - u, t.minHeight = e.minHeight + u, t.frequency = typeof a[h].frequency > "u" ? e.frequency : a[h].frequency, a[h].method(r, t);
+], G = new Array(512), E = new Array(512);
+Y.seed = function(e) {
+  e > 0 && e < 1 && (e *= 65536), e = Math.floor(e), e < 256 && (e |= e << 8);
+  for (var r = 0; r < 256; r++) {
+    var a;
+    r & 1 ? a = lr[r] ^ e & 255 : a = lr[r] ^ e >> 8 & 255, G[r] = G[r + 256] = a, E[r] = E[r + 256] = wr[a % 12];
   }
 };
-g.Curve = function(r, e, a) {
-  for (var t = (e.maxHeight - e.minHeight) * 0.5, n = e.frequency / (Math.min(e.xSegments, e.ySegments) + 1), f = 0, h = e.xSegments + 1, i = e.ySegments + 1; f < h; f++)
-    for (var m = 0; m < i; m++)
-      r[m * h + f] += a(f * n, m * n) * t;
+Y.seed(Math.random());
+var sr = 0.5 * (Math.sqrt(3) - 1), $ = (3 - Math.sqrt(3)) / 6;
+Y.simplex = function(e, r) {
+  var a, t, n, f = (e + r) * sr, u = Math.floor(e + f), h = Math.floor(r + f), m = (u + h) * $, i = e - u + m, g = r - h + m, o, l;
+  i > g ? (o = 1, l = 0) : (o = 0, l = 1);
+  var c = i - o + $, d = g - l + $, y = i - 1 + 2 * $, v = g - 1 + 2 * $;
+  u &= 255, h &= 255;
+  var H = E[u + G[h]], S = E[u + o + G[h + l]], w = E[u + 1 + G[h + 1]], x = 0.5 - i * i - g * g;
+  x < 0 ? a = 0 : (x *= x, a = x * x * H.dot2(i, g));
+  var I = 0.5 - c * c - d * d;
+  I < 0 ? t = 0 : (I *= I, t = I * I * S.dot2(c, d));
+  var z = 0.5 - y * y - v * v;
+  return z < 0 ? n = 0 : (z *= z, n = z * z * w.dot2(y, v)), 70 * (a + t + n);
 };
-g.Cosine = function(r, e) {
-  for (var a = (e.maxHeight - e.minHeight) * 0.5, t = e.frequency * Math.PI / (Math.min(e.xSegments, e.ySegments) + 1), n = Math.random() * Math.PI * 2, f = 0, h = e.xSegments + 1; f < h; f++)
-    for (var i = 0, m = e.ySegments + 1; i < m; i++)
-      r[i * h + f] += a * (Math.cos(f * t + n) + Math.cos(i * t + n));
+function Mr(e) {
+  return e * e * e * (e * (e * 6 - 15) + 10);
+}
+function fr(e, r, a) {
+  return (1 - a) * e + a * r;
+}
+Y.perlin = function(e, r) {
+  var a = Math.floor(e), t = Math.floor(r);
+  e = e - a, r = r - t, a = a & 255, t = t & 255;
+  var n = E[a + G[t]].dot2(e, r), f = E[a + G[t + 1]].dot2(e, r - 1), u = E[a + 1 + G[t]].dot2(e - 1, r), h = E[a + 1 + G[t + 1]].dot2(e - 1, r - 1), m = Mr(e);
+  return fr(
+    fr(n, u, m),
+    fr(f, h, m),
+    Mr(r)
+  );
 };
-g.CosineLayers = function(r, e) {
-  g.MultiPass(r, e, [
-    { method: g.Cosine, frequency: 2.5 },
-    { method: g.Cosine, amplitude: 0.1, frequency: 12 },
-    { method: g.Cosine, amplitude: 0.05, frequency: 15 },
-    { method: g.Cosine, amplitude: 0.025, frequency: 20 }
+M.MultiPass = function(e, r, a) {
+  var t = {};
+  for (var n in r)
+    r.hasOwnProperty(n) && (t[n] = r[n]);
+  for (var f = r.maxHeight - r.minHeight, u = 0, h = a.length; u < h; u++) {
+    var m = typeof a[u].amplitude > "u" ? 1 : a[u].amplitude, i = 0.5 * (f - f * m);
+    t.maxHeight = r.maxHeight - i, t.minHeight = r.minHeight + i, t.frequency = typeof a[u].frequency > "u" ? r.frequency : a[u].frequency, a[u].method(e, t);
+  }
+};
+M.Curve = function(e, r, a) {
+  for (var t = (r.maxHeight - r.minHeight) * 0.5, n = r.frequency / (Math.min(r.xSegments, r.ySegments) + 1), f = 0, u = r.xSegments + 1, h = r.ySegments + 1; f < u; f++)
+    for (var m = 0; m < h; m++)
+      e[m * u + f] += a(f * n, m * n) * t;
+};
+M.Cosine = function(e, r) {
+  for (var a = (r.maxHeight - r.minHeight) * 0.5, t = r.frequency * Math.PI / (Math.min(r.xSegments, r.ySegments) + 1), n = Math.random() * Math.PI * 2, f = 0, u = r.xSegments + 1; f < u; f++)
+    for (var h = 0, m = r.ySegments + 1; h < m; h++)
+      e[h * u + f] += a * (Math.cos(f * t + n) + Math.cos(h * t + n));
+};
+M.CosineLayers = function(e, r) {
+  M.MultiPass(e, r, [
+    { method: M.Cosine, frequency: 2.5 },
+    { method: M.Cosine, amplitude: 0.1, frequency: 12 },
+    { method: M.Cosine, amplitude: 0.05, frequency: 15 },
+    { method: M.Cosine, amplitude: 0.025, frequency: 20 }
   ]);
 };
-g.DiamondSquare = function(r, e) {
-  var a = g.ceilPowerOfTwo(Math.max(e.xSegments, e.ySegments) + 1);
-  console.log("Generating Diamond-Square terrain with segments:", a), console.log("Height range:", e.minHeight, "to", e.maxHeight);
-  var t = a + 1, n = [], f = e.maxHeight - e.minHeight, h, i, m = e.xSegments + 1, u = e.ySegments + 1;
-  for (h = 0; h <= a; h++)
-    n[h] = new Float64Array(a + 1);
-  var l = (e.maxHeight - e.minHeight) * 0.1;
-  n[0][0] = Math.random() * l, n[0][a] = Math.random() * l, n[a][0] = Math.random() * l, n[a][a] = Math.random() * l;
-  for (var v = a; v >= 2; v /= 2) {
-    var o = Math.round(v * 0.5), c = Math.round(v), d, y, M, S;
-    for (f /= 2, d = 0; d < a; d += c)
-      for (y = 0; y < a; y += c)
-        S = Math.random() * f * 2 - f, M = n[d][y] + // top left
-        n[d + c][y] + // top right
-        n[d][y + c] + // bottom left
-        n[d + c][y + c], M *= 0.25, n[d + o][y + o] = M + S;
-    for (d = 0; d < a; d += o)
-      for (y = (d + o) % v; y < a; y += v)
-        S = Math.random() * f * 2 - f, M = n[(d - o + t) % t][y] + // middle left
-        n[(d + o) % t][y] + // middle right
-        n[d][(y + o) % t] + // middle top
-        n[d][(y - o + t) % t], M *= 0.25, M += S, n[d][y] = M, d === 0 && (n[a][y] = M), y === 0 && (n[d][a] = M);
+M.DiamondSquare = function(e, r) {
+  var a = xr(Math.max(r.xSegments, r.ySegments) + 1), t = a + 1, n = [], f = r.maxHeight - r.minHeight, u, h, m = r.xSegments + 1, i = r.ySegments + 1;
+  for (u = 0; u <= a; u++)
+    n[u] = new Float64Array(a + 1);
+  for (var g = a; g >= 2; g /= 2) {
+    var o = Math.round(g * 0.5), l = Math.round(g), c, d, y, v;
+    for (f /= 2, c = 0; c < a; c += l)
+      for (d = 0; d < a; d += l)
+        v = Math.random() * f * 2 - f, y = n[c][d] + // top left
+        n[c + l][d] + // top right
+        n[c][d + l] + // bottom left
+        n[c + l][d + l], y *= 0.25, n[c + o][d + o] = y + v;
+    for (c = 0; c < a; c += o)
+      for (d = (c + o) % g; d < a; d += g)
+        v = Math.random() * f * 2 - f, y = n[(c - o + t) % t][d] + // middle left
+        n[(c + o) % t][d] + // middle right
+        n[c][(d + o) % t] + // middle top
+        n[c][(d - o + t) % t], y *= 0.25, y += v, n[c][d] = y, c === 0 && (n[a][d] = y), d === 0 && (n[c][a] = y);
   }
-  for (h = 0; h < m; h++)
-    for (i = 0; i < u; i++)
-      r[i * m + h] += n[h][i];
-  var s = 1 / 0, x = -1 / 0;
-  for (h = 0; h < r.length; h++)
-    r[h] < s && (s = r[h]), r[h] > x && (x = r[h]);
-  console.log("Diamond-Square terrain generated, height range:", s, "to", x);
+  for (u = 0; u < m; u++)
+    for (h = 0; h < i; h++)
+      e[h * m + u] += n[u][h];
+  var H = 1 / 0, S = -1 / 0;
+  for (u = 0; u < e.length; u++)
+    e[u] < H && (H = e[u]), e[u] > S && (S = e[u]);
 };
-g.Fault = function(r, e) {
-  for (var a = Math.sqrt(e.xSegments * e.xSegments + e.ySegments * e.ySegments), t = a * e.frequency, n = (e.maxHeight - e.minHeight) * 0.5, f = n / t, h = Math.min(e.xSize / e.xSegments, e.ySize / e.ySegments) * e.frequency, i = 0; i < t; i++)
-    for (var m = Math.random(), u = Math.sin(m * Math.PI * 2), l = Math.cos(m * Math.PI * 2), v = Math.random() * a - a * 0.5, o = 0, c = e.xSegments + 1; o < c; o++)
-      for (var d = 0, y = e.ySegments + 1; d < y; d++) {
-        var M = u * o + l * d - v;
-        M > h ? r[d * c + o] += f : M < -h ? r[d * c + o] -= f : r[d * c + o] += Math.cos(M / h * Math.PI * 2) * f;
+M.Fault = function(e, r) {
+  for (var a = Math.sqrt(r.xSegments * r.xSegments + r.ySegments * r.ySegments), t = a * r.frequency, n = (r.maxHeight - r.minHeight) * 0.5, f = n / t, u = Math.min(r.xSize / r.xSegments, r.ySize / r.ySegments) * r.frequency, h = 0; h < t; h++)
+    for (var m = Math.random(), i = Math.sin(m * Math.PI * 2), g = Math.cos(m * Math.PI * 2), o = Math.random() * a - a * 0.5, l = 0, c = r.xSegments + 1; l < c; l++)
+      for (var d = 0, y = r.ySegments + 1; d < y; d++) {
+        var v = i * l + g * d - o;
+        v > u ? e[d * c + l] += f : v < -u ? e[d * c + l] -= f : e[d * c + l] += Math.cos(v / u * Math.PI * 2) * f;
       }
 };
-g.Hill = function(r, e, a, t) {
-  var n = e.frequency * 2, f = n * n * 10, h = e.maxHeight - e.minHeight, i = h / (n * n), m = h / n, u = Math.min(e.xSize, e.ySize), l = u / (n * n), v = u / n;
-  a = a || g.Influences.Hill;
-  for (var o = { x: 0, y: 0 }, c = 0; c < f; c++) {
-    var d = Math.random() * (v - l) + l, y = Math.random() * (m - i) + i;
-    e.xSize + d, e.ySize + d, o.x = Math.random(), o.y = Math.random(), typeof t == "function" && t(o), g.Influence(
-      r,
+M.Hill = function(e, r, a, t) {
+  var n = r.frequency * 2, f = n * n * 10, u = r.maxHeight - r.minHeight, h = u / (n * n), m = u / n, i = Math.min(r.xSize, r.ySize), g = i / (n * n), o = i / n;
+  a = a || M.Influences.Hill;
+  for (var l = { x: 0, y: 0 }, c = 0; c < f; c++) {
+    var d = Math.random() * (o - g) + g, y = Math.random() * (m - h) + h;
+    r.xSize + d, r.ySize + d, l.x = Math.random(), l.y = Math.random(), typeof t == "function" && t(l), M.Influence(
       e,
+      r,
       a,
-      o.x,
-      o.y,
+      l.x,
+      l.y,
       d,
       y,
-      w.AdditiveBlending,
-      g.EaseInStrong
+      s.AdditiveBlending,
+      M.EaseInStrong
     );
   }
 };
-g.HillIsland = /* @__PURE__ */ function() {
-  var r = function(e) {
+M.HillIsland = /* @__PURE__ */ function() {
+  var e = function(r) {
     var a = Math.random() * Math.PI * 2;
-    e.x = 0.5 + Math.cos(a) * e.x * 0.4, e.y = 0.5 + Math.sin(a) * e.y * 0.4;
+    r.x = 0.5 + Math.cos(a) * r.x * 0.4, r.y = 0.5 + Math.sin(a) * r.y * 0.4;
   };
-  return function(e, a, t) {
-    g.Hill(e, a, t, r);
+  return function(r, a, t) {
+    M.Hill(r, a, t, e);
   };
 }();
 (function() {
-  function r(e, a, t, n, f) {
-    for (var h = t * n + a, i = 0; i < 3; i++) {
+  function e(r, a, t, n, f) {
+    for (var u = t * n + a, h = 0; h < 3; h++) {
       var m = Math.floor(Math.random() * 8);
       switch (m) {
         case 0:
@@ -696,845 +635,371 @@ g.HillIsland = /* @__PURE__ */ function() {
           a--, t--;
           break;
       }
-      var u = t * n + a;
-      if (typeof e[u] < "u") {
-        if (e[u] < e[h]) {
-          r(e, a, t, n, f);
+      var i = t * n + a;
+      if (typeof r[i] < "u") {
+        if (r[i] < r[u]) {
+          e(r, a, t, n, f);
           return;
         }
       } else if (Math.random() < 0.2) {
-        e[h] += f;
+        r[u] += f;
         return;
       }
     }
-    e[h] += f;
+    r[u] += f;
   }
-  g.Particles = function(e, a) {
-    for (var t = Math.sqrt(a.xSegments * a.xSegments + a.ySegments * a.ySegments) * a.frequency * 300, n = a.xSegments + 1, f = (a.maxHeight - a.minHeight) / t * 1e3, h = Math.floor(Math.random() * a.xSegments), i = Math.floor(Math.random() * a.ySegments), m = Math.random() * 0.2 - 0.1, u = Math.random() * 0.2 - 0.1, l = 0; l < t; l++) {
-      r(e, h, i, n, f);
-      var v = Math.random() * Math.PI * 2;
-      l % 1e3 === 0 && (m = Math.random() * 0.2 - 0.1, u = Math.random() * 0.2 - 0.1), l % 100 === 0 && (h = Math.floor(a.xSegments * (0.5 + m) + Math.cos(v) * Math.random() * a.xSegments * (0.5 - Math.abs(m))), i = Math.floor(a.ySegments * (0.5 + u) + Math.sin(v) * Math.random() * a.ySegments * (0.5 - Math.abs(u))));
+  M.Particles = function(r, a) {
+    for (var t = Math.sqrt(a.xSegments * a.xSegments + a.ySegments * a.ySegments) * a.frequency * 300, n = a.xSegments + 1, f = (a.maxHeight - a.minHeight) / t * 1e3, u = Math.floor(Math.random() * a.xSegments), h = Math.floor(Math.random() * a.ySegments), m = Math.random() * 0.2 - 0.1, i = Math.random() * 0.2 - 0.1, g = 0; g < t; g++) {
+      e(r, u, h, n, f);
+      var o = Math.random() * Math.PI * 2;
+      g % 1e3 === 0 && (m = Math.random() * 0.2 - 0.1, i = Math.random() * 0.2 - 0.1), g % 100 === 0 && (u = Math.floor(a.xSegments * (0.5 + m) + Math.cos(o) * Math.random() * a.xSegments * (0.5 - Math.abs(m))), h = Math.floor(a.ySegments * (0.5 + i) + Math.sin(o) * Math.random() * a.ySegments * (0.5 - Math.abs(i))));
     }
   };
 })();
-g.Perlin = function(r, e) {
-  j.seed(Math.random());
-  var a = (e.maxHeight - e.minHeight) * 0.5, t = (Math.min(e.xSegments, e.ySegments) + 1) / e.frequency;
-  console.log("Generating Perlin noise terrain with range:", a, "divisor:", t);
-  for (var n = 0, f = e.xSegments + 1, h = e.ySegments + 1; n < f; n++)
-    for (var i = 0; i < h; i++) {
-      var m = i * f + n, u = j.perlin(n / t, i / t);
-      r[m] += u * a;
+M.Perlin = function(e, r) {
+  Y.seed(Math.random());
+  for (var a = (r.maxHeight - r.minHeight) * 0.5, t = (Math.min(r.xSegments, r.ySegments) + 1) / r.frequency, n = 0, f = r.xSegments + 1, u = r.ySegments + 1; n < f; n++)
+    for (var h = 0; h < u; h++) {
+      var m = h * f + n, i = Y.perlin(n / t, h / t);
+      e[m] += i * a;
     }
-  for (var l = 1 / 0, v = -1 / 0, n = 0; n < r.length; n++)
-    r[n] < l && (l = r[n]), r[n] > v && (v = r[n]);
-  console.log("Perlin noise terrain generated, height range:", l, "to", v);
+  for (var g = 1 / 0, o = -1 / 0, n = 0; n < e.length; n++)
+    e[n] < g && (g = e[n]), e[n] > o && (o = e[n]);
 };
-g.PerlinDiamond = function(r, e) {
-  g.MultiPass(r, e, [
-    { method: g.Perlin },
-    { method: g.DiamondSquare, amplitude: 0.75 },
+M.PerlinDiamond = function(e, r) {
+  M.MultiPass(e, r, [
+    { method: M.Perlin },
+    { method: M.DiamondSquare, amplitude: 0.75 },
     { method: function(a, t) {
-      return g.SmoothMedian(a, t);
+      return M.SmoothMedian(a, t);
     } }
   ]);
 };
-g.PerlinLayers = function(r, e) {
-  g.MultiPass(r, e, [
-    { method: g.Perlin, frequency: 1.25 },
-    { method: g.Perlin, amplitude: 0.05, frequency: 2.5 },
-    { method: g.Perlin, amplitude: 0.35, frequency: 5 },
-    { method: g.Perlin, amplitude: 0.15, frequency: 10 }
+M.PerlinLayers = function(e, r) {
+  M.MultiPass(e, r, [
+    { method: M.Perlin, frequency: 1.25 },
+    { method: M.Perlin, amplitude: 0.05, frequency: 2.5 },
+    { method: M.Perlin, amplitude: 0.35, frequency: 5 },
+    { method: M.Perlin, amplitude: 0.15, frequency: 10 }
   ]);
 };
-g.Simplex = function(r, e) {
-  j.seed(Math.random());
-  for (var a = (e.maxHeight - e.minHeight) * 0.5, t = (Math.min(e.xSegments, e.ySegments) + 1) * 2 / e.frequency, n = 0, f = e.xSegments + 1; n < f; n++)
-    for (var h = 0, i = e.ySegments + 1; h < i; h++)
-      r[h * f + n] += j.simplex(n / t, h / t) * a;
+M.Simplex = function(e, r) {
+  Y.seed(Math.random());
+  for (var a = (r.maxHeight - r.minHeight) * 0.5, t = (Math.min(r.xSegments, r.ySegments) + 1) * 2 / r.frequency, n = 0, f = r.xSegments + 1; n < f; n++)
+    for (var u = 0, h = r.ySegments + 1; u < h; u++)
+      e[u * f + n] += Y.simplex(n / t, u / t) * a;
 };
-g.SimplexLayers = function(r, e) {
-  g.MultiPass(r, e, [
-    { method: g.Simplex, frequency: 1.25 },
-    { method: g.Simplex, amplitude: 0.5, frequency: 2.5 },
-    { method: g.Simplex, amplitude: 0.25, frequency: 5 },
-    { method: g.Simplex, amplitude: 0.125, frequency: 10 },
-    { method: g.Simplex, amplitude: 0.0625, frequency: 20 }
+M.SimplexLayers = function(e, r) {
+  M.MultiPass(e, r, [
+    { method: M.Simplex, frequency: 1.25 },
+    { method: M.Simplex, amplitude: 0.5, frequency: 2.5 },
+    { method: M.Simplex, amplitude: 0.25, frequency: 5 },
+    { method: M.Simplex, amplitude: 0.125, frequency: 10 },
+    { method: M.Simplex, amplitude: 0.0625, frequency: 20 }
   ]);
 };
 (function() {
-  function r(e, a, t, n, f, h) {
+  function e(r, a, t, n, f, u) {
     if (!(t > n)) {
-      var i = 0, m = 0, u = n, l = n, v = Math.floor(n / t), o = -v, c = -v;
-      for (i = 0; i <= u; i += v) {
-        for (m = 0; m <= l; m += v) {
-          var d = m * u + i;
-          if (h[d] = Math.random() * f, !(o < 0 && c < 0)) {
-            for (var y = h[d], M = h[m * u + (i - v)] || y, S = h[(m - v) * u + i] || y, s = h[(m - v) * u + (i - v)] || y, x = o; x < i; x++)
-              for (var H = c; H < m; H++)
-                if (!(x === o && H === c)) {
-                  var b = H * u + x;
-                  if (!(b < 0)) {
-                    var I = (x - o) / v, q = (H - c) / v, A = I * S + (1 - I) * s, V = I * y + (1 - I) * M;
-                    h[b] = q * V + (1 - q) * A;
+      var h = 0, m = 0, i = n, g = n, o = Math.floor(n / t), l = -o, c = -o;
+      for (h = 0; h <= i; h += o) {
+        for (m = 0; m <= g; m += o) {
+          var d = m * i + h;
+          if (u[d] = Math.random() * f, !(l < 0 && c < 0)) {
+            for (var y = u[d], v = u[m * i + (h - o)] || y, H = u[(m - o) * i + h] || y, S = u[(m - o) * i + (h - o)] || y, w = l; w < h; w++)
+              for (var x = c; x < m; x++)
+                if (!(w === l && x === c)) {
+                  var I = x * i + w;
+                  if (!(I < 0)) {
+                    var z = (w - l) / o, P = (x - c) / o, q = z * H + (1 - z) * S, V = z * y + (1 - z) * v;
+                    u[I] = P * V + (1 - P) * q;
                   }
                 }
             c = m;
           }
         }
-        o = i, c = -v;
+        l = h, c = -o;
       }
-      for (i = 0, u = a.xSegments + 1; i < u; i++)
-        for (m = 0, l = a.ySegments + 1; m < l; m++) {
-          var T = m * u + i, C = m * n + i;
-          e[T] += h[C];
+      for (h = 0, i = a.xSegments + 1; h < i; h++)
+        for (m = 0, g = a.ySegments + 1; m < g; m++) {
+          var T = m * i + h, O = m * n + h;
+          r[T] += u[O];
         }
     }
   }
-  g.Value = function(e, a) {
-    for (var t = g.ceilPowerOfTwo(Math.max(a.xSegments, a.ySegments) + 1), n = new Float64Array((t + 1) * (t + 1)), f = a.maxHeight - a.minHeight, h = 2; h < 7; h++)
-      r(e, a, Math.pow(2, h), t, f * Math.pow(2, 2.4 - h * 1.2), n);
-    g.Clamp(e, {
+  M.Value = function(r, a) {
+    for (var t = M.ceilPowerOfTwo(Math.max(a.xSegments, a.ySegments) + 1), n = new Float64Array((t + 1) * (t + 1)), f = a.maxHeight - a.minHeight, u = 2; u < 7; u++)
+      e(r, a, Math.pow(2, u), t, f * Math.pow(2, 2.4 - u * 1.2), n);
+    M.Clamp(r, {
       maxHeight: a.maxHeight,
       minHeight: a.minHeight,
       stretch: true
     });
   };
 })();
-g.Weierstrass = function(r, e) {
-  for (var a = (e.maxHeight - e.minHeight) * 0.5, t = Math.random() < 0.5 ? 1 : -1, n = Math.random() < 0.5 ? 1 : -1, f = 0.5 + Math.random() * 1, h = 0.5 + Math.random() * 1, i = 0.025 + Math.random() * 0.1, m = -1 + Math.random() * 2, u = 0.5 + Math.random() * 1, l = 0.5 + Math.random() * 1, v = 0.025 + Math.random() * 0.1, o = -1 + Math.random() * 2, c = 0, d = e.xSegments + 1; c < d; c++)
-    for (var y = 0, M = e.ySegments + 1; y < M; y++) {
-      for (var S = 0, s = 0; s < 20; s++) {
-        var x = Math.pow(1 + f, -s) * Math.sin(Math.pow(1 + h, s) * (c + 0.25 * Math.cos(y) + m * y) * i), H = Math.pow(1 + u, -s) * Math.sin(Math.pow(1 + l, s) * (y + 0.25 * Math.cos(c) + o * c) * v);
-        S -= Math.exp(t * x * x + n * H * H);
+M.Weierstrass = function(e, r) {
+  for (var a = (r.maxHeight - r.minHeight) * 0.5, t = Math.random() < 0.5 ? 1 : -1, n = Math.random() < 0.5 ? 1 : -1, f = 0.5 + Math.random() * 1, u = 0.5 + Math.random() * 1, h = 0.025 + Math.random() * 0.1, m = -1 + Math.random() * 2, i = 0.5 + Math.random() * 1, g = 0.5 + Math.random() * 1, o = 0.025 + Math.random() * 0.1, l = -1 + Math.random() * 2, c = 0, d = r.xSegments + 1; c < d; c++)
+    for (var y = 0, v = r.ySegments + 1; y < v; y++) {
+      for (var H = 0, S = 0; S < 20; S++) {
+        var w = Math.pow(1 + f, -S) * Math.sin(Math.pow(1 + u, S) * (c + 0.25 * Math.cos(y) + m * y) * h), x = Math.pow(1 + i, -S) * Math.sin(Math.pow(1 + g, S) * (y + 0.25 * Math.cos(c) + l * c) * o);
+        H -= Math.exp(t * w * w + n * x * x);
       }
-      r[y * d + c] += S * a;
+      e[y * d + c] += H * a;
     }
-  g.Clamp(r, e);
+  M.Clamp(e, r);
 };
-g.fromHeightmap = function(r, e, a) {
-  var t = document.createElement("canvas"), n = t.getContext("2d"), f = e.ySegments + 1, h = e.xSegments + 1, i = e.maxHeight - e.minHeight;
-  t.width = h, t.height = f;
-  var m = a || e.heightmap;
+M.fromHeightmap = function(e, r, a) {
+  var t = document.createElement("canvas"), n = t.getContext("2d"), f = r.ySegments + 1, u = r.xSegments + 1, h = r.maxHeight - r.minHeight;
+  t.width = u, t.height = f;
+  var m = a || r.heightmap;
   if (!m) {
     console.error("No heightmap image provided");
     return;
   }
   n.drawImage(m, 0, 0, t.width, t.height);
-  var u = n.getImageData(0, 0, t.width, t.height).data;
-  console.log("Processing heightmap image, dimensions:", t.width, "x", t.height), console.log("Height range:", e.minHeight, "to", e.maxHeight, "spread:", i);
-  for (var l = 0; l < f; l++)
-    for (var v = 0; v < h; v++) {
-      var o = l * h + v, c = o * 4;
-      r[o] = (u[c] + u[c + 1] + u[c + 2]) / 765 * i + e.minHeight;
+  for (var i = n.getImageData(0, 0, t.width, t.height).data, g = 0; g < f; g++)
+    for (var o = 0; o < u; o++) {
+      var l = g * u + o, c = l * 4;
+      e[l] = (i[c] + i[c + 1] + i[c + 2]) / 765 * h + r.minHeight;
     }
-  for (var d = 1 / 0, y = -1 / 0, o = 0; o < r.length; o++)
-    r[o] < d && (d = r[o]), r[o] > y && (y = r[o]);
-  console.log("Heightmap processed, resulting height range:", d, "to", y);
 };
-g.toHeightmap = function(r, e) {
-  var a = typeof e.maxHeight < "u", t = typeof e.minHeight < "u", n = a ? e.maxHeight : -1 / 0, f = t ? e.minHeight : 1 / 0;
+M.toHeightmap = function(e, r) {
+  var a = typeof r.maxHeight < "u", t = typeof r.minHeight < "u", n = a ? r.maxHeight : -1 / 0, f = t ? r.minHeight : 1 / 0;
   if (!a || !t) {
-    for (var h = n, i = f, m = 2, u = r.length; m < u; m += 3)
-      r[m] > h && (h = r[m]), r[m] < i && (i = r[m]);
-    a || (n = h), t || (f = i);
+    for (var u = n, h = f, m = 2, i = e.length; m < i; m += 3)
+      e[m] > u && (u = e[m]), e[m] < h && (h = e[m]);
+    a || (n = u), t || (f = h);
   }
-  var l = e.heightmap instanceof HTMLCanvasElement ? e.heightmap : document.createElement("canvas"), v = l.getContext("2d"), o = e.ySegments + 1, c = e.xSegments + 1, d = n - f;
-  l.width = c, l.height = o;
-  for (var y = v.createImageData(l.width, l.height), M = y.data, S = 0; S < o; S++)
-    for (var s = 0; s < c; s++) {
-      var x = S * c + s, H = x * 4;
-      M[H] = M[H + 1] = M[H + 2] = Math.round((r[x * 3 + 2] - f) / d * 255), M[H + 3] = 255;
+  var g = r.heightmap instanceof HTMLCanvasElement ? r.heightmap : document.createElement("canvas"), o = g.getContext("2d"), l = r.ySegments + 1, c = r.xSegments + 1, d = n - f;
+  g.width = c, g.height = l;
+  for (var y = o.createImageData(g.width, g.height), v = y.data, H = 0; H < l; H++)
+    for (var S = 0; S < c; S++) {
+      var w = H * c + S, x = w * 4;
+      v[x] = v[x + 1] = v[x + 2] = Math.round((e[w * 3 + 2] - f) / d * 255), v[x + 3] = 255;
     }
-  return v.putImageData(y, 0, 0), l;
+  return o.putImageData(y, 0, 0), g;
 };
-g.fromHeightmap = function(r, e, a) {
-  var t = document.createElement("canvas"), n = t.getContext("2d"), f = e.ySegments + 1, h = e.xSegments + 1, i = e.maxHeight - e.minHeight;
-  t.width = h, t.height = f, n.drawImage(a, 0, 0, t.width, t.height);
-  for (var m = n.getImageData(0, 0, t.width, t.height).data, u = 0; u < f; u++)
-    for (var l = 0; l < h; l++) {
-      var v = u * h + l, o = v * 4;
-      r[v] = (m[o] + m[o + 1] + m[o + 2]) / 765 * i + e.minHeight;
-    }
-  g.Clamp(r, {
-    maxHeight: e.maxHeight,
-    minHeight: e.minHeight,
-    stretch: true
-  });
-};
-g.fromHeightmapURL = function(r, e, a) {
-  return new Promise(function(t, n) {
-    var f = new Image();
-    f.crossOrigin = "anonymous", f.onload = function() {
-      g.fromHeightmap(r, e, f), t(r, e, f);
-    }, f.src = a;
-  });
-};
-g.heightmapArray = function(r, e) {
-  return new Promise(function(a, t) {
-    var n = new Image();
-    n.crossOrigin = "anonymous", n.onload = function() {
-      var f = document.createElement("canvas"), h = f.getContext("2d"), i = r.ySegments + 1, m = r.xSegments + 1, u = r.maxHeight - r.minHeight;
-      f.width = m, f.height = i, h.drawImage(n, 0, 0, f.width, f.height);
-      for (var l = h.getImageData(0, 0, f.width, f.height).data, v = new Float32Array(i * m), o = 0; o < i; o++)
-        for (var c = 0; c < m; c++) {
-          var d = o * m + c, y = d * 4;
-          v[d] = (l[y] + l[y + 1] + l[y + 2]) / 765 * u + r.minHeight;
-        }
-      g.Clamp(v, {
-        maxHeight: r.maxHeight,
-        minHeight: r.minHeight,
-        stretch: true
-      }), a(v);
-    }, n.src = e;
-  });
-};
-g.Influences = {
-  /**
-   * Raise the terrain in a circular fashion.
-   *
-   * @param {Number} x
-   *   The normalized distance of the vertex from the center of the terrain
-   *   in the X direction.
-   * @param {Number} y
-   *   The normalized distance of the vertex from the center of the terrain
-   *   in the Y direction.
-   *
-   * @return {Number}
-   *   The adjusted elevation at that point.
-   */
-  Hill: function(r, e) {
-    return Math.sqrt(r * r + e * e) * -1 + 1;
+M.Influences = {
+  Mesa: function(e) {
+    return 1.25 * Math.min(0.8, Math.exp(-(e * e)));
   },
-  /**
-   * Raise the terrain in a ripple-like manner.
-   *
-   * @param {Number} x
-   *   The normalized distance of the vertex from the center of the terrain
-   *   in the X direction.
-   * @param {Number} y
-   *   The normalized distance of the vertex from the center of the terrain
-   *   in the Y direction.
-   * @param {Number} [frequency=2.5]
-   *   The frequency of the ripples.
-   * @param {Number} [amplitude=0.5]
-   *   The amplitude of the ripples.
-   * @param {Number} [phase=0]
-   *   How far into the ripple we are.
-   *
-   * @return {Number}
-   *   The adjusted elevation at that point.
-   */
-  Ripple: function(r, e, a, t, n) {
-    a = typeof a > "u" ? 2.5 : a, t = typeof t > "u" ? 0.5 : t, n = typeof n > "u" ? 0 : n;
-    var f = Math.sqrt(r * r + e * e), h = f * a * Math.PI - n;
-    return Math.sin(h) * t;
+  Hole: function(e) {
+    return -M.Influences.Mesa(e);
   },
-  /**
-   * Produce spiky terrain.
-   *
-   * @param {Number} x
-   *   The normalized distance of the vertex from the center of the terrain
-   *   in the X direction.
-   * @param {Number} y
-   *   The normalized distance of the vertex from the center of the terrain
-   *   in the Y direction.
-   * @param {Number} [frequency=2.5]
-   *   The frequency of the ripples.
-   * @param {Number} [amplitude=0.5]
-   *   The amplitude of the ripples.
-   * @param {Number} [phase=0]
-   *   How far into the ripple we are.
-   *
-   * @return {Number}
-   *   The adjusted elevation at that point.
-   */
-  Spike: function(r, e, a, t, n) {
-    a = typeof a > "u" ? 2.5 : a, t = typeof t > "u" ? 0.5 : t, n = typeof n > "u" ? 0 : n;
-    var f = Math.sqrt(r * r + e * e), h = f * a * Math.PI - n;
-    return Math.pow(Math.sin(h), 2) * t;
+  Hill: function(e) {
+    return e < 0 ? (e + 1) * (e + 1) * (3 - 2 * (e + 1)) : 1 - e * e * (3 - 2 * e);
   },
-  /**
-   * A stepwise function that creates a platform-like appearance.
-   *
-   * @param {Number} x
-   *   The normalized distance of the vertex from the center of the terrain
-   *   in the X direction.
-   * @param {Number} y
-   *   The normalized distance of the vertex from the center of the terrain
-   *   in the Y direction.
-   * @param {Number} [levels=4]
-   *   The number of distinct levels.
-   *
-   * @return {Number}
-   *   The adjusted elevation at that point.
-   */
-  Platforms: function(r, e, a) {
-    a = typeof a > "u" ? 4 : a;
-    var t = Math.sqrt(r * r + e * e);
-    return Math.floor(t * a) / a;
+  Valley: function(e) {
+    return -M.Influences.Hill(e);
   },
-  /**
-   * A stepwise version of the Hill function.
-   *
-   * @param {Number} x
-   *   The normalized distance of the vertex from the center of the terrain
-   *   in the X direction.
-   * @param {Number} y
-   *   The normalized distance of the vertex from the center of the terrain
-   *   in the Y direction.
-   * @param {Number} [levels=4]
-   *   The number of distinct levels.
-   *
-   * @return {Number}
-   *   The adjusted elevation at that point.
-   */
-  Steps: function(r, e, a) {
-    a = typeof a > "u" ? 4 : a;
-    var t = g.Influences.Hill(r, e);
-    return Math.floor(t * a) / a;
+  Dome: function(e) {
+    return -(e + 1) * (e - 1);
   },
-  /**
-   * Raise the terrain in a circular fashion.
-   *
-   * @param {Number} x
-   *   The normalized distance of the vertex from the center of the terrain
-   *   in the X direction.
-   * @param {Number} y
-   *   The normalized distance of the vertex from the center of the terrain
-   *   in the Y direction.
-   *
-   * @return {Number}
-   *   The adjusted elevation at that point.
-   */
-  Mesa: function(r, e) {
-    var a = Math.sqrt(r * r + e * e);
-    return 1.25 * Math.min(0.8, Math.exp(-(a * a)));
-  },
-  /**
-   * Lower the terrain in a circular fashion.
-   *
-   * @param {Number} x
-   *   The normalized distance of the vertex from the center of the terrain
-   *   in the X direction.
-   * @param {Number} y
-   *   The normalized distance of the vertex from the center of the terrain
-   *   in the Y direction.
-   *
-   * @return {Number}
-   *   The adjusted elevation at that point.
-   */
-  Hole: function(r, e) {
-    return -g.Influences.Mesa(r, e);
-  },
-  /**
-   * Create a valley.
-   *
-   * @param {Number} x
-   *   The normalized distance of the vertex from the center of the terrain
-   *   in the X direction.
-   * @param {Number} y
-   *   The normalized distance of the vertex from the center of the terrain
-   *   in the Y direction.
-   *
-   * @return {Number}
-   *   The adjusted elevation at that point.
-   */
-  Valley: function(r, e) {
-    return -g.Influences.Hill(r, e);
-  },
-  /**
-   * Create a dome-shaped terrain feature.
-   *
-   * @param {Number} x
-   *   The normalized distance of the vertex from the center of the terrain
-   *   in the X direction.
-   * @param {Number} y
-   *   The normalized distance of the vertex from the center of the terrain
-   *   in the Y direction.
-   *
-   * @return {Number}
-   *   The adjusted elevation at that point.
-   */
-  Dome: function(r, e) {
-    var a = Math.sqrt(r * r + e * e);
-    return -(a + 1) * (a - 1);
-  },
-  /**
-   * Create a flat terrain feature.
-   *
-   * @param {Number} x
-   *   The normalized distance of the vertex from the center of the terrain
-   *   in the X direction.
-   * @param {Number} y
-   *   The normalized distance of the vertex from the center of the terrain
-   *   in the Y direction.
-   *
-   * @return {Number}
-   *   The adjusted elevation at that point.
-   */
-  Flat: function(r, e) {
+  // Not meaningful in Additive or Subtractive mode
+  Flat: function(e) {
     return 0;
   },
-  /**
-   * Create a volcano-shaped terrain feature.
-   *
-   * @param {Number} x
-   *   The normalized distance of the vertex from the center of the terrain
-   *   in the X direction.
-   * @param {Number} y
-   *   The normalized distance of the vertex from the center of the terrain
-   *   in the Y direction.
-   *
-   * @return {Number}
-   *   The adjusted elevation at that point.
-   */
-  Volcano: function(r, e) {
-    var a = Math.sqrt(r * r + e * e);
-    return 0.94 - 0.32 * (Math.abs(2 * a) + Math.cos(2 * Math.PI * Math.abs(a) + 0.4));
+  Volcano: function(e) {
+    return 0.94 - 0.32 * (Math.abs(2 * e) + Math.cos(2 * Math.PI * Math.abs(e) + 0.4));
   }
 };
-g.Influence = function(r, e, a, t, n, f, h, i, m) {
-  a = a || g.Influences.Hill, t = typeof t > "u" ? 0.5 : t, n = typeof n > "u" ? 0.5 : n, f = typeof f > "u" ? 64 : f, h = typeof h > "u" ? 64 : h, i = typeof i > "u" ? w.NormalBlending : i, m = m || g.EaseIn;
-  for (var u = e.xSegments + 1, l = e.ySegments + 1, v = u * t, o = l * n, c = e.xSize / e.xSegments, d = e.ySize / e.ySegments, y = f / c, M = f / d, S = 1 / f, s = Math.ceil(v - y), x = Math.floor(v + y), H = Math.ceil(o - M), b = Math.floor(o + M), I = s; I < x; I++)
-    for (var q = H; q < b; q++) {
-      var A = q * u + I, V = (I - v) * c, T = (q - o) * d, C = Math.sqrt(V * V + T * T), F = C * S, R = V * S, O = T * S, G = a(F, R, O) * h * (1 - m(F, R, O));
-      C > f || typeof r[A] > "u" || (i === w.AdditiveBlending ? r[A] += G : i === w.SubtractiveBlending ? r[A] -= G : i === w.MultiplyBlending ? r[A] *= G : i === w.NoBlending ? r[A] = G : i === w.NormalBlending ? r[A] = m(F, R, O) * r[A] + G : typeof i == "function" && (r[A] = i(r[A].z, G, F, R, O)));
+M.Influence = function(e, r, a, t, n, f, u, h, m) {
+  a = a || M.Influences.Hill, t = typeof t > "u" ? 0.5 : t, n = typeof n > "u" ? 0.5 : n, f = typeof f > "u" ? 64 : f, u = typeof u > "u" ? 64 : u, h = typeof h > "u" ? s.NormalBlending : h, m = m || s.Terrain.EaseIn;
+  for (var i = r.xSegments + 1, g = r.ySegments + 1, o = i * t, l = g * n, c = r.xSize / r.xSegments, d = r.ySize / r.ySegments, y = f / c, v = f / d, H = 1 / f, S = Math.ceil(o - y), w = Math.floor(o + y), x = Math.ceil(l - v), I = Math.floor(l + v), z = S; z < w; z++)
+    for (var P = x; P < I; P++) {
+      var q = P * i + z, V = (z - o) * c, T = (P - l) * d, O = Math.sqrt(V * V + T * T), W = O * H, L = V * H, B = T * H, D = a(W, L, B) * u * (1 - m(W, L, B));
+      O > f || typeof e[q] > "u" || (h === s.AdditiveBlending ? e[q] += D : h === s.SubtractiveBlending ? e[q] -= D : h === s.MultiplyBlending ? e[q] *= D : h === s.NoBlending ? e[q] = D : h === s.NormalBlending ? e[q] = m(W, L, B) * e[q] + D : typeof h == "function" && (e[q] = h(e[q].z, D, W, L, B)));
     }
 };
-g.normalize = function(r, e) {
-};
-g.applyInfluence = function(r, e, a, t) {
-  for (var n = e.xSegments + 1, f = e.ySegments + 1, h = a, i = 0; i < n; i++)
-    for (var m = (i - e.xSegments * 0.5) / e.xSegments, u = 0; u < f; u++) {
-      var l = (u - e.ySegments * 0.5) / e.ySegments;
-      r[u * n + i] += h(m, l, t);
-    }
-};
-g.multiplyInfluence = function(r, e, a, t) {
-  for (var n = e.xSegments + 1, f = e.ySegments + 1, h = a, i = 0; i < n; i++)
-    for (var m = (i - e.xSegments * 0.5) / e.xSegments, u = 0; u < f; u++) {
-      var l = (u - e.ySegments * 0.5) / e.ySegments;
-      r[u * n + i] *= h(m, l, t);
-    }
-};
-g.applyEasing = function(r, e, a, t) {
-  for (var n = e.xSegments + 1, f = e.ySegments + 1, h = a, i = e.maxHeight, m = e.minHeight, u = 0; u < n; u++)
-    for (var l = (u - e.xSegments * 0.5) / e.xSegments, v = 0; v < f; v++) {
-      var o = v * n + u, c = (v - e.ySegments * 0.5) / e.ySegments, d = h(l, c, t);
-      (d < 0 || d > 1) && console.warn("Curve value should be in the range [0, 1]"), r[o] = d * i + (1 - d) * m;
-    }
-};
-g.setHeightByVertices = function(r, e, a, t) {
-  for (var n = a.length, f = 0; f < n; f++)
-    r[a[f]] = t;
-};
-g.Smooth = function(r, e, a) {
-  var t = new Float32Array(r.length);
-  a = a || 1;
-  var n = e.xSegments + 1;
-  e.ySegments + 1;
-  for (var f, h, i, m = 0; m < a; m++) {
-    for (var u = 0; u <= e.xSegments; u++)
-      for (var l = 0; l <= e.ySegments; l++) {
-        var i = l * n + u;
-        t[i] = r[i];
-      }
-    for (var u = 0; u <= e.xSegments; u++)
-      for (var l = 0; l <= e.ySegments; l++) {
-        for (var v = 0, o = 0, c = -1; c <= 1; c++)
-          for (var d = -1; d <= 1; d++)
-            f = u + c, h = l + d, f >= 0 && f <= e.xSegments && h >= 0 && h <= e.ySegments && (i = h * n + f, v += t[i], o++);
-        r[l * n + u] = v / o;
-      }
+M.ScatterMeshes = function(e, r) {
+  if (!r.mesh) {
+    console.error("options.mesh is required for THREE.Terrain.ScatterMeshes but was not passed");
+    return;
   }
-};
-g.SmoothMedian = function(r, e) {
-  var a = new Float32Array(r.length), t = e.xSegments + 1;
-  e.ySegments + 1;
-  for (var n, f, h, i = 0; i <= e.xSegments; i++)
-    for (var m = 0; m <= e.ySegments; m++) {
-      var h = m * t + i;
-      a[h] = r[h];
-    }
-  for (var i = 0; i <= e.xSegments; i++)
-    for (var m = 0; m <= e.ySegments; m++) {
-      for (var u = [], l = -1; l <= 1; l++)
-        for (var v = -1; v <= 1; v++)
-          n = i + l, f = m + v, n >= 0 && n <= e.xSegments && f >= 0 && f <= e.ySegments && (h = f * t + n, u.push(a[h]));
-      u.sort(), r[m * t + i] = u[Math.floor(u.length / 2)];
-    }
-};
-g.SmoothConservative = function(r, e) {
-  var a = new Float32Array(r.length), t = e.xSegments + 1;
-  e.ySegments + 1;
-  for (var n, f, h, i = 0; i <= e.xSegments; i++)
-    for (var m = 0; m <= e.ySegments; m++) {
-      var h = m * t + i;
-      a[h] = r[h];
-    }
-  for (var i = 0; i <= e.xSegments; i++)
-    for (var m = 0; m <= e.ySegments; m++) {
-      for (var u = 1 / 0, l = -1 / 0, v = -1; v <= 1; v++)
-        for (var o = -1; o <= 1; o++)
-          n = i + v, f = m + o, n >= 0 && n <= e.xSegments && f >= 0 && f <= e.ySegments && (h = f * t + n, a[h] < u && (u = a[h]), a[h] > l && (l = a[h]));
-      var c = m * t + i;
-      a[c] < u ? r[c] = u : a[c] > l && (r[c] = l);
-    }
-};
-g.Normalize = function(r, e) {
-  for (var a = 1 / 0, t = -1 / 0, n = 0, f = r.length; n < f; n++)
-    r[n] < a && (a = r[n]), r[n] > t && (t = r[n]);
-  for (var h = e.maxHeight - e.minHeight, n = 0, f = r.length; n < f; n++)
-    r[n] = (r[n] - a) / (t - a) * h + e.minHeight;
-};
-g.Turbulence = function(r, e, a) {
-  a = a || 0;
-  for (var t = (e.maxHeight - e.minHeight) * 0.5, n = e.xSegments + 1, f = e.ySegments + 1, h = 0; h < n; h++)
-    for (var i = 0; i < f; i++) {
-      var m = i * n + h;
-      r[m] += a * (Math.random() - 0.5) * t;
-    }
-};
-g.Clamp = function(r, e, a) {
-  var t = 1 / 0, n = -1 / 0, f = r.length;
-  e.minHeight = e.minHeight || 0, e.maxHeight = typeof e.maxHeight > "u" ? 100 : e.maxHeight, a = a || false;
-  for (var h = 0; h < f; h++)
-    r[h] < t && (t = r[h]), r[h] > n && (n = r[h]);
-  if (a)
-    for (var h = 0; h < f; h++)
-      r[h] = (r[h] - t) / (n - t) * (e.maxHeight - e.minHeight) + e.minHeight;
-  else
-    for (var h = 0; h < f; h++)
-      r[h] = r[h] < e.minHeight ? e.minHeight : r[h] > e.maxHeight ? e.maxHeight : r[h];
-};
-g.EaseInOut = function(r, e) {
-  return e === 0 || r === 0 || r === 1 ? r : r < 0.5 ? Math.pow(2, (e + 1) * (r * 2 - 1) - e) * 0.5 : 1 - Math.pow(2, -((e + 1) * (r * 2 - 1) + e)) * 0.5;
-};
-g.EaseIn = function(r, e) {
-  return r === 0 ? 0 : Math.pow(r, e);
-};
-g.EaseOut = function(r, e) {
-  return r === 1 ? 1 : 1 - Math.pow(1 - r, e);
-};
-g.LinearTaper = function(r, e) {
-  return Math.min(r * e, 1);
-};
-g.Identity = function(r) {
-  return r;
-};
-g.EaseInStrong = function(r) {
-  return r * r * r * r;
-};
-g.EaseOutStrong = function(r) {
-  return 1 - Math.pow(1 - r, 4);
-};
-g.EaseNone = function(r) {
-  return 0;
-};
-g.EaseSin = function(r) {
-  return 1 - Math.sin((1 - r) * Math.PI * 0.5);
-};
-g.fromGenerator = function(r, e, a) {
-  console.log("Creating terrain using generator " + e.generator);
-  var t = g(e);
-  return r.add(t), a && a(t), t;
-};
-g.Influence = function(r, e, a, t, n, f, h, i, m, u) {
-  a = a || g.Influences.Hill, t = t || 0, n = n || 0, f = f || 64, h = h || 120, i = i || w.NormalBlending, m = m || g.EaseInOut, u = u || 3;
-  for (var l = e.xSegments + 1, v = e.ySegments + 1, o = e.xSize / e.xSegments, c = e.ySize / e.ySegments, d = l * t - 0.5, y = v * n - 0.5, M = f / o, S = f / c, s = 0; s < l; s++)
-    for (var x = 0; x < v; x++) {
-      var H = x * l + s, b = Math.abs(s - d), I = Math.abs(x - y);
-      if (!(b >= M || I >= S)) {
-        var q = Math.sqrt(b * b + I * I) / Math.sqrt(M * M + S * S), A = 0;
-        switch (i) {
-          case w.SubtractiveBlending:
-            A = r[H] - h * a(q, b / M, I / S) * m(1 - q, u);
-            break;
-          case w.AdditiveBlending:
-          default:
-            A = r[H] + h * a(q, b / M, I / S) * m(1 - q, u);
-            break;
+  r.scene || (r.scene = new s.Object3D());
+  var a = {
+    spread: 0.025,
+    smoothSpread: 0,
+    sizeVariance: 0.1,
+    randomness: Math.random,
+    maxSlope: 0.6283185307179586,
+    // 36deg or 36 / 180 * Math.PI, about the angle of repose of earth
+    maxTilt: 1 / 0,
+    w: 0,
+    h: 0
+  };
+  for (var t in a)
+    a.hasOwnProperty(t) && (r[t] = typeof r[t] > "u" ? a[t] : r[t]);
+  var n = typeof r.spread == "number", f, u, h = 1 / r.smoothSpread, m = r.sizeVariance * 2, i = new s.Vector3(), g = new s.Vector3(), o = new s.Vector3(), l = new s.Vector3(), c = r.mesh.up.clone().applyAxisAngle(new s.Vector3(1, 0, 0), 0.5 * Math.PI);
+  n && (f = r.randomness(), u = typeof f == "number" ? Math.random : function(P) {
+    return f[P];
+  }), e = e.toNonIndexed();
+  for (var d = e.attributes.position.array, y = 0; y < e.attributes.position.array.length; y += 9) {
+    i.set(d[y + 0], d[y + 1], d[y + 2]), g.set(d[y + 3], d[y + 4], d[y + 5]), o.set(d[y + 6], d[y + 7], d[y + 8]), s.Triangle.getNormal(i, g, o, l);
+    var v = false;
+    if (n) {
+      var H = u(y / 9);
+      H < r.spread ? v = true : H < r.spread + r.smoothSpread && (v = s.Terrain.EaseInOut((H - r.spread) * h) * r.spread > Math.random());
+    } else
+      v = r.spread(i, y / 9, l, y);
+    if (v) {
+      if (l.angleTo(c) > r.maxSlope)
+        continue;
+      var S = r.mesh.clone();
+      if (S.position.addVectors(i, g).add(o).divideScalar(3), r.maxTilt > 0) {
+        var w = S.position.clone().add(l);
+        S.lookAt(w);
+        var x = l.angleTo(c);
+        if (x > r.maxTilt) {
+          var I = r.maxTilt / x;
+          S.rotation.x *= I, S.rotation.y *= I, S.rotation.z *= I;
         }
-        r[H] = A;
       }
-    }
-};
-g.generateBlendedMaterial = function(r) {
-  function e(s) {
-    return s === (s | 0) ? s + ".0" : s + "";
-  }
-  for (var a = "", t = "", n = r[0].texture.repeat || new w.Vector2(1, 1), f = r[0].texture.offset || new w.Vector2(0, 0), h = 0, i = r.length; h < i; h++)
-    if (r[h].texture.wrapS = r[h].texture.wrapT = w.RepeatWrapping, r[h].texture.needsUpdate = true, a += "uniform sampler2D texture_" + h + `;
-`, h !== 0) {
-      var m = r[h].levels, u = r[h].glsl, l = typeof m < "u", v = r[h].texture.repeat || new w.Vector2(1, 1), o = r[h].texture.offset || new w.Vector2(0, 0);
-      if (l) {
-        m[1] - m[0] < 1 && (m[0] -= 1), m[3] - m[2] < 1 && (m[3] += 1);
-        for (var c = 0; c < m.length; c++)
-          m[c] = e(m[c]);
+      if (S.rotation.x += 90 / 180 * Math.PI, S.rotateY(Math.random() * 2 * Math.PI), r.sizeVariance) {
+        var z = Math.random() * m - r.sizeVariance;
+        S.scale.x = S.scale.z = 1 + z, S.scale.y += z;
       }
-      var d = l ? "1.0 - smoothstep(" + m[0] + ", " + m[1] + ", vPosition.z) + smoothstep(" + m[2] + ", " + m[3] + ", vPosition.z)" : u;
-      t += "        color = mix( texture2D( texture_" + h + ", MyvUv * vec2( " + e(v.x) + ", " + e(v.y) + " ) + vec2( " + e(o.x) + ", " + e(o.y) + " ) ), color, max(min(" + d + `, 1.0), 0.0));
-`;
+      S.updateMatrix(), r.scene.add(S);
     }
-  var y = `float slope = acos(max(min(dot(myNormal, vec3(0.0, 0.0, 1.0)), 1.0), -1.0));
-    diffuseColor = vec4( diffuse, opacity );
-    vec4 color = texture2D( texture_0, MyvUv * vec2( ` + e(n.x) + ", " + e(n.y) + " ) + vec2( " + e(f.x) + ", " + e(f.y) + ` ) ); // base
-` + t + `    diffuseColor = color;
-`, M = a + `
-varying vec2 MyvUv;
-varying vec3 vPosition;
-varying vec3 myNormal;
-`, S = new w.MeshLambertMaterial();
-  return S.onBeforeCompile = function(s) {
-    s.vertexShader = s.vertexShader.replace(
-      "#include <common>",
-      `varying vec2 MyvUv;
-varying vec3 vPosition;
-varying vec3 myNormal;
-#include <common>`
-    ), s.vertexShader = s.vertexShader.replace(
-      "#include <uv_vertex>",
-      `MyvUv = uv;
-vPosition = position;
-myNormal = normal;
-#include <uv_vertex>`
-    ), s.fragmentShader = s.fragmentShader.replace("#include <common>", M + `
-#include <common>`), s.fragmentShader = s.fragmentShader.replace("#include <map_fragment>", y);
-    for (var x = 0, H = r.length; x < H; x++)
-      s.uniforms["texture_" + x] = {
-        type: "t",
-        value: r[x].texture
-      };
-  }, S;
-};
-g.ScatterMeshes = function(r, e) {
-  r instanceof w.BufferGeometry && console.warn("The terrain's BufferGeometry was passed to ScatterMeshes. You probably want to pass the terrain mesh's Geometry instead."), (r.type === "PlaneGeometry" || r.type === "PlaneBufferGeometry") && console.warn("A plane geometry was passed to ScatterMeshes. You probably want to pass the terrain mesh's geometry instead."), e = e || {}, e.mesh = e.mesh || new w.Mesh(new w.BoxGeometry(0.5, 0.5, 0.5), new w.MeshBasicMaterial({ color: 8947848 })), e.spread = e.spread || 0.025, e.smoothSpread = e.smoothSpread || 0, e.sizeVariance = e.sizeVariance || 0.1, e.randomness = e.randomness || 1, e.maxSlope = e.maxSlope || Math.PI / 4, e.maxTilt = e.maxTilt || Math.PI / 4, e.w = e.w || 0, e.h = e.h || 0;
-  var a = e.scene || new w.Object3D(), t = typeof e.spread == "number", n, f, h, i = (r.faces ? r.faces.length : r.index.count) * 0.85, m = {};
-  (!e.w || !e.h) && yieldException("The width and height of the terrain in terms of segments must be passed to ScatterMeshes."), f = g.heightmapArray(r, e), t ? n = e.spread : (h = Math.random(), n = e.spread(f.min, f.max, h)), i *= n;
-  var u = g.randomHeightIndices(f, i, e);
-  return u.forEach(function(l) {
-    var v, o, c, d, y, M = new w.Vector3(), S = new w.Vector3(), s = new w.Euler(0, 0, 0, "YXZ"), x = Math.random() * e.sizeVariance * 2 + 1 - e.sizeVariance, H = x;
-    if (r.faces) {
-      if (v = r.faces[l], o = r.vertices[v.a].clone(), c = r.vertices[v.b].clone(), d = r.vertices[v.c].clone(), v.normal.angleTo(g.toNormalVector(0, 1, 0)) > e.maxSlope)
-        return;
-      S.copy(v.normal);
-    } else {
-      if (l = l * 3, o = new w.Vector3().fromBufferAttribute(r.attributes.position, l), c = new w.Vector3().fromBufferAttribute(r.attributes.position, l + 1), d = new w.Vector3().fromBufferAttribute(r.attributes.position, l + 2), y = new w.Vector3().fromBufferAttribute(r.attributes.normal, l), y.angleTo(g.toNormalVector(0, 1, 0)) > e.maxSlope)
-        return;
-      S.copy(y);
-    }
-    var b = o.clone().add(c).add(d).divideScalar(3 * (e.w / 127)).round();
-    if (!m[b]) {
-      m[b] = true, M.copy(o).add(c).add(d).divideScalar(3), s.y = Math.random() * Math.PI * 2, e.maxTilt > 0 && (s.x = Math.random() * e.maxTilt * 2 - e.maxTilt, s.z = Math.random() * e.maxTilt * 2 - e.maxTilt);
-      var I = e.mesh.clone();
-      I.position.copy(M), I.rotation.copy(s), I.scale.set(H, H, H), I.updateMatrix(), a.add(I);
-    }
-  }), a;
-};
-g.randomHeightIndices = function(r, e, a) {
-  for (var t = Math.floor(e), n = /* @__PURE__ */ new Map(), f = 0; n.size < t && f < t * 10; ) {
-    var h = Math.floor(Math.random() * r.length), i = r[h];
-    if (i > a.maxElevation || i < a.minElevation) {
-      f++;
-      continue;
-    }
-    n.set(h, h), f++;
   }
-  return Array.from(n.values());
+  return r.scene;
 };
-g.normalToXYCoordinates = function(r) {
-  var e = 0, a = 0, t = 0;
-  return r instanceof w.Vector3 ? (e = r.x, a = r.y, t = Math.sqrt(e * e + a * a), e /= t, a /= t, e = (e + 1) * 0.5, a = (a + 1) * 0.5) : (e = r[0], a = r[1], t = Math.sqrt(e * e + a * a), e /= t, a /= t, e = (e + 1) * 0.5, a = (a + 1) * 0.5), new w.Vector2(e, a);
-};
-g.toNormalVector = function(r, e, a) {
-  var t = new w.Vector3(0, 1, 0), n;
-  return typeof r < "u" && typeof e < "u" && typeof a < "u" && (n = new w.Vector3(r, e, a), t.copy(n).normalize()), t;
-};
-g.xyCoordinatesToNormal = function(r) {
-  if (r instanceof w.Vector2)
-    return new w.Vector3(2 * r.x - 1, 2 * r.y - 1, 0);
-  if (r instanceof Array && r.length === 2)
-    return new w.Vector3(2 * r[0] - 1, 2 * r[1] - 1, 0);
-  if (r instanceof Array && r.length === 3)
-    return new w.Vector3(2 * r[0] - 1, 2 * r[1] - 1, 2 * r[2] - 1);
-};
-g.heightmapArray = function(r, e) {
-  var a = new Float32Array(e.w * e.h), t = 0;
-  if (r.attributes && r.attributes.position)
-    for (var n = r.attributes.position, f = 0; f < n.count; f++)
-      t = f * 3, a[f] = n.array[t + 1];
-  else if (r.vertices && r.faces)
-    for (var h = r.vertices, f = 0, i = h.length; f < i; f++)
-      a[f] = h[f].y;
-  a.min = 1 / 0, a.max = -1 / 0;
-  for (var f = 0, i = a.length; f < i; f++)
-    a[f] < a.min && (a.min = a[f]), a[f] > a.max && (a.max = a[f]);
-  return a;
-};
-g.Clamp = g.Clamp || {};
-g.Clamp.index = function(r) {
-  return r;
-};
-g.ScatterHelper = function(r, e, a, t) {
-  if (console.log("ScatterHelper called with:", typeof r, e ? Object.keys(e) : "no options"), !r || !e)
-    return console.warn("ScatterHelper called with invalid parameters"), r instanceof w.Vector3 ? false : function() {
-      return [];
-    };
-  if (r instanceof w.Vector3)
-    return !(r.x < 0 || r.x > (e.maxWidth || e.xSize || 1024) || r.z < 0 || r.z > (e.maxHeight || e.ySize || 1024) || typeof e.minElevation < "u" && typeof e.maxElevation < "u" && (r.y < e.minElevation || r.y > e.maxElevation));
-  a = a || 1, t = t || 0.25;
-  var n = {
-    xSegments: e.xSegments || 63,
-    ySegments: e.ySegments || 63,
-    maxHeight: 1,
-    minHeight: 0,
-    frequency: e.frequency || 2.5,
-    stretch: true
-  };
-  for (var f in e)
-    e.hasOwnProperty(f) && !n.hasOwnProperty(f) && (n[f] = e[f]);
-  return typeof r != "function" ? (console.warn("ScatterHelper: provided method is not a function"), function() {
-    return [];
-  }) : function() {
-    try {
-      for (var h = (n.xSegments + 1) * (n.ySegments + 1), i = new Float32Array(h * 3), m = 0; m < i.length; m++)
-        i[m] = 0;
-      r(i, n);
-      for (var u = [], m = 2; m < i.length; m += 3)
-        u.push(i[m]);
-      for (var l = [], m = 0; m < u.length; m += a)
-        l.push(u[m] > t ? 1 : 0);
-      return l;
-    } catch (v) {
-      return console.error("Error in ScatterHelper noise generation:", v), [];
-    }
+M.ScatterHelper = function(e, r, a, t) {
+  a = a || 1, t = t || 0.25, r.frequency = r.frequency || 2.5;
+  var n = {};
+  for (var f in r)
+    r.hasOwnProperty(f) && (n[f] = r[f]);
+  n.xSegments *= 2, n.stretch = true, n.maxHeight = 1, n.minHeight = 0;
+  for (var u = M.heightmapArray(e, n), h = 0, m = u.length; h < m; h++)
+    (h % a || Math.random() > t) && (u[h] = 1);
+  return function() {
+    return u;
   };
 };
-g.Analyze = function(r, e) {
-  if (!r || !r.geometry || !r.geometry.attributes || !r.geometry.attributes.position || r.geometry.attributes.position.count < 3)
-    return console.warn("Not enough vertices to analyze or invalid mesh"), ie();
+M.Analyze = function(e, r) {
+  if (!e || !e.geometry || !e.geometry.attributes || !e.geometry.attributes.position || e.geometry.attributes.position.count < 3)
+    return console.warn("Not enough vertices to analyze or invalid mesh"), hr();
   try {
-    var a = r.geometry.clone();
+    var a = e.geometry.clone();
     a.index && (a = a.toNonIndexed());
-    var t = g.toArray1D(a.attributes.position.array);
+    var t = M.toArray1D(a.attributes.position.array);
     if (!t || t.length === 0)
-      return console.warn("Could not extract elevations from geometry"), ie(e);
-    var n = Array.from(t).sort(function(P, W) {
-      return P - W;
-    }), f = t.length, h = D(n, 1), i = D(n, 0), m = D(n, 0.5), u = ce(n), l = 0, v = 0, o = 0, c = 0, d = r.up.clone().applyAxisAngle(new w.Vector3(1, 0, 0), 0.5 * Math.PI), y = [];
+      return console.warn("Could not extract elevations from geometry"), hr(r);
+    var n = Array.from(t).sort(function(A, F) {
+      return A - F;
+    }), f = t.length, u = R(n, 1), h = R(n, 0), m = R(n, 0.5), i = cr(n), g = 0, o = 0, l = 0, c = 0, d = e.up.clone().applyAxisAngle(new s.Vector3(1, 0, 0), 0.5 * Math.PI), y = [];
     try {
-      y = se(a, e).map(function(P) {
-        return P.angleTo(d) * 180 / Math.PI;
-      }).sort(function(P, W) {
-        return P - W;
+      y = vr(a, r).map(function(A) {
+        return A.angleTo(d) * 180 / Math.PI;
+      }).sort(function(A, F) {
+        return A - F;
       });
-    } catch (P) {
-      console.warn("Error calculating slopes:", P), y = [0];
+    } catch (A) {
+      console.warn("Error calculating slopes:", A), y = [0];
     }
-    var M = y.length, S = D(y, 1), s = D(y, 0), x = D(y, 0.5), H = ce(y), b = r.position.clone().setZ(u), I, q;
+    var v = y.length, H = R(y, 1), S = R(y, 0), w = R(y, 0.5), x = cr(y), I = e.position.clone().setZ(i), z, P;
     try {
-      I = Se(a.attributes.position.array, b), q = I.angleTo(d) * 180 / Math.PI;
-    } catch (P) {
-      console.warn("Error calculating plane normal:", P), I = new w.Vector3(0, 0, 1), q = 0;
+      z = Sr(a.attributes.position.array, I), P = z.angleTo(d) * 180 / Math.PI;
+    } catch (A) {
+      console.warn("Error calculating plane normal:", A), z = new s.Vector3(0, 0, 1), P = 0;
     }
-    for (var A = 0, V = 0, T = 0, C = 0, F = e.xSize / e.xSegments * (e.ySize / e.ySegments) * 0.5, R = 0, O = 0, G = 0, X = new Float32Array(f), Q = new Float32Array(M), N = 0, z; N < f; N++)
-      z = n[N] - u, l += z * z, v += z * z * z, X[N] = Math.abs(n[N] - m), o += X[N], c += z * z * z * z;
-    for (f > 1 && (v = v / f / Math.pow(l / (f - 1), 1.5), o = (u - m) / (o / f || 1), c = c * f / (l * l || 1) - 3, l = Math.sqrt(l / f)), Array.prototype.sort.call(X, function(P, W) {
-      return P - W;
-    }), N = 0; N < M; N++)
-      z = y[N] - H, A += z * z, V += z * z * z, Q[N] = Math.abs(y[N] - x), T += Q[N], C += z * z * z * z, R += F / Math.cos(y[N] * Math.PI / 180 || 1e-3);
-    M > 1 && (V = V / M / Math.pow(A / (M - 1), 1.5), T = (H - x) / (T / M || 1), C = C * M / (A * A || 1) - 3, A = Math.sqrt(A / M)), Array.prototype.sort.call(Q, function(P, W) {
-      return P - W;
+    for (var q = 0, V = 0, T = 0, O = 0, W = r.xSize / r.xSegments * (r.ySize / r.ySegments) * 0.5, L = 0, B = 0, D = 0, Z = new Float32Array(f), k = new Float32Array(v), N = 0, b; N < f; N++)
+      b = n[N] - i, g += b * b, o += b * b * b, Z[N] = Math.abs(n[N] - m), l += Z[N], c += b * b * b * b;
+    for (f > 1 && (o = o / f / Math.pow(g / (f - 1), 1.5), l = (i - m) / (l / f || 1), c = c * f / (g * g || 1) - 3, g = Math.sqrt(g / f)), Array.prototype.sort.call(Z, function(A, F) {
+      return A - F;
+    }), N = 0; N < v; N++)
+      b = y[N] - x, q += b * b, V += b * b * b, k[N] = Math.abs(y[N] - w), T += k[N], O += b * b * b * b, L += W / Math.cos(y[N] * Math.PI / 180 || 1e-3);
+    v > 1 && (V = V / v / Math.pow(q / (v - 1), 1.5), T = (x - w) / (T / v || 1), O = O * v / (q * q || 1) - 3, q = Math.sqrt(q / v)), Array.prototype.sort.call(k, function(A, F) {
+      return A - F;
     });
     try {
-      for (var U = e.xSegments + 1, _ = e.ySegments + 1, J = 0; J < U; J++)
-        for (var K = 0; K < _; K++) {
-          for (var te = -1 / 0, ne = 1 / 0, ee = a.attributes.position.array[(K * U + J) * 3 + 2], fe = 0, re = 0, $ = -1; $ <= 1; $++)
-            for (var Z = -1; Z <= 1; Z++)
-              if (J + Z >= 0 && K + $ >= 0 && J + Z < U && K + $ < _ && !($ === 0 && Z === 0)) {
-                var k = a.attributes.position.array[((K + $) * U + J + Z) * 3 + 2];
-                fe += k, re++, k > te && (te = k), k < ne && (ne = k);
+      for (var J = r.xSegments + 1, er = r.ySegments + 1, X = 0; X < J; X++)
+        for (var _ = 0; _ < er; _++) {
+          for (var ar = -1 / 0, tr = 1 / 0, p = a.attributes.position.array[(_ * J + X) * 3 + 2], nr = 0, j = 0, Q = -1; Q <= 1; Q++)
+            for (var U = -1; U <= 1; U++)
+              if (X + U >= 0 && _ + Q >= 0 && X + U < J && _ + Q < er && !(Q === 0 && U === 0)) {
+                var K = a.attributes.position.array[((_ + Q) * J + X + U) * 3 + 2];
+                nr += K, j++, K > ar && (ar = K), K < tr && (tr = K);
               }
-          re && (O += (fe / re - ee) * (fe / re - ee)), (ee > te || ee < ne) && G++;
+          j && (B += (nr / j - p) * (nr / j - p)), (p > ar || p < tr) && D++;
         }
-      O = Math.sqrt(O / f);
-      var ge = Math.ceil(U * 0.5) * Math.ceil(_ * 0.5) * 2;
-      G /= ge > 0 ? ge : 1;
-    } catch (P) {
-      console.warn("Error calculating roughness:", P), O = 0, G = 0;
+      B = Math.sqrt(B / f);
+      var gr = Math.ceil(J * 0.5) * Math.ceil(er * 0.5) * 2;
+      D /= gr > 0 ? gr : 1;
+    } catch (A) {
+      console.warn("Error calculating roughness:", A), B = 0, D = 0;
     }
     return {
       elevation: {
         sampleSize: f,
-        max: h,
-        min: i,
-        range: h - i,
-        midrange: (h - i) * 0.5 + i,
+        max: u,
+        min: h,
+        range: u - h,
+        midrange: (u - h) * 0.5 + h,
         median: m,
-        iqr: D(n, 0.75) - D(n, 0.25),
-        mean: u,
-        stdev: l,
-        mad: D(X, 0.5),
-        pearsonSkew: v,
-        groeneveldMeedenSkew: o,
+        iqr: R(n, 0.75) - R(n, 0.25),
+        mean: i,
+        stdev: g,
+        mad: R(Z, 0.5),
+        pearsonSkew: o,
+        groeneveldMeedenSkew: l,
         kurtosis: c,
-        modes: ue(
+        modes: mr(
           n,
-          Math.ceil(e.maxHeight - e.minHeight),
-          e.minHeight,
-          e.maxHeight
+          Math.ceil(r.maxHeight - r.minHeight),
+          r.minHeight,
+          r.maxHeight
         ),
-        percentile: function(P) {
-          return D(n, P);
+        percentile: function(A) {
+          return R(n, A);
         },
-        percentRank: function(P) {
-          return me(n, P);
+        percentRank: function(A) {
+          return ur(n, A);
         },
-        drawHistogram: function(P, W) {
-          le(
-            ae(
+        drawHistogram: function(A, F) {
+          ir(
+            rr(
               n,
-              W,
-              e.minHeight,
-              e.maxHeight
+              F,
+              r.minHeight,
+              r.maxHeight
             ),
-            P,
-            e.minHeight,
-            e.maxHeight
+            A,
+            r.minHeight,
+            r.maxHeight
           );
         }
       },
       slope: {
-        sampleSize: M,
-        max: S,
-        min: s,
-        range: S - s,
-        midrange: (S - s) * 0.5 + s,
-        median: x,
-        iqr: D(y, 0.75) - D(y, 0.25),
-        mean: H,
-        stdev: A,
-        mad: D(Q, 0.5),
+        sampleSize: v,
+        max: H,
+        min: S,
+        range: H - S,
+        midrange: (H - S) * 0.5 + S,
+        median: w,
+        iqr: R(y, 0.75) - R(y, 0.25),
+        mean: x,
+        stdev: q,
+        mad: R(k, 0.5),
         pearsonSkew: V,
         groeneveldMeedenSkew: T,
-        kurtosis: C,
-        modes: ue(y, 90, 0, 90),
-        percentile: function(P) {
-          return D(y, P);
+        kurtosis: O,
+        modes: mr(y, 90, 0, 90),
+        percentile: function(A) {
+          return R(y, A);
         },
-        percentRank: function(P) {
-          return me(y, P);
+        percentRank: function(A) {
+          return ur(y, A);
         },
-        drawHistogram: function(P, W) {
-          le(
-            ae(
+        drawHistogram: function(A, F) {
+          ir(
+            rr(
               y,
-              W,
+              F,
               0,
               90
             ),
-            P,
+            A,
             0,
             90,
             "\xB0"
@@ -1542,28 +1007,28 @@ g.Analyze = function(r, e) {
         }
       },
       roughness: {
-        planimetricAreaRatio: e.xSize * e.ySize / (R || e.xSize * e.ySize),
-        terrainRuggednessIndex: O,
-        jaggedness: G
+        planimetricAreaRatio: r.xSize * r.ySize / (L || r.xSize * r.ySize),
+        terrainRuggednessIndex: B,
+        jaggedness: D
       },
       fittedPlane: {
-        centroid: b,
-        normal: I,
-        slope: q,
-        pctExplained: xe(
+        centroid: I,
+        normal: z,
+        slope: P,
+        pctExplained: Hr(
           a.attributes.position.array,
-          b,
           I,
-          e.maxHeight - e.minHeight
+          z,
+          r.maxHeight - r.minHeight
         )
       }
     };
-  } catch (P) {
-    return console.error("Error during terrain analysis:", P), ie();
+  } catch (A) {
+    return console.error("Error during terrain analysis:", A), hr();
   }
 };
-function ie(r) {
-  var e = function(a) {
+function hr(e) {
+  var r = function(a) {
     if (a && a.getContext) {
       var t = a.getContext("2d");
       a.width = 300, a.height = 200, t.clearRect(0, 0, a.width, a.height), t.fillStyle = "rgba(144, 176, 192, 1)", t.font = "12px Arial", t.fillText("No data available for analysis", 10, 100);
@@ -1591,7 +1056,7 @@ function ie(r) {
       percentRank: function() {
         return 0;
       },
-      drawHistogram: e
+      drawHistogram: r
     },
     slope: {
       sampleSize: 0,
@@ -1614,7 +1079,7 @@ function ie(r) {
       percentRank: function() {
         return 0;
       },
-      drawHistogram: e
+      drawHistogram: r
     },
     roughness: {
       planimetricAreaRatio: 1,
@@ -1622,448 +1087,393 @@ function ie(r) {
       jaggedness: 0
     },
     fittedPlane: {
-      centroid: new w.Vector3(),
-      normal: new w.Vector3(0, 0, 1),
+      centroid: new s.Vector3(),
+      normal: new s.Vector3(0, 0, 1),
       slope: 0,
       pctExplained: 0
     }
   };
 }
-g.percentile = D;
-function D(r, e) {
-  if (r.length === 0) return 0;
-  if (typeof e != "number") throw new TypeError("p must be a number");
-  if (e <= 0) return r[0];
-  if (e >= 1) return r[r.length - 1];
-  var a = r.length * e, t = Math.floor(a), n = t + 1, f = a % 1;
-  return n >= r.length ? r[t] : r[t] * (1 - f) + r[n] * f;
+M.percentile = R;
+function R(e, r) {
+  if (e.length === 0) return 0;
+  if (typeof r != "number") throw new TypeError("p must be a number");
+  if (r <= 0) return e[0];
+  if (r >= 1) return e[e.length - 1];
+  var a = e.length * r, t = Math.floor(a), n = t + 1, f = a % 1;
+  return n >= e.length ? e[t] : e[t] * (1 - f) + e[n] * f;
 }
-g.percentRank = me;
-function me(r, e) {
-  if (typeof e != "number") throw new TypeError("v must be a number");
-  for (var a = 0, t = r.length; a < t; a++)
-    if (e <= r[a]) {
-      for (; a < t && e === r[a]; )
+M.percentRank = ur;
+function ur(e, r) {
+  if (typeof r != "number") throw new TypeError("v must be a number");
+  for (var a = 0, t = e.length; a < t; a++)
+    if (r <= e[a]) {
+      for (; a < t && r === e[a]; )
         a++;
-      return a === 0 ? 0 : (e !== r[a - 1] && (a += (e - r[a - 1]) / (r[a] - r[a - 1])), a / t);
+      return a === 0 ? 0 : (r !== e[a - 1] && (a += (r - e[a - 1]) / (e[a] - e[a - 1])), a / t);
     }
   return 1;
 }
-g.faceNormals = se;
-function se(r, e) {
-  var a = r.clone();
+M.faceNormals = vr;
+function vr(e, r) {
+  var a = e.clone();
   a.index && (a = a.toNonIndexed());
-  for (var t = a.attributes.position.array, n = t.length / 9, f = new Array(n), h = new w.Vector3(), i = new w.Vector3(), m = new w.Vector3(), u = 0; u < n; u++) {
-    var l = u * 9;
-    h.set(
-      t[l],
-      t[l + 1],
-      t[l + 2]
-    ), i.set(
-      t[l + 3],
-      t[l + 4],
-      t[l + 5]
+  for (var t = a.attributes.position.array, n = t.length / 9, f = new Array(n), u = new s.Vector3(), h = new s.Vector3(), m = new s.Vector3(), i = 0; i < n; i++) {
+    var g = i * 9;
+    u.set(
+      t[g],
+      t[g + 1],
+      t[g + 2]
+    ), h.set(
+      t[g + 3],
+      t[g + 4],
+      t[g + 5]
     ), m.set(
-      t[l + 6],
-      t[l + 7],
-      t[l + 8]
+      t[g + 6],
+      t[g + 7],
+      t[g + 8]
     );
-    var v = new w.Vector3().crossVectors(
-      new w.Vector3().subVectors(i, h),
-      new w.Vector3().subVectors(m, h)
+    var o = new s.Vector3().crossVectors(
+      new s.Vector3().subVectors(h, u),
+      new s.Vector3().subVectors(m, u)
     ).normalize();
-    f[u] = v;
+    f[i] = o;
   }
   return f;
 }
-g.getFittedPlaneNormal = Se;
-function Se(r, e) {
-  var a = r.length / 3, t = 0, n = 0, f = 0, h = 0, i = 0, m = 0;
+M.getFittedPlaneNormal = Sr;
+function Sr(e, r) {
+  var a = e.length / 3, t = 0, n = 0, f = 0, u = 0, h = 0, m = 0;
   if (a < 3) throw new Error("At least three points are required to fit a plane");
-  for (var u = new w.Vector3(), l = 0, v = r.length; l < v; l += 3) {
-    var o = r[l] - e.x, c = r[l + 1] - e.y, d = r[l + 2] - e.z;
-    t += o * o, n += o * c, f += o * d, h += c * c, i += c * d, m += d * d;
+  for (var i = new s.Vector3(), g = 0, o = e.length; g < o; g += 3) {
+    var l = e[g] - r.x, c = e[g + 1] - r.y, d = e[g + 2] - r.z;
+    t += l * l, n += l * c, f += l * d, u += c * c, h += c * d, m += d * d;
   }
-  var y = h * m - i * i, M = t * m - f * f, S = t * h - n * n;
-  return y >= M && y >= S ? u.set(y, n * m - f * i, f * h - n * i) : M >= y && M >= S ? u.set(n * m - f * i, M, n * f - i * t) : u.set(f * h - n * i, n * f - i * t, S), u.z < 0 && u.negate(), u.normalize();
+  var y = u * m - h * h, v = t * m - f * f, H = t * u - n * n;
+  return y >= v && y >= H ? i.set(y, n * m - f * h, f * u - n * h) : v >= y && v >= H ? i.set(n * m - f * h, v, n * f - h * t) : i.set(f * u - n * h, n * f - h * t, H), i.z < 0 && i.negate(), i.normalize();
 }
-g.bucketNumbersLinearly = ae;
-function ae(r, e, a, t) {
-  var n = 0, f = r.length;
+M.bucketNumbersLinearly = rr;
+function rr(e, r, a, t) {
+  var n = 0, f = e.length;
   if (typeof a > "u")
     for (a = 1 / 0, t = -1 / 0, n = 0; n < f; n++)
-      r[n] < a && (a = r[n]), r[n] > t && (t = r[n]);
+      e[n] < a && (a = e[n]), e[n] > t && (t = e[n]);
   a === t && (t = a + 1);
-  var h = (t - a) / e, i = new Array(e);
-  for (n = 0; n < e; n++)
-    i[n] = [];
+  var u = (t - a) / r, h = new Array(r);
+  for (n = 0; n < r; n++)
+    h[n] = [];
   for (n = 0; n < f; n++) {
-    var m = Math.max(a, Math.min(t, r[n]));
+    var m = Math.max(a, Math.min(t, e[n]));
     if (m === t)
-      i[e - 1].push(m);
+      h[r - 1].push(m);
     else {
-      var u = Math.floor((m - a) / h);
-      u = Math.max(0, Math.min(e - 1, u)), i[u].push(m);
+      var i = Math.floor((m - a) / u);
+      i = Math.max(0, Math.min(r - 1, i)), h[i].push(m);
     }
   }
-  return i;
-}
-g.getModes = ue;
-function ue(r, e, a, t) {
-  if (!r || r.length === 0)
-    return [];
-  a === t && (t = a + 1);
-  for (var n = ae(r, e, a, t), f = 0, h = [], i = 0, m = n.length; i < m; i++)
-    n[i].length > f ? (f = n[i].length, h = [a + (i + 0.5) / e * (t - a)]) : n[i].length === f && f > 0 && h.push(a + (i + 0.5) / e * (t - a));
-  if (h.length === 0)
-    return [];
-  for (var u = 0; u < h.length; u++)
-    Math.abs(h[u] - Math.round(h[u])) < 1e-3 ? h[u] = Math.round(h[u]) : h[u] = parseFloat(h[u].toFixed(3));
   return h;
 }
-g.drawHistogram = le;
-function le(r, e, a, t, n) {
-  if (!e || !e.getContext) {
+M.getModes = mr;
+function mr(e, r, a, t) {
+  if (!e || e.length === 0)
+    return [];
+  a === t && (t = a + 1);
+  for (var n = rr(e, r, a, t), f = 0, u = [], h = 0, m = n.length; h < m; h++)
+    n[h].length > f ? (f = n[h].length, u = [a + (h + 0.5) / r * (t - a)]) : n[h].length === f && f > 0 && u.push(a + (h + 0.5) / r * (t - a));
+  if (u.length === 0)
+    return [];
+  for (var i = 0; i < u.length; i++)
+    Math.abs(u[i] - Math.round(u[i])) < 1e-3 ? u[i] = Math.round(u[i]) : u[i] = parseFloat(u[i].toFixed(3));
+  return u;
+}
+M.drawHistogram = ir;
+function ir(e, r, a, t, n) {
+  if (!r || !r.getContext) {
     console.warn("Invalid canvas for histogram drawing");
     return;
   }
-  var f = e.getContext("2d"), h = 280, i = 180, m = 10, u = 4, l = typeof t > "u" ? -1 / 0 : t, v = typeof a > "u" ? 1 / 0 : a, o = r.length, c;
-  if (e.width = h + m * 2, e.height = i + m * 2, f.clearRect(0, 0, e.width, e.height), typeof n > "u" && (n = ""), l === -1 / 0 || v === 1 / 0)
-    for (c = 0; c < o; c++)
-      for (var d = 0, y = r[c].length; d < y; d++)
-        r[c][d] > l && (l = r[c][d]), r[c][d] < v && (v = r[c][d]);
-  v === l && (l = v + 1);
-  var M = 0, S = 0;
-  for (c = 0; c < o; c++)
-    r[c].length > M && (M = r[c].length), S += r[c].length;
-  if (S === 0 || M === 0) {
-    f.fillStyle = "rgba(144, 176, 192, 1)", f.font = "12px Arial", f.fillText("No data available", m + 10, m + i / 2), f.strokeStyle = "rgba(13, 42, 64, 1)", f.lineWidth = 2, f.beginPath(), f.moveTo(m, m), f.lineTo(m, i + m), f.moveTo(m, i + m), f.lineTo(h + m, i + m), f.stroke();
+  var f = r.getContext("2d"), u = 280, h = 180, m = 10, i = 4, g = typeof t > "u" ? -1 / 0 : t, o = typeof a > "u" ? 1 / 0 : a, l = e.length, c;
+  if (r.width = u + m * 2, r.height = h + m * 2, f.clearRect(0, 0, r.width, r.height), typeof n > "u" && (n = ""), g === -1 / 0 || o === 1 / 0)
+    for (c = 0; c < l; c++)
+      for (var d = 0, y = e[c].length; d < y; d++)
+        e[c][d] > g && (g = e[c][d]), e[c][d] < o && (o = e[c][d]);
+  o === g && (g = o + 1);
+  var v = 0, H = 0;
+  for (c = 0; c < l; c++)
+    e[c].length > v && (v = e[c].length), H += e[c].length;
+  if (H === 0 || v === 0) {
+    f.fillStyle = "rgba(144, 176, 192, 1)", f.font = "12px Arial", f.fillText("No data available", m + 10, m + h / 2), f.strokeStyle = "rgba(13, 42, 64, 1)", f.lineWidth = 2, f.beginPath(), f.moveTo(m, m), f.lineTo(m, h + m), f.moveTo(m, h + m), f.lineTo(u + m, h + m), f.stroke();
     return;
   }
-  var s = (i - u) / M, x = (h - (r.length + 1) * u) / r.length;
-  for (x >= 1 && (x = Math.floor(x)), s >= 1 && (s = Math.floor(s)), f.fillStyle = "rgba(13, 42, 64, 1)", c = 0; c < o; c++)
+  var S = (h - i) / v, w = (u - (e.length + 1) * i) / e.length;
+  for (w >= 1 && (w = Math.floor(w)), S >= 1 && (S = Math.floor(S)), f.fillStyle = "rgba(13, 42, 64, 1)", c = 0; c < l; c++)
     f.fillRect(
-      m + u + c * (x + u),
-      m + i - (u + r[c].length * s),
-      x,
-      s * r[c].length
+      m + i + c * (w + i),
+      m + h - (i + e[c].length * S),
+      w,
+      S * e[c].length
     );
-  for (f.fillStyle = "rgba(144, 176, 192, 1)", f.font = "12px Arial", c = 0; c < o; c++) {
-    var H = Math.floor((c + 0.5) / r.length * (l - v) + v) + "" + n;
+  for (f.fillStyle = "rgba(144, 176, 192, 1)", f.font = "12px Arial", c = 0; c < l; c++) {
+    var x = Math.floor((c + 0.5) / e.length * (g - o) + o) + "" + n;
     f.fillText(
-      H,
-      m + u + c * (x + u) + Math.floor((x - f.measureText(H).width) * 0.5),
-      m + i - 8,
-      x
+      x,
+      m + i + c * (w + i) + Math.floor((w - f.measureText(x).width) * 0.5),
+      m + h - 8,
+      w
     );
   }
-  var b = S > 0 ? Math.round(100 * M / S) + "%" : "0%";
+  var I = H > 0 ? Math.round(100 * v / H) + "%" : "0%";
   f.fillText(
-    b,
-    m + u,
-    m + u + 6
-  ), f.strokeStyle = "rgba(13, 42, 64, 1)", f.lineWidth = 2, f.beginPath(), f.moveTo(m, m), f.lineTo(m, i + m), f.moveTo(m, i + m), f.lineTo(h + m, i + m), f.stroke();
+    I,
+    m + i,
+    m + i + 6
+  ), f.strokeStyle = "rgba(13, 42, 64, 1)", f.lineWidth = 2, f.beginPath(), f.moveTo(m, m), f.lineTo(m, h + m), f.moveTo(m, h + m), f.lineTo(u + m, h + m), f.stroke();
 }
-g.percentVariationExplainedByFittedPlane = xe;
-function xe(r, e, a, t) {
-  if (!r || r.length < 3 || !e || !a || !a.isVector3)
+M.percentVariationExplainedByFittedPlane = Hr;
+function Hr(e, r, a, t) {
+  if (!e || e.length < 3 || !r || !a || !a.isVector3)
     return 0;
   t = Math.abs(t) || 1;
-  var n = r.length, f = 0, h, i;
+  var n = e.length, f = 0, u, h;
   try {
     for (var m = 0; m < n; m += 3) {
-      var u = r[m + 0] - e.x, l = r[m + 1] - e.y, v = r[m + 2] - e.z;
-      h = a.x * u + a.y * l + a.z * v, i = Math.abs(h) / Math.sqrt(a.x * a.x + a.y * a.y + a.z * a.z), f += i * i;
+      var i = e[m + 0] - r.x, g = e[m + 1] - r.y, o = e[m + 2] - r.z;
+      u = a.x * i + a.y * g + a.z * o, h = Math.abs(u) / Math.sqrt(a.x * a.x + a.y * a.y + a.z * a.z), f += h * h;
     }
     return Math.max(0, Math.min(1, 1 - Math.sqrt(f / n) * 2 / t));
-  } catch (o) {
-    return console.warn("Error calculating plane variation:", o), 0;
+  } catch (l) {
+    return console.warn("Error calculating plane variation:", l), 0;
   }
 }
-g.mean = ce;
-function ce(r) {
-  for (var e = 0, a = r.length, t = 0; t < a; t++)
-    e += r[t];
-  return e / a;
+M.mean = cr;
+function cr(e) {
+  for (var r = 0, a = e.length, t = 0; t < a; t++)
+    r += e[t];
+  return r / a;
 }
-g.Brownian = function(r, e) {
-  var a = [], t = [], n = Math.min(e.xSize, e.ySize), f = Math.sqrt(n) / n, h = Math.sqrt(e.maxHeight - e.minHeight), i = e.xSegments + 1, m = e.ySegments + 1, u = Math.floor(Math.random() * e.xSegments), l = Math.floor(Math.random() * e.ySegments), v = u, o = l, c = r.length, d = Array.from(r).map(function(O) {
-    return { z: O };
-  }), y = d[l * i + u], M = Math.random() * Math.PI * 2, S = Math.cos(M), s = Math.sin(M), x, H, b, I, q, A, V;
-  for (y.z = Math.random() * (e.maxHeight - e.minHeight) + e.minHeight, t.push(y); t.length !== c; ) {
-    for (x = -1; x <= 1; x++)
-      for (H = -1; H <= 1; H++)
-        b = (l + x) * i + u + H, typeof d[b] < "u" && t.indexOf(d[b]) === -1 && u + H >= 0 && l + x >= 0 && u + H < i && l + x < m && x && H && a.push(d[b]);
+M.Brownian = function(e, r) {
+  var a = [], t = [], n = Math.min(r.xSize, r.ySize), f = Math.sqrt(n) / n, u = Math.sqrt(r.maxHeight - r.minHeight), h = r.xSegments + 1, m = r.ySegments + 1, i = Math.floor(Math.random() * r.xSegments), g = Math.floor(Math.random() * r.ySegments), o = i, l = g, c = e.length, d = Array.from(e).map(function(B) {
+    return { z: B };
+  }), y = d[g * h + i], v = Math.random() * Math.PI * 2, H = Math.cos(v), S = Math.sin(v), w, x, I, z, P, q, V;
+  for (y.z = Math.random() * (r.maxHeight - r.minHeight) + r.minHeight, t.push(y); t.length !== c; ) {
+    for (w = -1; w <= 1; w++)
+      for (x = -1; x <= 1; x++)
+        I = (g + w) * h + i + x, typeof d[I] < "u" && t.indexOf(d[I]) === -1 && i + x >= 0 && g + w >= 0 && i + x < h && g + w < m && w && x && a.push(d[I]);
     if (Math.random() < f)
-      y = a.splice(Math.floor(Math.random() * a.length), 1)[0], M = Math.random() * Math.PI * 2, S = Math.cos(M), s = Math.sin(M), V = d.indexOf(y), u = V % i, l = Math.floor(V / i), v = u, o = l;
+      y = a.splice(Math.floor(Math.random() * a.length), 1)[0], v = Math.random() * Math.PI * 2, H = Math.cos(v), S = Math.sin(v), V = d.indexOf(y), i = V % h, g = Math.floor(V / h), o = i, l = g;
     else {
-      for (var T = v, C = o; Math.round(T) === u && Math.round(C) === l; )
-        T += S, C += s;
-      u = Math.round(T), l = Math.round(T);
-      for (var F = 0; u >= 0 && l >= 0 && u < i && l < m && t.indexOf(d[l * i + u]) !== -1 && F < 9; F++) {
-        for (M = Math.random() * Math.PI * 2, S = Math.cos(M), s = Math.sin(M); Math.round(T) === u && Math.round(C) === l; )
-          T += S, C += s;
-        u = Math.round(T), l = Math.round(C);
+      for (var T = o, O = l; Math.round(T) === i && Math.round(O) === g; )
+        T += H, O += S;
+      i = Math.round(T), g = Math.round(T);
+      for (var W = 0; i >= 0 && g >= 0 && i < h && g < m && t.indexOf(d[g * h + i]) !== -1 && W < 9; W++) {
+        for (v = Math.random() * Math.PI * 2, H = Math.cos(v), S = Math.sin(v); Math.round(T) === i && Math.round(O) === g; )
+          T += H, O += S;
+        i = Math.round(T), g = Math.round(O);
       }
-      if (u >= 0 && l >= 0 && u < i && l < m && t.indexOf(d[l * i + u]) === -1) {
-        v = T, o = C, y = d[l * i + u];
-        var R = a.indexOf(y);
-        R !== -1 && a.splice(R, 1);
+      if (i >= 0 && g >= 0 && i < h && g < m && t.indexOf(d[g * h + i]) === -1) {
+        o = T, l = O, y = d[g * h + i];
+        var L = a.indexOf(y);
+        L !== -1 && a.splice(L, 1);
       } else
-        y = a.splice(Math.floor(Math.random() * a.length), 1)[0], M = Math.random() * Math.PI * 2, S = Math.cos(M), s = Math.sin(M), V = d.indexOf(y), u = V % i, l = Math.floor(V / i), v = u, o = l;
+        y = a.splice(Math.floor(Math.random() * a.length), 1)[0], v = Math.random() * Math.PI * 2, H = Math.cos(v), S = Math.sin(v), V = d.indexOf(y), i = V % h, g = Math.floor(V / h), o = i, l = g;
     }
-    for (I = 0, q = 0, x = -1; x <= 1; x++)
-      for (H = -1; H <= 1; H++)
-        b = (l + x) * i + u + H, typeof d[b] < "u" && t.indexOf(d[b]) !== -1 && u + H >= 0 && l + x >= 0 && u + H < i && l + x < m && x && H && (I += d[b].z, q++);
-    q && ((!A || Math.random() < f) && (A = Math.random()), y.z = I / q + g.EaseInWeak(A) * h * 2 - h), t.push(y);
+    for (z = 0, P = 0, w = -1; w <= 1; w++)
+      for (x = -1; x <= 1; x++)
+        I = (g + w) * h + i + x, typeof d[I] < "u" && t.indexOf(d[I]) !== -1 && i + x >= 0 && g + w >= 0 && i + x < h && g + w < m && w && x && (z += d[I].z, P++);
+    P && ((!q || Math.random() < f) && (q = Math.random()), y.z = z / P + M.EaseInWeak(q) * u * 2 - u), t.push(y);
   }
-  for (u = d.length - 1; u >= 0; u--)
-    r[u] = d[u].z;
-  g.Smooth(r, e), g.Smooth(r, e);
+  for (i = d.length - 1; i >= 0; i--)
+    e[i] = d[i].z;
+  M.Smooth(e, r), M.Smooth(e, r);
 };
-function de(r, e, a) {
-  if (!r.length || !e.length) return r;
-  var t = 0, n = 0, f = 0, h = 0, i = r.length, m = r[0].length, u = e.length, l = e[0].length;
+function or(e, r, a) {
+  if (!e.length || !r.length) return e;
+  var t = 0, n = 0, f = 0, u = 0, h = e.length, m = e[0].length, i = r.length, g = r[0].length;
   if (typeof a > "u")
-    for (a = new Array(i), t = 0; t < i; t++)
+    for (a = new Array(h), t = 0; t < h; t++)
       a[t] = new Float64Array(m);
-  for (t = 0; t < i; t++)
+  for (t = 0; t < h; t++)
     for (n = 0; n < m; n++) {
-      var v = 0;
-      for (a[t][n] = 0, f = 0; f < u; f++)
-        for (h = 0; h < l; h++)
-          typeof r[t + f] < "u" && typeof r[t + f][n + h] < "u" && (v = r[t + f][n + h]), a[t][n] += v * e[f][h];
+      var o = 0;
+      for (a[t][n] = 0, f = 0; f < i; f++)
+        for (u = 0; u < g; u++)
+          typeof e[t + f] < "u" && typeof e[t + f][n + u] < "u" && (o = e[t + f][n + u]), a[t][n] += o * r[f][u];
     }
   return a;
 }
-function be(r, e) {
-  return Math.exp(-0.5 * r * r / (e * e)) / (e * 2.5066282746310007);
+function Ir(e, r) {
+  return Math.exp(-0.5 * e * e / (r * r)) / (r * 2.5066282746310007);
 }
-function Ae(r, e) {
-  typeof e != "number" && (e = 7);
-  var a = new Float64Array(e), t = Math.floor(e * 0.5), n = e % 2, f;
-  if (!r || !e) return a;
+function Ar(e, r) {
+  typeof r != "number" && (r = 7);
+  var a = new Float64Array(r), t = Math.floor(r * 0.5), n = r % 2, f;
+  if (!e || !r) return a;
   for (f = 0; f <= t; f++)
-    a[f] = be(r * (f - t - n * 0.5), r);
-  for (; f < e; f++)
-    a[f] = a[e - 1 - f];
+    a[f] = Ir(e * (f - t - n * 0.5), e);
+  for (; f < r; f++)
+    a[f] = a[r - 1 - f];
   return a;
 }
-function Pe(r, e, a) {
-  typeof e > "u" && (e = 1), typeof a > "u" && (a = 7);
-  for (var t = Ae(e, a), n = a || t.length, f = [t], h = new Array(n), i = 0; i < n; i++)
-    h[i] = [t[i]];
-  return de(de(r, f), h);
+function zr(e, r, a) {
+  typeof r > "u" && (r = 1), typeof a > "u" && (a = 7);
+  for (var t = Ar(r, a), n = a || t.length, f = [t], u = new Array(n), h = 0; h < n; h++)
+    u[h] = [t[h]];
+  return or(or(e, f), u);
 }
-g.Gaussian = function(r, e, a, t) {
-  g.fromArray2D(r, Pe(g.toArray2D(r, e), a, t));
+M.Gaussian = function(e, r, a, t) {
+  M.fromArray2D(e, zr(M.toArray2D(e, r), a, t));
 };
-g.GaussianBoxBlur = function(r, e, a, t) {
-  ze(
-    r,
-    e.xSegments + 1,
-    e.ySegments + 1,
+M.GaussianBoxBlur = function(e, r, a, t) {
+  qr(
+    e,
+    r.xSegments + 1,
+    r.ySegments + 1,
     a,
     t
   );
 };
-function ze(r, e, a, t, n, f) {
-  typeof t > "u" && (t = 1), typeof n > "u" && (n = 3), typeof f > "u" && (f = new Float32Array(r.length));
-  for (var h = qe(t, n), i = 0; i < n; i++)
-    Te(r, f, e, a, (h[i] - 1) / 2);
+function qr(e, r, a, t, n, f) {
+  typeof t > "u" && (t = 1), typeof n > "u" && (n = 3), typeof f > "u" && (f = new Float32Array(e.length));
+  for (var u = br(t, n), h = 0; h < n; h++)
+    Tr(e, f, r, a, (u[h] - 1) / 2);
   return f;
 }
-function qe(r, e) {
-  var a = Math.sqrt(12 * r * r / e + 1), t = Math.floor(a);
+function br(e, r) {
+  var a = Math.sqrt(12 * e * e / r + 1), t = Math.floor(a);
   t % 2 === 0 && t--;
-  for (var n = t + 2, f = (12 * r * r - e * t * t - 4 * e * t - 3 * e) / (-4 * t - 4), h = Math.round(f), i = new Int16Array(e), m = 0; m < e; m++)
-    i[m] = m < h ? t : n;
-  return i;
+  for (var n = t + 2, f = (12 * e * e - r * t * t - 4 * r * t - 3 * r) / (-4 * t - 4), u = Math.round(f), h = new Int16Array(r), m = 0; m < r; m++)
+    h[m] = m < u ? t : n;
+  return h;
 }
-function Te(r, e, a, t, n) {
-  for (var f = 0, h = r.length; f < h; f++)
-    e[f] = r[f];
-  Ve(e, r, a, t, n), Ce(r, e, a, t, n);
+function Tr(e, r, a, t, n) {
+  for (var f = 0, u = e.length; f < u; f++)
+    r[f] = e[f];
+  Pr(r, e, a, t, n), Vr(e, r, a, t, n);
 }
-function Ve(r, e, a, t, n) {
-  for (var f = 1 / (n + n + 1), h = 0; h < t; h++) {
-    var i = h * a, m = i, u = i + n, l = r[i], v = r[i + a - 1], o = (n + 1) * l, c;
+function Pr(e, r, a, t, n) {
+  for (var f = 1 / (n + n + 1), u = 0; u < t; u++) {
+    var h = u * a, m = h, i = h + n, g = e[h], o = e[h + a - 1], l = (n + 1) * g, c;
     for (c = 0; c < n; c++)
-      o += r[i + c];
+      l += e[h + c];
     for (c = 0; c <= n; c++)
-      o += r[u++] - l, e[i++] = o * f;
+      l += e[i++] - g, r[h++] = l * f;
     for (c = n + 1; c < a - n; c++)
-      o += r[u++] - r[m++], e[i++] = o * f;
+      l += e[i++] - e[m++], r[h++] = l * f;
     for (c = a - n; c < a; c++)
-      o += v - r[m++], e[i++] = o * f;
+      l += o - e[m++], r[h++] = l * f;
   }
 }
-function Ce(r, e, a, t, n) {
-  for (var f = 1 / (n + n + 1), h = 0; h < a; h++) {
-    var i = h, m = i, u = i + n * a, l = r[i], v = r[i + a * (t - 1)], o = (n + 1) * l, c;
+function Vr(e, r, a, t, n) {
+  for (var f = 1 / (n + n + 1), u = 0; u < a; u++) {
+    var h = u, m = h, i = h + n * a, g = e[h], o = e[h + a * (t - 1)], l = (n + 1) * g, c;
     for (c = 0; c < n; c++)
-      o += r[i + c * a];
+      l += e[h + c * a];
     for (c = 0; c <= n; c++)
-      o += r[u] - l, e[i] = o * f, u += a, i += a;
+      l += e[i] - g, r[h] = l * f, i += a, h += a;
     for (c = n + 1; c < t - n; c++)
-      o += r[u] - r[m], e[i] = o * f, m += a, u += a, i += a;
+      l += e[i] - e[m], r[h] = l * f, m += a, i += a, h += a;
     for (c = t - n; c < t; c++)
-      o += v - r[m], e[i] = o * f, m += a, i += a;
+      l += o - e[m], r[h] = l * f, m += a, h += a;
   }
 }
-w.Vector2.prototype.distanceToManhattan = function(r) {
-  return Math.abs(this.x - r.x) + Math.abs(this.y - r.y);
+M.Worley || (M.Worley = {});
+s.Vector2.prototype.distanceToManhattan = function(e) {
+  return Math.abs(this.x - e.x) + Math.abs(this.y - e.y);
 };
-w.Vector2.prototype.distanceToChebyshev = function(r) {
-  var e = Math.abs(this.x - r.x), a = Math.abs(this.y - r.y);
-  return e <= a ? a : e;
+s.Vector2.prototype.distanceToChebyshev = function(e) {
+  var r = Math.abs(this.x - e.x), a = Math.abs(this.y - e.y);
+  return r <= a ? a : r;
 };
-w.Vector2.prototype.distanceToQuadratic = function(r) {
-  var e = Math.abs(this.x - r.x), a = Math.abs(this.y - r.y);
-  return e * e + e * a + a * a;
+s.Vector2.prototype.distanceToQuadratic = function(e) {
+  var r = Math.abs(this.x - e.x), a = Math.abs(this.y - e.y);
+  return r * r + r * a + a * a;
 };
-function Ne(r, e, a) {
-  for (var t = 1 / 0, n = "distanceTo" + a, f = 0; f < e.length; f++) {
-    var h = e[f][n](r);
-    h < t && (t = h);
+function Or(e, r, a) {
+  for (var t = 1 / 0, n = "distanceTo" + a, f = 0; f < r.length; f++) {
+    var u = r[f][n](e);
+    u < t && (t = u);
   }
   return t;
 }
-g.Worley = function(r, e) {
-  for (var a = (e.worleyDistribution || g.Worley.randomPoints)(e.xSegments, e.ySegments, e.worleyPoints), t = e.worleyDistanceTransformation || function(m) {
-    return -m;
-  }, n = new w.Vector2(0, 0), f = 0, h = e.xSegments + 1; f < h; f++)
-    for (var i = 0; i < e.ySegments + 1; i++)
-      n.x = f, n.y = i, r[i * h + f] = t(Ne(n, a, e.distanceType || ""));
-  g.Clamp(r, {
-    maxHeight: e.maxHeight,
-    minHeight: e.minHeight,
+M.Worley = function(e, r) {
+  for (var a = r.worleyDistribution || M.Worley.randomPoints || function(i, g, o) {
+    o = o || Math.floor(Math.sqrt(i * g * 0.025)) || 1;
+    for (var l = new Array(o), c = 0; c < o; c++)
+      l[c] = new s.Vector2(
+        Math.random() * i,
+        Math.random() * g
+      );
+    return l;
+  }, t = a(r.xSegments, r.ySegments, r.worleyPoints), n = r.worleyDistanceTransformation || function(i) {
+    return -i;
+  }, f = new s.Vector2(0, 0), u = 0, h = r.xSegments + 1; u < h; u++)
+    for (var m = 0; m < r.ySegments + 1; m++)
+      f.x = u, f.y = m, e[m * h + u] = n(Or(f, t, r.distanceType || ""));
+  M.Clamp(e, {
+    maxHeight: r.maxHeight,
+    minHeight: r.minHeight,
     stretch: true
   });
 };
-g.Worley.randomPoints = function(r, e, a) {
-  a = a || Math.floor(Math.sqrt(r * e * 0.025)) || 1;
+M.Worley.randomPoints = function(e, r, a) {
+  a = a || Math.floor(Math.sqrt(e * r * 0.025)) || 1;
   for (var t = new Array(a), n = 0; n < a; n++)
-    t[n] = new w.Vector2(
-      Math.random() * r,
-      Math.random() * e
+    t[n] = new s.Vector2(
+      Math.random() * e,
+      Math.random() * r
     );
   return t;
 };
-function Be(r) {
-  return r.splice(Math.floor(Math.random() * r.length), 1)[0];
+function Rr(e) {
+  return e.splice(Math.floor(Math.random() * e.length), 1)[0];
 }
-function ye(r, e, a) {
-  var t = Math.floor(e.x / a), n = Math.floor(e.y / a);
-  r[t] || (r[t] = []), r[t][n] = e;
+function yr(e, r, a) {
+  var t = Math.floor(r.x / a), n = Math.floor(r.y / a);
+  e[t] || (e[t] = []), e[t][n] = r;
 }
-function De(r, e, a) {
-  return r.x >= 0 && // jscs:ignore requireSpaceAfterKeywords
-  r.y >= 0 && r.x <= e + 1 && r.y <= a + 1;
+function Nr(e, r, a) {
+  return e.x >= 0 && // jscs:ignore requireSpaceAfterKeywords
+  e.y >= 0 && e.x <= r + 1 && e.y <= a + 1;
 }
-function Re(r, e, a, t) {
-  for (var n = Math.floor(e.x / t), f = Math.floor(e.y / t), h = n - 1; h <= n + 1; h++)
-    for (var i = f - 1; i <= f + 1; i++)
-      if (h !== n && i !== f && typeof r[h] < "u" && typeof r[h][i] < "u") {
-        var m = h * t, u = i * t;
-        if (Math.sqrt((e.x - m) * (e.x - m) + (e.y - u) * (e.y - u)) < a)
+function Cr(e, r, a, t) {
+  for (var n = Math.floor(r.x / t), f = Math.floor(r.y / t), u = n - 1; u <= n + 1; u++)
+    for (var h = f - 1; h <= f + 1; h++)
+      if (u !== n && h !== f && typeof e[u] < "u" && typeof e[u][h] < "u") {
+        var m = u * t, i = h * t;
+        if (Math.sqrt((r.x - m) * (r.x - m) + (r.y - i) * (r.y - i)) < a)
           return true;
       }
   return false;
 }
-function Oe(r, e) {
-  var a = e * (Math.random() + 1), t = 2 * Math.PI * Math.random();
-  return new w.Vector2(
-    r.x + a * Math.cos(t),
-    r.y + a * Math.sin(t)
+function Br(e, r) {
+  var a = r * (Math.random() + 1), t = 2 * Math.PI * Math.random();
+  return new s.Vector2(
+    e.x + a * Math.cos(t),
+    e.y + a * Math.sin(t)
   );
 }
-g.Worley.PoissonDisks = function(r, e, a, t) {
-  a = a || Math.floor(Math.sqrt(r * e * 0.2)) || 1, t = Math.sqrt((r + e) * 2.5), t > a * 0.67 && (t = a * 0.67);
+M.Worley.PoissonDisks = function(e, r, a, t) {
+  a = a || Math.floor(Math.sqrt(e * r * 0.2)) || 1, t = Math.sqrt((e + r) * 2.5), t > a * 0.67 && (t = a * 0.67);
   var n = t / Math.sqrt(2);
   n < 2 && (n = 2);
-  var f = [], h = [], i = [], m = new w.Vector2(
-    Math.random() * r,
-    Math.random() * e
+  var f = [], u = [], h = [], m = new s.Vector2(
+    Math.random() * e,
+    Math.random() * r
   );
-  h.push(m), i.push(m), ye(f, m, n);
-  for (var u = 0; h.length; ) {
-    for (var l = Be(h), v = 0; v < a; v++) {
-      var o = Oe(l, t);
-      if (De(o, r, e) && !Re(f, o, t, n) && (h.push(o), i.push(o), ye(f, o, n), i.length >= a))
+  u.push(m), h.push(m), yr(f, m, n);
+  for (var i = 0; u.length; ) {
+    for (var g = Rr(u), o = 0; o < a; o++) {
+      var l = Br(g, t);
+      if (Nr(l, e, r) && !Cr(f, l, t, n) && (u.push(l), h.push(l), yr(f, l, n), h.length >= a))
         break;
     }
-    if (i.length >= a || ++u > a * a)
+    if (h.length >= a || ++i > a * a)
       break;
   }
-  return i;
+  return h;
 };
-g.MultiPass || (console.log("Adding fallback MultiPass function"), g.MultiPass = function(r, e, a) {
-  console.log("Using fallback MultiPass function");
-  var t = {};
-  for (var n in e)
-    e.hasOwnProperty(n) && (t[n] = e[n]);
-  for (var f = e.maxHeight - e.minHeight, h = 0, i = a.length; h < i; h++) {
-    var m = typeof a[h].amplitude > "u" ? 1 : a[h].amplitude, u = 0.5 * (f - f * m);
-    t.maxHeight = e.maxHeight - u, t.minHeight = e.minHeight + u, t.frequency = typeof a[h].frequency > "u" ? e.frequency : a[h].frequency, a[h].method(r, t);
-  }
-});
-g.DiamondSquare || (console.log("Adding fallback DiamondSquare function"), g.DiamondSquare = function(r, e) {
-  console.log("Using fallback DiamondSquare function");
-  var a = Math.max(e.xSegments, e.ySegments) + 1;
-  a = g.ceilPowerOfTwo(a);
-  for (var t = a + 1, n = new Array(t), f = 0; f < t; f++) {
-    n[f] = new Array(t);
-    for (var h = 0; h < t; h++)
-      n[f][h] = 0;
-  }
-  var i = e.minHeight, m = e.maxHeight, u = m - i;
-  n[0][0] = Math.random() * u + i, n[0][t - 1] = Math.random() * u + i, n[t - 1][0] = Math.random() * u + i, n[t - 1][t - 1] = Math.random() * u + i;
-  for (var l = u * 0.5, v = a; v >= 2; v /= 2) {
-    for (var o = Math.round(v * 0.5), c = Math.round(v), d = 0; d < a; d += c)
-      for (var y = 0; y < a; y += c) {
-        var M = n[d][y] + n[d + c][y] + n[d][y + c] + n[d + c][y + c];
-        M *= 0.25, n[d + o][y + o] = M + (Math.random() * 2 - 1) * l;
-      }
-    for (var d = 0; d < a; d += o)
-      for (var y = (d + o) % v; y < a; y += v) {
-        var M = 0, S = 0;
-        d >= o && (M += n[d - o][y], S++), d + o < t && (M += n[d + o][y], S++), y >= o && (M += n[d][y - o], S++), y + o < t && (M += n[d][y + o], S++), M /= S, n[d][y] = M + (Math.random() * 2 - 1) * l, d === 0 && (n[a][y] = n[0][y]), y === 0 && (n[d][a] = n[d][0]);
-      }
-    l /= 2;
-  }
-  for (var s = e.xSegments + 1, x = e.ySegments + 1, f = 0; f < s; f++)
-    for (var h = 0; h < x; h++) {
-      var d = Math.round(f * a / s), y = Math.round(h * a / x);
-      r[h * s + f] = n[d][y];
-    }
-});
-g.Perlin || (console.log("Adding fallback Perlin function"), g.Perlin = function(r, e) {
-  console.log("Using fallback Perlin function");
-  for (var a = (e.maxHeight - e.minHeight) * 0.5, t = 0; t < r.length; t++)
-    r[t] = Math.random() * a * 2 - a;
-});
-g.SmoothMedian || (console.log("Adding fallback SmoothMedian function"), g.SmoothMedian = function(r, e) {
-  return console.log("Using fallback SmoothMedian function"), r;
-});
-console.log("THREE.Terrain module loaded");
-console.log("Available heightmap generators:", Object.keys(g).filter((r) => typeof g[r] == "function" && [
-  "Perlin",
-  "DiamondSquare",
-  "Hill",
-  "Brownian",
-  "Cosine",
-  "CosineLayers",
-  "Fault",
-  "Particles",
-  "Simplex",
-  "SimplexLayers",
-  "Value",
-  "Weierstrass",
-  "Worley"
-].includes(r)));
-typeof window < "u" && (window.THREE || (window.THREE = {}), window.THREE.Terrain = Me, Object.assign(window.THREE.Terrain, g));
+typeof window < "u" && (window.THREE || (window.THREE = {}), window.THREE.Terrain = dr, Object.assign(window.THREE.Terrain, M));
 export {
-  g as TerrainNS,
-  Me as default
+  M as TerrainNS,
+  dr as default
 };

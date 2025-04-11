@@ -58,7 +58,6 @@ function generateBlendedMaterial(textures, material) {
         // Set color space and enhance saturation for more vibrant colors
         if (textures[i].texture.source) {
             textures[i].texture.colorSpace = THREE.SRGBColorSpace;
-            textures[i].texture.encoding = THREE.sRGBEncoding; // Backward compatibility
         }
         textures[i].texture.needsUpdate = true;
 
