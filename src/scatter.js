@@ -107,7 +107,7 @@ TerrainNS.ScatterMeshes = function(geometry, options) {
                 // Interpolate rv between spread and spread + smoothSpread,
                 // then multiply that "easing" value by the probability
                 // that a mesh would get placed on a given face.
-                place = THREE.Terrain.EaseInOut((rv - options.spread) * spreadRange) * options.spread > Math.random();
+                place = TerrainNS.EaseInOut((rv - options.spread) * spreadRange) * options.spread > Math.random();
             }
         }
         else {

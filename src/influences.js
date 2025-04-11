@@ -93,7 +93,7 @@ TerrainNS.Influence = function(g, options, f, x, y, r, h, t, e) {
     r = typeof r === 'undefined' ? 64  : r; // radius
     h = typeof h === 'undefined' ? 64  : h; // height
     t = typeof t === 'undefined' ? THREE.NormalBlending : t; // blending
-    e = e || THREE.Terrain.EaseIn; // falloff
+    e = e || TerrainNS.EaseIn; // falloff
     // Find the vertex location of the feature origin
     var xl = options.xSegments + 1, // # x-vertices
         yl = options.ySegments + 1, // # y-vertices
