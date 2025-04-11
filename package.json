@@ -5,6 +5,11 @@
     "homepage": "https://github.com/IceCreamYou/THREE.Terrain",
     "bugs": "https://github.com/IceCreamYou/THREE.Terrain/issues",
     "main": "build/THREE.Terrain.min.js",
+    "scripts": {
+        "start": "vite",
+        "build": "vite build",
+        "preview": "vite preview"
+    },
     "directories": {
         "lib": "build",
         "example": "demo"
@@ -32,6 +37,12 @@
         "grunt-contrib-uglify": "^5.0.1",
         "grunt-contrib-watch": "^1.1.0",
         "grunt-jscs": "^3.0.1",
-        "three": "^0.130.1"
+        "three": "^0.130.1",
+        "vite": "^6.2.5",
+        "vite-plugin-top-level-await": "^1.5.0",
+        "vite-plugin-wasm": "^3.4.1"
+    },
+    "dependencies": {
+        "@dimforge/rapier3d": "^0.15.0"
     }
 }
