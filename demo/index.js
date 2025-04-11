@@ -1,8 +1,8 @@
 import * as THREE from 'three';
 import { FirstPersonControls } from 'three/examples/jsm/controls/FirstPersonControls.js';
 import { GUI } from 'dat.gui';
-import Terrain, { TerrainNS } from '../src/index.js'; // Default import for Terrain function
-import { generateBlendedMaterial } from '../src/materials.js'; // Named import
+import Terrain, { TerrainNS } from '../src/index.js';
+import { generateBlendedMaterial } from '../src/materials.js';
 
 // Global variables (use let)
 let camera, scene, renderer, clock, player, terrainScene, decoScene, lastOptions, controls = {}, fpsCamera, skyDome, skyLight, sand, water; // jscs:ignore requireLineBreakAfterVariableAssignment

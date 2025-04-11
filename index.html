@@ -15,6 +15,20 @@
   <script>
     window.__DEFINES__ = {};
   </script>
+  
+  <!-- Add import map for Three.js dependencies -->
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.175.0/build/three.module.js",
+        "three/examples/": "https://unpkg.com/three@0.175.0/examples/",
+        "three/examples/jsm/controls/FirstPersonControls.js": "https://unpkg.com/three@0.175.0/examples/jsm/controls/FirstPersonControls.js",
+        "dat.gui": "https://unpkg.com/dat.gui@0.7.9/build/dat.gui.module.js",
+        "../src/index.js": "./src/index.js",
+        "../src/materials.js": "./src/materials.js"
+      }
+    }
+  </script>
 </head>
 <body>
   <canvas id="heightmap"></canvas>
