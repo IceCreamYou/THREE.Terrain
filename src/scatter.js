@@ -1,3 +1,6 @@
+import * as THREE from 'three';
+import { TerrainNS } from './core.js';
+
 /**
  * Scatter a mesh across the terrain.
  *
@@ -47,7 +50,7 @@
  *   return value of a call to `THREE.Terrain()` or added to that return value;
  *   otherwise the position and rotation of the meshes will be wrong.
  */
-THREE.Terrain.ScatterMeshes = function(geometry, options) {
+TerrainNS.ScatterMeshes = function(geometry, options) {
     if (!options.mesh) {
         console.error('options.mesh is required for THREE.Terrain.ScatterMeshes but was not passed');
         return;
@@ -117,7 +120,7 @@ THREE.Terrain.ScatterMeshes = function(geometry, options) {
             }
             var mesh = options.mesh.clone();
             mesh.position.addVectors(vertex1, vertex2).add(vertex3).divideScalar(3);
-            if (options.maxTilt > 0) {
+                if (options.maxTilt > 0) {
                 var normal = mesh.position.clone().add(faceNormal);
                 mesh.lookAt(normal);
                 var tiltAngle = faceNormal.angleTo(up);
@@ -172,7 +175,7 @@ THREE.Terrain.ScatterMeshes = function(geometry, options) {
  *   `options.randomness` parameter to the {@link THREE.Terrain.ScatterMeshes}
  *   function.
  */
-THREE.Terrain.ScatterHelper = function(method, options, skip, threshold) {
+TerrainNS.ScatterHelper = function(method, options, skip, threshold) {
     skip = skip || 1;
     threshold = threshold || 0.25;
     options.frequency = options.frequency || 2.5;
@@ -188,7 +191,7 @@ THREE.Terrain.ScatterHelper = function(method, options, skip, threshold) {
     clonedOptions.stretch = true;
     clonedOptions.maxHeight = 1;
     clonedOptions.minHeight = 0;
-    var heightmap = THREE.Terrain.heightmapArray(method, clonedOptions);
+    var heightmap = TerrainNS.heightmapArray(method, clonedOptions);
 
     for (var i = 0, l = heightmap.length; i < l; i++) {
         if (i % skip || Math.random() > threshold) {

@@ -1,4 +1,5 @@
-(function() {
+import * as THREE from 'three';
+import { TerrainNS } from './core.js';
 
 /**
  * Convolve an array with a kernel.
@@ -138,7 +139,7 @@ function gaussian(src, s, kernelSize) {
  * @param {Object} options
  *   A map of settings that control how the terrain is constructed and
  *   displayed. Valid values are the same as those for the `options` parameter
- *   of {@link THREE.Terrain}().
+ *   of {@link TerrainNS.Terrain}().
  * @param {Number} [s=1]
  *   The standard deviation of the Gaussian kernel to use. Higher values result
  *   in smoothing across more cells of the src matrix.
@@ -146,8 +147,6 @@ function gaussian(src, s, kernelSize) {
  *   The size of the Gaussian kernel to use. Larger kernels result in slower
  *   but more accurate smoothing.
  */
-THREE.Terrain.Gaussian = function(g, options, s, kernelSize) {
-    THREE.Terrain.fromArray2D(g, gaussian(THREE.Terrain.toArray2D(g, options), s, kernelSize));
+TerrainNS.Gaussian = function(g, options, s, kernelSize) {
+    TerrainNS.fromArray2D(g, gaussian(TerrainNS.toArray2D(g, options), s, kernelSize));
 };
-
-})();

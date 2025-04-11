@@ -1,3 +1,6 @@
+import * as THREE from 'three';
+import { TerrainNS } from './core.js';
+
 // Allows placing geometrically-described features on a terrain.
 // If you want these features to look a little less regular, apply them before a procedural pass.
 // If you want more complex influence, you can composite heightmaps.
@@ -5,19 +8,19 @@
 /**
  * Equations describing geographic features.
  */
-THREE.Terrain.Influences = {
+TerrainNS.Influences = {
     Mesa: function(x) {
         return 1.25 * Math.min(0.8, Math.exp(-(x*x)));
     },
     Hole: function(x) {
-        return -THREE.Terrain.Influences.Mesa(x);
+        return -TerrainNS.Influences.Mesa(x);
     },
     Hill: function(x) {
         // Same curve as EaseInOut, but mirrored and translated.
         return x < 0 ? (x+1)*(x+1)*(3-2*(x+1)) : 1-x*x*(3-2*x);
     },
     Valley: function(x) {
-        return -THREE.Terrain.Influences.Hill(x);
+        return -TerrainNS.Influences.Hill(x);
     },
     Dome: function(x) {
         // Parabola
@@ -83,8 +86,8 @@ THREE.Terrain.Influences = {
  *   functions can also accept optional second and third parameters, which are
  *   the x- and y-distances to the feature origin, respectively.)
  */
-THREE.Terrain.Influence = function(g, options, f, x, y, r, h, t, e) {
-    f = f || THREE.Terrain.Influences.Hill; // feature shape
+TerrainNS.Influence = function(g, options, f, x, y, r, h, t, e) {
+    f = f || TerrainNS.Influences.Hill; // feature shape
     x = typeof x === 'undefined' ? 0.5 : x; // x-location %
     y = typeof y === 'undefined' ? 0.5 : y; // y-location %
     r = typeof r === 'undefined' ? 64  : r; // radius

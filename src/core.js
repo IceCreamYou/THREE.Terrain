@@ -1,3 +1,21 @@
+import * as THREE from 'three';
+
+// Create a Terrain namespace
+// Use a global variable to ensure it's accessible across modules
+const TerrainNS = {};
+
+// Debug to check if TerrainNS is properly initialized
+console.log('TerrainNS initialized in core.js');
+
+/**
+ * Returns the smallest power of 2 that is greater than or equal to the given number.
+ * @param {number} n The number to find the next power of 2 for.
+ * @return {number} The smallest power of 2 that is greater than or equal to n.
+ */
+function ceilPowerOfTwo(n) {
+    return Math.pow(2, Math.ceil(Math.log(n) / Math.log(2)));
+}
+
 /**
  * A terrain object for use with the Three.js library.
  *
@@ -71,15 +89,21 @@
  *     Rendering might be slightly faster if this is a multiple of
  *     `options.ySegments + 1`.
  */
-THREE.Terrain = function(options) {
+const Terrain = function(options) {
     var defaultOptions = {
         after: null,
-        easing: THREE.Terrain.Linear,
-        heightmap: THREE.Terrain.DiamondSquare,
+        easing: TerrainNS.Linear,
+        heightmap: function(g, options) {
+            console.log('Using fallback heightmap function');
+            // Simple random heightmap
+            for (var i = 0; i < g.length; i++) {
+                g[i] = Math.random() * (options.maxHeight - options.minHeight) + options.minHeight;
+            }
+        },
         material: null,
         maxHeight: 100,
         minHeight: -100,
-        optimization: THREE.Terrain.NONE,
+        optimization: TerrainNS.NONE,
         frequency: 2.5,
         steps: 1,
         stretch: true,
@@ -110,9 +134,9 @@ THREE.Terrain = function(options) {
     );
 
     // Assign elevation data to the terrain plane from a heightmap or function.
-    var zs = THREE.Terrain.toArray1D(mesh.geometry.attributes.position.array);
+    var zs = TerrainNS.toArray1D(mesh.geometry.attributes.position.array);
     if (options.heightmap instanceof HTMLCanvasElement || options.heightmap instanceof Image) {
-        THREE.Terrain.fromHeightmap(zs, options);
+        TerrainNS.fromHeightmap(zs, options, options.heightmap);
     }
     else if (typeof options.heightmap === 'function') {
         options.heightmap(zs, options);
@@ -120,8 +144,8 @@ THREE.Terrain = function(options) {
     else {
         console.warn('An invalid value was passed for `options.heightmap`: ' + options.heightmap);
     }
-    THREE.Terrain.fromArray1D(mesh.geometry.attributes.position.array, zs);
-    THREE.Terrain.Normalize(mesh, options);
+    TerrainNS.fromArray1D(mesh.geometry.attributes.position.array, zs);
+    TerrainNS.Normalize(mesh, options);
 
     // lod.addLevel(mesh, options.unit * 10 * Math.pow(2, lodLevel));
 
@@ -142,28 +166,27 @@ THREE.Terrain = function(options) {
  *   A map of settings that control how the terrain is constructed and
  *   displayed. Valid options are the same as for {@link THREE.Terrain}().
  */
-THREE.Terrain.Normalize = function(mesh, options) {
-    var zs = THREE.Terrain.toArray1D(mesh.geometry.attributes.position.array);
+TerrainNS.Normalize = function(mesh, options) {
+    var zs = TerrainNS.toArray1D(mesh.geometry.attributes.position.array);
     if (options.turbulent) {
-        THREE.Terrain.Turbulence(zs, options);
+        TerrainNS.Turbulence(zs, options);
     }
     if (options.steps > 1) {
-        THREE.Terrain.Step(zs, options.steps);
-        THREE.Terrain.Smooth(zs, options);
+        TerrainNS.Step(zs, options.steps);
+        TerrainNS.Smooth(zs, options);
     }
 
     // Keep the terrain within the allotted height range if necessary, and do easing.
-    THREE.Terrain.Clamp(zs, options);
+    TerrainNS.Clamp(zs, options);
 
     // Call the "after" callback
     if (typeof options.after === 'function') {
         options.after(zs, options);
     }
-    THREE.Terrain.fromArray1D(mesh.geometry.attributes.position.array, zs);
+    TerrainNS.fromArray1D(mesh.geometry.attributes.position.array, zs);
 
     // Mark the geometry as having changed and needing updates.
     mesh.geometry.computeBoundingSphere();
-    mesh.geometry.computeFaceNormals();
     mesh.geometry.computeVertexNormals();
 };
 
@@ -220,10 +243,10 @@ THREE.Terrain.Normalize = function(mesh, options) {
  *            rings then morph to "follow" the camera around so that the camera
  *            is always at the center, surrounded by the most detail.
  */
-THREE.Terrain.NONE = 0;
-THREE.Terrain.GEOMIPMAP = 1;
-THREE.Terrain.GEOCLIPMAP = 2;
-THREE.Terrain.POLYGONREDUCTION = 3;
+TerrainNS.NONE = 0;
+TerrainNS.GEOMIPMAP = 1;
+TerrainNS.GEOCLIPMAP = 2;
+TerrainNS.POLYGONREDUCTION = 3;
 
 /**
  * Get a 2D array of heightmap values from a 1D array of Z-positions.
@@ -240,7 +263,7 @@ THREE.Terrain.POLYGONREDUCTION = 3;
  * @return {Float32Array[]}
  *   A 2D array representing the terrain's heightmap.
  */
-THREE.Terrain.toArray2D = function(vertices, options) {
+TerrainNS.toArray2D = function(vertices, options) {
     var tgt = new Array(options.xSegments + 1),
         xl = options.xSegments + 1,
         yl = options.ySegments + 1,
@@ -263,7 +286,7 @@ THREE.Terrain.toArray2D = function(vertices, options) {
  * @param {Number[][]} src
  *   A 2D array representing a heightmap to apply to the terrain.
  */
-THREE.Terrain.fromArray2D = function(vertices, src) {
+TerrainNS.fromArray2D = function(vertices, src) {
     for (var i = 0, xl = src.length; i < xl; i++) {
         for (var j = 0, yl = src[i].length; j < yl; j++) {
             vertices[j * xl + i] = src[i][j];
@@ -286,7 +309,7 @@ THREE.Terrain.fromArray2D = function(vertices, src) {
  * @return {Float32Array}
  *   A 1D array representing the terrain's heightmap.
  */
-THREE.Terrain.toArray1D = function(vertices) {
+TerrainNS.toArray1D = function(vertices) {
     var tgt = new Float32Array(vertices.length / 3);
     for (var i = 0, l = tgt.length; i < l; i++) {
         tgt[i] = vertices[i * 3 + 2];
@@ -303,7 +326,7 @@ THREE.Terrain.toArray1D = function(vertices) {
  * @param {Number[]} src
  *   A 1D array representing a heightmap to apply to the terrain.
  */
-THREE.Terrain.fromArray1D = function(vertices, src) {
+TerrainNS.fromArray1D = function(vertices, src) {
     for (var i = 0, l = Math.min(vertices.length / 3, src.length); i < l; i++) {
         vertices[i * 3 + 2] = src[i];
     }
@@ -323,7 +346,7 @@ THREE.Terrain.fromArray1D = function(vertices, src) {
  * @param {Number} options
  *   The same as the options parameter for the {@link THREE.Terrain} function.
  */
-THREE.Terrain.heightmapArray = function(method, options) {
+TerrainNS.heightmapArray = function(method, options) {
     var arr = new Array((options.xSegments+1) * (options.ySegments+1)),
         l = arr.length,
         i;
@@ -332,46 +355,53 @@ THREE.Terrain.heightmapArray = function(method, options) {
     options.maxHeight = typeof options.maxHeight === 'undefined' ? 1 : options.maxHeight;
     options.stretch = options.stretch || false;
     method(arr, options);
-    THREE.Terrain.Clamp(arr, options);
+    TerrainNS.Clamp(arr, options);
     return arr;
 };
 
 /**
  * Randomness interpolation functions.
  */
-THREE.Terrain.Linear = function(x) {
+TerrainNS.Linear = function(x) {
     return x;
 };
 
 // x = [0, 1], x^2
-THREE.Terrain.EaseIn = function(x) {
+TerrainNS.EaseIn = function(x) {
     return x*x;
 };
 
 // x = [0, 1], -x(x-2)
-THREE.Terrain.EaseOut = function(x) {
+TerrainNS.EaseOut = function(x) {
     return -x * (x - 2);
 };
 
 // x = [0, 1], x^2(3-2x)
 // Nearly identical alternatives: 0.5+0.5*cos(x*pi-pi), x^a/(x^a+(1-x)^a) (where a=1.6 seems nice)
 // For comparison: http://www.wolframalpha.com/input/?i=x^1.6%2F%28x^1.6%2B%281-x%29^1.6%29%2C+x^2%283-2x%29%2C+0.5%2B0.5*cos%28x*pi-pi%29+from+0+to+1
-THREE.Terrain.EaseInOut = function(x) {
+TerrainNS.EaseInOut = function(x) {
     return x*x*(3-2*x);
 };
 
 // x = [0, 1], 0.5*(2x-1)^3+0.5
-THREE.Terrain.InEaseOut = function(x) {
+TerrainNS.InEaseOut = function(x) {
     var y = 2*x-1;
     return 0.5 * y*y*y + 0.5;
 };
 
 // x = [0, 1], x^1.55
-THREE.Terrain.EaseInWeak = function(x) {
+TerrainNS.EaseInWeak = function(x) {
     return Math.pow(x, 1.55);
 };
 
 // x = [0, 1], x^7
-THREE.Terrain.EaseInStrong = function(x) {
+TerrainNS.EaseInStrong = function(x) {
     return x*x*x*x*x*x*x;
 };
+
+// Assign the terrain function to the namespace
+TerrainNS.Terrain = Terrain;
+
+// Export for ES modules
+export default Terrain;
+export { TerrainNS, ceilPowerOfTwo };

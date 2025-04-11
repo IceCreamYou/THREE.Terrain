@@ -303,12 +303,12 @@
 
 			const _onKeyUp = this.onKeyUp.bind( this );
 
-			this.domElement.addEventListener( 'contextmenu', contextmenu );
-			this.domElement.addEventListener( 'mousemove', _onMouseMove );
-			this.domElement.addEventListener( 'mousedown', _onMouseDown );
-			this.domElement.addEventListener( 'mouseup', _onMouseUp );
-			window.addEventListener( 'keydown', _onKeyDown );
-			window.addEventListener( 'keyup', _onKeyUp );
+			this.domElement.addEventListener( 'contextmenu', contextmenu, { passive: false } );
+			this.domElement.addEventListener( 'mousemove', _onMouseMove, { passive: true } );
+			this.domElement.addEventListener( 'mousedown', _onMouseDown, { passive: true } );
+			this.domElement.addEventListener( 'mouseup', _onMouseUp, { passive: true } );
+			window.addEventListener( 'keydown', _onKeyDown, { passive: true } );
+			window.addEventListener( 'keyup', _onKeyUp, { passive: true } );
 
 			function setOrientation( controls ) {
 

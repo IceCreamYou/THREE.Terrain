@@ -1,4 +1,5 @@
-(function() {
+import * as THREE from 'three';
+import Terrain, { TerrainNS } from './core.js';
 
 /**
  * Analyze a terrain using statistical measures.
@@ -13,193 +14,330 @@
  * @return {Object}
  *   An object containing statistical information about the terrain.
  */
-THREE.Terrain.Analyze = function(mesh, options) {
-    if (mesh.geometry.attributes.position.count < 3) {
-        throw new Error('Not enough vertices to analyze');
+TerrainNS.Analyze = function(mesh, options) {
+    // Basic validation
+    if (!mesh || !mesh.geometry || !mesh.geometry.attributes || 
+        !mesh.geometry.attributes.position || 
+        mesh.geometry.attributes.position.count < 3) {
+        console.warn('Not enough vertices to analyze or invalid mesh');
+        return createEmptyAnalysisResult(options);
     }
 
-    var sortNumeric = function(a, b) { return a - b; },
-        elevations = Array.prototype.sort.call(
-            THREE.Terrain.toArray1D(mesh.geometry.attributes.position.array),
-            sortNumeric
-        ),
-        numVertices = elevations.length,
-        maxElevation = percentile(elevations, 1),
-        minElevation = percentile(elevations, 0),
-        medianElevation = percentile(elevations, 0.5),
-        meanElevation = mean(elevations),
-        stdevElevation = 0,
-        pearsonSkewElevation = 0,
-        groeneveldMeedenSkewElevation = 0,
-        kurtosisElevation = 0,
-        up = mesh.up.clone().applyAxisAngle(new THREE.Vector3(1, 0, 0), 0.5*Math.PI), // correct for mesh rotation
-        slopes = faceNormals(mesh.geometry, options)
-            .map(function(normal) { return normal.angleTo(up) * 180 / Math.PI; })
-            .sort(sortNumeric),
-        numFaces = slopes.length,
-        maxSlope = percentile(slopes, 1),
-        minSlope = percentile(slopes, 0),
-        medianSlope = percentile(slopes, 0.5),
-        meanSlope = mean(slopes),
-        centroid = mesh.position.clone().setZ(meanElevation),
-        fittedPlaneNormal = getFittedPlaneNormal(mesh.geometry.attributes.position.array, centroid),
-        fittedPlaneSlope = fittedPlaneNormal.angleTo(up) * 180 / Math.PI,
-        stdevSlope = 0,
-        pearsonSkewSlope = 0,
-        groeneveldMeedenSkewSlope = 0,
-        kurtosisSlope = 0,
-        faceArea2D = (options.xSize / options.xSegments) * (options.ySize / options.ySegments) * 0.5,
-        area3D = 0,
-        tri = 0,
-        jaggedness = 0,
-        medianElevationDeviations = new Float32Array(numVertices),
-        medianSlopeDeviations = new Float32Array(numFaces),
-        deviation,
-        i;
+    try {
+        // Work with a cloned non-indexed geometry to ensure consistency
+        var geometry = mesh.geometry.clone();
+        if (geometry.index) {
+            geometry = geometry.toNonIndexed();
+        }
 
-    for (i = 0; i < numVertices; i++) {
-        deviation = elevations[i] - meanElevation;
-        stdevElevation += deviation * deviation;
-        pearsonSkewElevation += deviation * deviation * deviation;
-        medianElevationDeviations[i] = Math.abs(elevations[i] - medianElevation);
-        groeneveldMeedenSkewElevation += medianElevationDeviations[i];
-        kurtosisElevation += deviation * deviation * deviation * deviation;
-    }
-    pearsonSkewElevation = (pearsonSkewElevation / numVertices) / Math.pow(stdevElevation / (numVertices - 1), 1.5);
-    groeneveldMeedenSkewElevation = (meanElevation - medianElevation) / (groeneveldMeedenSkewElevation / numVertices);
-    kurtosisElevation = (kurtosisElevation * numVertices) / (stdevElevation * stdevElevation) - 3;
-    stdevElevation = Math.sqrt(stdevElevation / numVertices);
-    Array.prototype.sort.call(medianElevationDeviations, sortNumeric);
+        // Extract elevations and prepare for analysis
+        var elevations = TerrainNS.toArray1D(geometry.attributes.position.array);
+        if (!elevations || elevations.length === 0) {
+            console.warn('Could not extract elevations from geometry');
+            return createEmptyAnalysisResult(options);
+        }
 
-    for (i = 0; i < numFaces; i++) {
-        deviation = slopes[i] - meanSlope;
-        stdevSlope += deviation * deviation;
-        pearsonSkewSlope += deviation * deviation * deviation;
-        medianSlopeDeviations[i] = Math.abs(slopes[i] - medianSlope);
-        groeneveldMeedenSkewSlope += medianSlopeDeviations[i];
-        kurtosisSlope += deviation * deviation * deviation * deviation;
-        area3D += faceArea2D / Math.cos(slopes[i] * Math.PI / 180);
-    }
-    pearsonSkewSlope = (pearsonSkewSlope / numFaces) / Math.pow(stdevSlope / (numFaces - 1), 1.5);
-    groeneveldMeedenSkewSlope = (meanSlope - medianSlope) / (groeneveldMeedenSkewSlope / numFaces);
-    kurtosisSlope = (kurtosisSlope * numFaces) / (stdevSlope * stdevSlope) - 3;
-    stdevSlope = Math.sqrt(stdevSlope / numFaces);
-    Array.prototype.sort.call(medianSlopeDeviations, sortNumeric);
+        // Sort elevations for percentile calculations
+        var sortedElevations = Array.from(elevations).sort(function(a, b) { return a - b; });
+        var numVertices = elevations.length;
+        
+        // Basic elevation statistics
+        var maxElevation = percentile(sortedElevations, 1);
+        var minElevation = percentile(sortedElevations, 0);
+        var medianElevation = percentile(sortedElevations, 0.5);
+        var meanElevation = mean(sortedElevations);
+        
+        // Default values for statistics
+        var stdevElevation = 0;
+        var pearsonSkewElevation = 0;
+        var groeneveldMeedenSkewElevation = 0;
+        var kurtosisElevation = 0;
+        var up = mesh.up.clone().applyAxisAngle(new THREE.Vector3(1, 0, 0), 0.5*Math.PI);
+        
+        // Calculate face normals
+        var slopes = [];
+        try {
+            slopes = faceNormals(geometry, options)
+                .map(function(normal) { return normal.angleTo(up) * 180 / Math.PI; })
+                .sort(function(a, b) { return a - b; });
+        } catch (e) {
+            console.warn('Error calculating slopes:', e);
+            slopes = [0]; // Default to flat terrain
+        }
+        
+        var numFaces = slopes.length;
+        var maxSlope = percentile(slopes, 1);
+        var minSlope = percentile(slopes, 0);
+        var medianSlope = percentile(slopes, 0.5);
+        var meanSlope = mean(slopes);
+        
+        var centroid = mesh.position.clone().setZ(meanElevation);
+        var fittedPlaneNormal, fittedPlaneSlope;
+        
+        try {
+            fittedPlaneNormal = getFittedPlaneNormal(geometry.attributes.position.array, centroid);
+            fittedPlaneSlope = fittedPlaneNormal.angleTo(up) * 180 / Math.PI;
+        } catch (e) {
+            console.warn('Error calculating plane normal:', e);
+            fittedPlaneNormal = new THREE.Vector3(0, 0, 1);
+            fittedPlaneSlope = 0;
+        }
+        
+        var stdevSlope = 0;
+        var pearsonSkewSlope = 0;
+        var groeneveldMeedenSkewSlope = 0;
+        var kurtosisSlope = 0;
+        
+        var faceArea2D = (options.xSize / options.xSegments) * (options.ySize / options.ySegments) * 0.5;
+        var area3D = 0;
+        var tri = 0;
+        var jaggedness = 0;
+        
+        // Create arrays for deviations
+        var medianElevationDeviations = new Float32Array(numVertices);
+        var medianSlopeDeviations = new Float32Array(numFaces);
+        
+        // Calculate elevation statistics
+        for (var i = 0, deviation; i < numVertices; i++) {
+            deviation = sortedElevations[i] - meanElevation;
+            stdevElevation += deviation * deviation;
+            pearsonSkewElevation += deviation * deviation * deviation;
+            medianElevationDeviations[i] = Math.abs(sortedElevations[i] - medianElevation);
+            groeneveldMeedenSkewElevation += medianElevationDeviations[i];
+            kurtosisElevation += deviation * deviation * deviation * deviation;
+        }
+        
+        // Finalize elevation statistics
+        if (numVertices > 1) {
+            pearsonSkewElevation = (pearsonSkewElevation / numVertices) / Math.pow(stdevElevation / (numVertices - 1), 1.5);
+            groeneveldMeedenSkewElevation = (meanElevation - medianElevation) / (groeneveldMeedenSkewElevation / numVertices || 1);
+            kurtosisElevation = (kurtosisElevation * numVertices) / (stdevElevation * stdevElevation || 1) - 3;
+            stdevElevation = Math.sqrt(stdevElevation / numVertices);
+        }
+        
+        Array.prototype.sort.call(medianElevationDeviations, function(a, b) { return a - b; });
 
-    for (var ii = 0, xl = options.xSegments + 1, yl = options.ySegments + 1; ii < xl; ii++) {
-        for (var j = 0; j < yl; j++) {
-            var neighborhoodMax = -Infinity,
-                neighborhoodMin = Infinity,
-                v = mesh.geometry.attributes.position.array[(j*xl + ii) * 3 + 2],
-                sum = 0,
-                c = 0;
-            for (var n = -1; n <= 1; n++) {
-                for (var m = -1; m <= 1; m++) {
-                    if (ii+m >= 0 && j+n >= 0 && ii+m < xl && j+n < yl && !(n === 0 && m === 0)) {
-                        var val = mesh.geometry.attributes.position.array[((j+n)*xl + ii + m) * 3 + 2];
-                        sum += val;
-                        c++;
-                        if (val > neighborhoodMax) neighborhoodMax = val;
-                        if (val < neighborhoodMin) neighborhoodMin = val;
+        // Calculate slope statistics
+        for (i = 0; i < numFaces; i++) {
+            deviation = slopes[i] - meanSlope;
+            stdevSlope += deviation * deviation;
+            pearsonSkewSlope += deviation * deviation * deviation;
+            medianSlopeDeviations[i] = Math.abs(slopes[i] - medianSlope);
+            groeneveldMeedenSkewSlope += medianSlopeDeviations[i];
+            kurtosisSlope += deviation * deviation * deviation * deviation;
+            area3D += faceArea2D / Math.cos((slopes[i] * Math.PI / 180) || 0.001); // Avoid division by zero
+        }
+        
+        // Finalize slope statistics
+        if (numFaces > 1) {
+            pearsonSkewSlope = (pearsonSkewSlope / numFaces) / Math.pow(stdevSlope / (numFaces - 1), 1.5);
+            groeneveldMeedenSkewSlope = (meanSlope - medianSlope) / (groeneveldMeedenSkewSlope / numFaces || 1);
+            kurtosisSlope = (kurtosisSlope * numFaces) / (stdevSlope * stdevSlope || 1) - 3;
+            stdevSlope = Math.sqrt(stdevSlope / numFaces);
+        }
+        
+        Array.prototype.sort.call(medianSlopeDeviations, function(a, b) { return a - b; });
+
+        // Calculate roughness statistics
+        try {
+            var xl = options.xSegments + 1;
+            var yl = options.ySegments + 1;
+            
+            for (var ii = 0; ii < xl; ii++) {
+                for (var j = 0; j < yl; j++) {
+                    var neighborhoodMax = -Infinity;
+                    var neighborhoodMin = Infinity;
+                    var vertexZ = geometry.attributes.position.array[(j*xl + ii) * 3 + 2];
+                    var sum = 0;
+                    var c = 0;
+                    
+                    for (var n = -1; n <= 1; n++) {
+                        for (var m = -1; m <= 1; m++) {
+                            if (ii+m >= 0 && j+n >= 0 && ii+m < xl && j+n < yl && !(n === 0 && m === 0)) {
+                                var neighborZ = geometry.attributes.position.array[((j+n)*xl + ii + m) * 3 + 2];
+                                sum += neighborZ;
+                                c++;
+                                if (neighborZ > neighborhoodMax) neighborhoodMax = neighborZ;
+                                if (neighborZ < neighborhoodMin) neighborhoodMin = neighborZ;
+                            }
+                        }
                     }
+                    
+                    if (c) tri += (sum / c - vertexZ) * (sum / c - vertexZ);
+                    if (vertexZ > neighborhoodMax || vertexZ < neighborhoodMin) jaggedness++;
                 }
             }
-            if (c) tri += (sum / c - v) * (sum / c - v);
-            if (v > neighborhoodMax || v < neighborhoodMin) jaggedness++;
+            
+            tri = Math.sqrt(tri / numVertices);
+            var maxPeaks = Math.ceil(xl * 0.5) * Math.ceil(yl * 0.5) * 2;
+            jaggedness /= maxPeaks > 0 ? maxPeaks : 1;
+        } catch (e) {
+            console.warn('Error calculating roughness:', e);
+            tri = 0;
+            jaggedness = 0;
         }
-    }
-    tri = Math.sqrt(tri / numVertices);
-    // ceil(n/2)*ceil(m/2) is the max # of local maxima or minima in an n*m grid
-    jaggedness /= Math.ceil((options.xSegments+1) * 0.5) * Math.ceil((options.ySegments+1) * 0.5) * 2;
 
-    return {
-        elevation: {
-            sampleSize: numVertices,
-            max: maxElevation,
-            min: minElevation,
-            range: maxElevation - minElevation,
-            midrange: (maxElevation - minElevation) * 0.5 + minElevation,
-            median: medianElevation,
-            iqr: percentile(elevations, 0.75) - percentile(elevations, 0.25),
-            mean: meanElevation,
-            stdev: stdevElevation,
-            mad: percentile(medianElevationDeviations, 0.5),
-            pearsonSkew: pearsonSkewElevation,
-            groeneveldMeedenSkew: groeneveldMeedenSkewElevation,
-            kurtosis: kurtosisElevation,
-            modes: getModes(
-                elevations,
-                Math.ceil(options.maxHeight - options.minHeight),
-                options.minHeight,
-                options.maxHeight
-            ),
-            percentile: function(p) { return percentile(elevations, p); },
-            percentRank: function(v) { return percentRank(elevations, v); },
-            drawHistogram: function(canvas, bucketCount) {
-                drawHistogram(
-                    bucketNumbersLinearly(
-                        elevations,
-                        bucketCount,
-                        options.minHeight,
-                        options.maxHeight
-                    ),
-                    canvas,
+        // Build the result object
+        return {
+            elevation: {
+                sampleSize: numVertices,
+                max: maxElevation,
+                min: minElevation,
+                range: maxElevation - minElevation,
+                midrange: (maxElevation - minElevation) * 0.5 + minElevation,
+                median: medianElevation,
+                iqr: percentile(sortedElevations, 0.75) - percentile(sortedElevations, 0.25),
+                mean: meanElevation,
+                stdev: stdevElevation,
+                mad: percentile(medianElevationDeviations, 0.5),
+                pearsonSkew: pearsonSkewElevation,
+                groeneveldMeedenSkew: groeneveldMeedenSkewElevation,
+                kurtosis: kurtosisElevation,
+                modes: getModes(
+                    sortedElevations,
+                    Math.ceil(options.maxHeight - options.minHeight),
                     options.minHeight,
                     options.maxHeight
-                );
+                ),
+                percentile: function(p) { return percentile(sortedElevations, p); },
+                percentRank: function(v) { return percentRank(sortedElevations, v); },
+                drawHistogram: function(canvas, bucketCount) {
+                    drawHistogram(
+                        bucketNumbersLinearly(
+                            sortedElevations,
+                            bucketCount,
+                            options.minHeight,
+                            options.maxHeight
+                        ),
+                        canvas,
+                        options.minHeight,
+                        options.maxHeight
+                    );
+                },
             },
+            slope: {
+                sampleSize: numFaces,
+                max: maxSlope,
+                min: minSlope,
+                range: maxSlope - minSlope,
+                midrange: (maxSlope - minSlope) * 0.5 + minSlope,
+                median: medianSlope,
+                iqr: percentile(slopes, 0.75) - percentile(slopes, 0.25),
+                mean: meanSlope,
+                stdev: stdevSlope,
+                mad: percentile(medianSlopeDeviations, 0.5),
+                pearsonSkew: pearsonSkewSlope,
+                groeneveldMeedenSkew: groeneveldMeedenSkewSlope,
+                kurtosis: kurtosisSlope,
+                modes: getModes(slopes, 90, 0, 90),
+                percentile: function(p) { return percentile(slopes, p); },
+                percentRank: function(v) { return percentRank(slopes, v); },
+                drawHistogram: function(canvas, bucketCount) {
+                    drawHistogram(
+                        bucketNumbersLinearly(
+                            slopes,
+                            bucketCount,
+                            0,
+                            90
+                        ),
+                        canvas,
+                        0,
+                        90,
+                        String.fromCharCode(176)
+                    );
+                },
+            },
+            roughness: {
+                planimetricAreaRatio: options.xSize * options.ySize / (area3D || options.xSize * options.ySize),
+                terrainRuggednessIndex: tri,
+                jaggedness: jaggedness,
+            },
+            fittedPlane: {
+                centroid: centroid,
+                normal: fittedPlaneNormal,
+                slope: fittedPlaneSlope,
+                pctExplained: percentVariationExplainedByFittedPlane(
+                    geometry.attributes.position.array,
+                    centroid,
+                    fittedPlaneNormal,
+                    options.maxHeight - options.minHeight
+                ),
+            },
+        };
+    } catch (e) {
+        console.error('Error during terrain analysis:', e);
+        return createEmptyAnalysisResult(options);
+    }
+};
+
+/**
+ * Creates an empty analysis result when actual analysis fails
+ */
+function createEmptyAnalysisResult(options) {
+    var emptyHistogram = function(canvas) {
+        if (canvas && canvas.getContext) {
+            var ctx = canvas.getContext('2d');
+            canvas.width = 300;
+            canvas.height = 200;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = 'rgba(144, 176, 192, 1)';
+            ctx.font = '12px Arial';
+            ctx.fillText('No data available for analysis', 10, 100);
+        }
+    };
+    
+    return {
+        elevation: {
+            sampleSize: 0,
+            max: 0,
+            min: 0,
+            range: 0,
+            midrange: 0,
+            median: 0,
+            iqr: 0,
+            mean: 0,
+            stdev: 0,
+            mad: 0,
+            pearsonSkew: 0,
+            groeneveldMeedenSkew: 0,
+            kurtosis: 0,
+            modes: [],
+            percentile: function() { return 0; },
+            percentRank: function() { return 0; },
+            drawHistogram: emptyHistogram
         },
         slope: {
-            sampleSize: numFaces,
-            max: maxSlope,
-            min: minSlope,
-            range: maxSlope - minSlope,
-            midrange: (maxSlope - minSlope) * 0.5 + minSlope,
-            median: medianSlope,
-            iqr: percentile(slopes, 0.75) - percentile(slopes, 0.25),
-            mean: meanSlope,
-            stdev: stdevSlope,
-            mad: percentile(medianSlopeDeviations, 0.5),
-            pearsonSkew: pearsonSkewSlope,
-            groeneveldMeedenSkew: groeneveldMeedenSkewSlope,
-            kurtosis: kurtosisSlope,
-            modes: getModes(slopes, 90, 0, 90),
-            percentile: function(p) { return percentile(slopes, p); },
-            percentRank: function(v) { return percentRank(slopes, v); },
-            drawHistogram: function(canvas, bucketCount) {
-                drawHistogram(
-                    bucketNumbersLinearly(
-                        slopes,
-                        bucketCount,
-                        0,
-                        90
-                    ),
-                    canvas,
-                    0,
-                    90,
-                    String.fromCharCode(176)
-                );
-            },
+            sampleSize: 0,
+            max: 0,
+            min: 0,
+            range: 0,
+            midrange: 0,
+            median: 0,
+            iqr: 0,
+            mean: 0,
+            stdev: 0,
+            mad: 0,
+            pearsonSkew: 0,
+            groeneveldMeedenSkew: 0,
+            kurtosis: 0,
+            modes: [],
+            percentile: function() { return 0; },
+            percentRank: function() { return 0; },
+            drawHistogram: emptyHistogram
         },
         roughness: {
-            planimetricAreaRatio: options.xSize * options.ySize / area3D,
-            terrainRuggednessIndex: tri,
-            jaggedness: jaggedness,
+            planimetricAreaRatio: 1,
+            terrainRuggednessIndex: 0,
+            jaggedness: 0,
         },
         fittedPlane: {
-            centroid: centroid,
-            normal: fittedPlaneNormal,
-            slope: fittedPlaneSlope,
-            pctExplained: percentVariationExplainedByFittedPlane(
-                mesh.geometry.attributes.position.array,
-                centroid,
-                fittedPlaneNormal,
-                options.maxHeight - options.minHeight
-            ),
-        },
-        // # of different kinds of features http://www.armystudyguide.com/content/army_board_study_guide_topics/land_navigation_map_reading/identify-major-minor-terr.shtml
+            centroid: new THREE.Vector3(),
+            normal: new THREE.Vector3(0, 0, 1),
+            slope: 0,
+            pctExplained: 0,
+        }
     };
-};
+}
 
 /**
  * Returns the value at a given percentile in a sorted numeric array.
@@ -214,6 +352,7 @@ THREE.Terrain.Analyze = function(mesh, options) {
  * @return {Number}
  *   The value at the given percentile in the given array.
  */
+TerrainNS.percentile = percentile;
 function percentile(arr, p) {
     if (arr.length === 0) return 0;
     if (typeof p !== 'number') throw new TypeError('p must be a number');
@@ -240,6 +379,7 @@ function percentile(arr, p) {
  * @return {Number}
  *   The percentile at the given value in the given array.
  */
+TerrainNS.percentRank = percentRank;
 function percentRank(arr, v) {
     if (typeof v !== 'number') throw new TypeError('v must be a number');
     for (var i = 0, l = arr.length; i < l; i++) {
@@ -266,23 +406,59 @@ function percentRank(arr, v) {
  *   Includes the `xSegments` and `ySegments` - the number of row and column
  *   segments of the plane geometry.
  */
+TerrainNS.faceNormals = faceNormals;
 function faceNormals(geometry, options) {
-    geometry = geometry.toNonIndexed();
-    var normals = new Array(Math.round(geometry.attributes.position.array.length / 9)),
-        gArray = geometry.attributes.position.array,
-        vertex1 = new THREE.Vector3(),
-        vertex2 = new THREE.Vector3(),
-        vertex3 = new THREE.Vector3();
-
-    for (var i = 0, j = 0; i < geometry.attributes.position.array.length; i += 9, j++) {
-        vertex1.set(gArray[i + 0], gArray[i + 1], gArray[i + 2]);
-        vertex2.set(gArray[i + 3], gArray[i + 4], gArray[i + 5]);
-        vertex3.set(gArray[i + 6], gArray[i + 7], gArray[i + 8]);
-
-        var faceNormal = new THREE.Vector3();
-        THREE.Triangle.getNormal(vertex1, vertex2, vertex3, faceNormal);
-        normals[j] = faceNormal;
+    // Clone the geometry to avoid modifying the original
+    var geom = geometry.clone();
+    
+    // Make sure we're working with non-indexed geometry
+    if (geom.index) {
+        geom = geom.toNonIndexed();
     }
+    
+    var positions = geom.attributes.position.array;
+    var numFaces = positions.length / 9; // 3 vertices per face, 3 components per vertex
+    var normals = new Array(numFaces);
+    
+    // Create temporary vectors for calculations
+    var v1 = new THREE.Vector3();
+    var v2 = new THREE.Vector3();
+    var v3 = new THREE.Vector3();
+    
+    // For each face, calculate its normal
+    for (var i = 0; i < numFaces; i++) {
+        var baseIndex = i * 9;
+        
+        // Get the three vertices of the face
+        v1.set(
+            positions[baseIndex],
+            positions[baseIndex + 1],
+            positions[baseIndex + 2]
+        );
+        
+        v2.set(
+            positions[baseIndex + 3],
+            positions[baseIndex + 4],
+            positions[baseIndex + 5]
+        );
+        
+        v3.set(
+            positions[baseIndex + 6],
+            positions[baseIndex + 7],
+            positions[baseIndex + 8]
+        );
+        
+        // Calculate normal
+        var normal = new THREE.Vector3()
+            .crossVectors(
+                new THREE.Vector3().subVectors(v2, v1),
+                new THREE.Vector3().subVectors(v3, v1)
+            )
+            .normalize();
+        
+        normals[i] = normal;
+    }
+    
     return normals;
 }
 
@@ -297,8 +473,9 @@ function faceNormals(geometry, options) {
  * @return {THREE.Vector3}
  *   The normal vector of the fitted plane.
  */
+TerrainNS.getFittedPlaneNormal = getFittedPlaneNormal;
 function getFittedPlaneNormal(points, centroid) {
-    var n = points.length,
+    var n = points.length / 3, // Divide by 3 to get actual point count
         xx = 0,
         xy = 0,
         xz = 0,
@@ -309,42 +486,40 @@ function getFittedPlaneNormal(points, centroid) {
 
     var r = new THREE.Vector3();
     for (var i = 0, l = points.length; i < l; i += 3) {
-        r.set(points[i], points[i+1], points[i+2]).sub(centroid);
-        xx += r.x * r.x;
-        xy += r.x * r.y;
-        xz += r.x * r.z;
-        yy += r.y * r.y;
-        yz += r.y * r.z;
-        zz += r.z * r.z;
+        // Get position relative to centroid
+        var x = points[i] - centroid.x;
+        var y = points[i+1] - centroid.y;
+        var z = points[i+2] - centroid.z;
+        
+        // Calculate covariance matrix
+        xx += x * x;
+        xy += x * y;
+        xz += x * z;
+        yy += y * y;
+        yz += y * z;
+        zz += z * z;
     }
 
-    var xDeterminant = yy*zz - yz*yz,
-        yDeterminant = xx*zz - xz*xz,
-        zDeterminant = xx*yy - xy*xy,
-        maxDeterminant = Math.max(xDeterminant, yDeterminant, zDeterminant);
-    if (maxDeterminant <= 0) throw new Error("The points don't span a plane");
-
-    if (maxDeterminant === xDeterminant) {
-        r.set(
-            1,
-            (xz*yz - xy*zz) / xDeterminant,
-            (xy*yz - xz*yy) / xDeterminant
-        );
+    var det_x = yy*zz - yz*yz;
+    var det_y = xx*zz - xz*xz;
+    var det_z = xx*yy - xy*xy;
+    
+    // Find the direction with the maximum determinant
+    if (det_x >= det_y && det_x >= det_z) {
+        // x has max determinant
+        r.set(det_x, xy*zz - xz*yz, xz*yy - xy*yz);
+    } 
+    else if (det_y >= det_x && det_y >= det_z) {
+        // y has max determinant
+        r.set(xy*zz - xz*yz, det_y, xy*xz - yz*xx);
     }
-    else if (maxDeterminant === yDeterminant) {
-        r.set(
-            (yz*xz - xy*zz) / yDeterminant,
-            1,
-            (xy*xz - yz*xx) / yDeterminant
-        );
+    else {
+        // z has max determinant
+        r.set(xz*yy - xy*yz, xy*xz - yz*xx, det_z);
     }
-    else if (maxDeterminant === zDeterminant) {
-        r.set(
-            (yz*xy - xz*yy) / zDeterminant,
-            (xz*xy - yz*xx) / zDeterminant,
-            1
-        );
-    }
+    
+    // Ensure normal points upward
+    if (r.z < 0) r.negate();
     return r.normalize();
 }
 
@@ -362,6 +537,7 @@ function getFittedPlaneNormal(points, centroid) {
  *
  * @return {Number[][]} An array of buckets of numbers.
  */
+TerrainNS.bucketNumbersLinearly = bucketNumbersLinearly;
 function bucketNumbersLinearly(data, bucketCount, min, max) {
     var i = 0,
         l = data.length;
@@ -374,6 +550,12 @@ function bucketNumbersLinearly(data, bucketCount, min, max) {
             if (data[i] > max) max = data[i];
         }
     }
+    
+    // Ensure min and max are different
+    if (min === max) {
+        max = min + 1;  // Prevent division by zero
+    }
+    
     var inc = (max - min) / bucketCount,
         buckets = new Array(bucketCount);
     // Initialize buckets
@@ -382,12 +564,17 @@ function bucketNumbersLinearly(data, bucketCount, min, max) {
     }
     // Put the numbers into buckets
     for (i = 0; i < l; i++) {
+        // Clamp data to min/max range
+        var value = Math.max(min, Math.min(max, data[i]));
+        
         // Buckets include the lower bound but not the higher bound, except the top bucket
-        try {
-            if (data[i] === max) buckets[bucketCount-1].push(data[i]);
-            else buckets[((data[i] - min) / inc) | 0].push(data[i]);
-        } catch(e) {
-            console.warn('Numbers in the data are outside of the min and max values used to bucket the data.');
+        if (value === max) {
+            buckets[bucketCount-1].push(value);
+        } else {
+            var bucketIndex = Math.floor((value - min) / inc);
+            // Safety check for index
+            bucketIndex = Math.max(0, Math.min(bucketCount - 1, bucketIndex));
+            buckets[bucketIndex].push(value);
         }
     }
     return buckets;
@@ -408,19 +595,47 @@ function bucketNumbersLinearly(data, bucketCount, min, max) {
  * @return {Number[]}
  *   An array containing the bucketed mode(s).
  */
+TerrainNS.getModes = getModes;
 function getModes(data, bucketCount, min, max) {
+    // Handle empty data
+    if (!data || data.length === 0) {
+        return [];
+    }
+    
+    // Ensure min and max are different
+    if (min === max) {
+        max = min + 1;
+    }
+    
     var buckets = bucketNumbersLinearly(data, bucketCount, min, max),
         maxLen = 0,
         modes = [];
+    
+    // Find the buckets with the most values
     for (var i = 0, l = buckets.length; i < l; i++) {
         if (buckets[i].length > maxLen) {
             maxLen = buckets[i].length;
-            modes = [Math.floor(((i + 0.5) / l) * (max - min) + min)];
+            modes = [min + ((i + 0.5) / bucketCount) * (max - min)];
         }
-        else if (buckets[i].length === maxLen) {
-            modes.push(Math.floor(((i + 0.5) / l) * (max - min) + min));
+        else if (buckets[i].length === maxLen && maxLen > 0) {
+            modes.push(min + ((i + 0.5) / bucketCount) * (max - min));
         }
     }
+    
+    // If no modes were found (all buckets empty), return empty array
+    if (modes.length === 0) {
+        return [];
+    }
+    
+    // Round modes to integers if they're close enough to integers
+    for (var j = 0; j < modes.length; j++) {
+        if (Math.abs(modes[j] - Math.round(modes[j])) < 0.001) {
+            modes[j] = Math.round(modes[j]);
+        } else {
+            modes[j] = parseFloat(modes[j].toFixed(3));
+        }
+    }
+    
     return modes;
 }
 
@@ -438,7 +653,14 @@ function getModes(data, bucketCount, min, max) {
  * @param {String} [append='']
  *   A string to append to the bar labels. Defaults to the empty string.
  */
+TerrainNS.drawHistogram = drawHistogram;
 function drawHistogram(buckets, canvas, minV, maxV, append) {
+    // Check if canvas is valid
+    if (!canvas || !canvas.getContext) {
+        console.warn('Invalid canvas for histogram drawing');
+        return;
+    }
+    
     var context = canvas.getContext('2d'),
         width = 280,
         height = 180,
@@ -448,8 +670,12 @@ function drawHistogram(buckets, canvas, minV, maxV, append) {
         min = typeof minV === 'undefined' ? Infinity : minV,
         l = buckets.length,
         i;
+    
+    // Clear canvas
     canvas.width = width + border*2;
     canvas.height = height + border*2;
+    context.clearRect(0, 0, canvas.width, canvas.height);
+    
     if (typeof append === 'undefined') append = '';
 
     // If max or min is not set, set them to the highest/lowest value.
@@ -465,6 +691,11 @@ function drawHistogram(buckets, canvas, minV, maxV, append) {
             }
         }
     }
+    
+    // Ensure min and max are different
+    if (min === max) {
+        max = min + 1;
+    }
 
     // Find the size of the largest bucket.
     var maxBucketSize = 0,
@@ -474,6 +705,24 @@ function drawHistogram(buckets, canvas, minV, maxV, append) {
             maxBucketSize = buckets[i].length;
         }
         n += buckets[i].length;
+    }
+    
+    // If there's no data, draw an empty histogram
+    if (n === 0 || maxBucketSize === 0) {
+        context.fillStyle = 'rgba(144, 176, 192, 1)';
+        context.font = '12px Arial';
+        context.fillText('No data available', border + 10, border + height/2);
+        
+        // Draw axes
+        context.strokeStyle = 'rgba(13, 42, 64, 1)';
+        context.lineWidth = 2;
+        context.beginPath();
+        context.moveTo(border, border);
+        context.lineTo(border, height + border);
+        context.moveTo(border, height + border);
+        context.lineTo(width + border, height + border);
+        context.stroke();
+        return;
     }
 
     // Draw a bar.
@@ -504,8 +753,10 @@ function drawHistogram(buckets, canvas, minV, maxV, append) {
         );
     }
 
+    // Calculate percentage for maxBucketSize if n is not zero
+    var percentage = n > 0 ? Math.round(100 * maxBucketSize / n) + '%' : '0%';
     context.fillText(
-        Math.round(100 * maxBucketSize / n) + '%',
+        percentage,
         border + separator,
         border + separator + 6
     );
@@ -544,19 +795,49 @@ function drawHistogram(buckets, canvas, minV, maxV, append) {
  *   explains the variation in terrain elevation. 1 means entirely explained; 0
  *   means not explained at all.
  */
+TerrainNS.percentVariationExplainedByFittedPlane = percentVariationExplainedByFittedPlane;
 function percentVariationExplainedByFittedPlane(vertices, centroid, normal, range) {
-    var numVertices = vertices.length,
-        diff = 0;
-    for (var i = 0; i < numVertices; i += 3) {
-        var fittedZ = Math.sqrt(
-                (vertices[i + 0] - centroid.x) * (vertices[i + 0] - centroid.x) +
-                (vertices[i + 1] - centroid.y) * (vertices[i + 1] - centroid.y)
-            ) * Math.tan(normal.z * Math.PI) + centroid.z;
-        diff += (vertices[i + 2] - fittedZ) * (vertices[i + 2] - fittedZ);
+    if (!vertices || vertices.length < 3 || !centroid || !normal || !normal.isVector3) {
+        return 0; // Return 0 if we have invalid inputs
     }
-    return 1 - Math.sqrt(diff / numVertices) * 2 / range;
+    
+    // Ensure range is valid
+    range = Math.abs(range) || 1; // Use 1 as default if range is 0 or undefined
+    
+    var numVertices = vertices.length;
+    var totalDiff = 0;
+    var dotProduct, vertexPlaneDistance;
+    
+    try {
+        for (var i = 0; i < numVertices; i += 3) {
+            // Get the vertex position relative to centroid
+            var dx = vertices[i + 0] - centroid.x;
+            var dy = vertices[i + 1] - centroid.y;
+            var dz = vertices[i + 2] - centroid.z;
+            
+            // Calculate the distance from the vertex to the plane
+            // The plane equation is: ax + by + cz + d = 0 where (a,b,c) is the normal
+            // For a point (x,y,z) on the plane: a(x-x0) + b(y-y0) + c(z-z0) = 0
+            // where (x0,y0,z0) is a point on the plane (our centroid)
+            dotProduct = normal.x * dx + normal.y * dy + normal.z * dz;
+            
+            // The distance from the point to the plane
+            vertexPlaneDistance = Math.abs(dotProduct) / Math.sqrt(normal.x * normal.x + normal.y * normal.y + normal.z * normal.z);
+            
+            // Add to total squared difference
+            totalDiff += vertexPlaneDistance * vertexPlaneDistance;
+        }
+        
+        // Calculate and return the explained variation
+        // 1 - normalized average distance (bounded between 0 and 1)
+        return Math.max(0, Math.min(1, 1 - Math.sqrt(totalDiff / numVertices) * 2 / range));
+    } catch (e) {
+        console.warn('Error calculating plane variation:', e);
+        return 0;
+    }
 }
 
+TerrainNS.mean = mean;
 function mean(data) {
     var sum = 0,
         l = data.length;
@@ -565,5 +846,3 @@ function mean(data) {
     }
     return sum / l;
 }
-
-})();

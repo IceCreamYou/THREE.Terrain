@@ -1,3 +1,6 @@
+import * as THREE from 'three';
+import { TerrainNS } from './core.js';
+
 /**
  * Generate a material that blends together textures based on vertex height.
  *
@@ -39,7 +42,7 @@
  *   material type such as `MeshStandardMaterial` instead of the default
  *   `MeshLambertMaterial`.
  */
-THREE.Terrain.generateBlendedMaterial = function(textures, material) {
+function generateBlendedMaterial(textures, material) {
     // Convert numbers to strings of floats so GLSL doesn't barf on "1" instead of "1.0"
     function glslifyNumber(n) {
         return n === (n|0) ? n+'.0' : n+'';
@@ -51,7 +54,12 @@ THREE.Terrain.generateBlendedMaterial = function(textures, material) {
         t0Offset = textures[0].texture.offset;
     for (var i = 0, l = textures.length; i < l; i++) {
         // Update textures
-        textures[i].texture.wrapS = textures[i].wrapT = THREE.RepeatWrapping;
+        textures[i].texture.wrapS = textures[i].texture.wrapT = THREE.RepeatWrapping;
+        // Set color space and enhance saturation for more vibrant colors
+        if (textures[i].texture.source) {
+            textures[i].texture.colorSpace = THREE.SRGBColorSpace;
+            textures[i].texture.encoding = THREE.sRGBEncoding; // Backward compatibility
+        }
         textures[i].texture.needsUpdate = true;
 
         // Shader fragments
@@ -86,10 +94,15 @@ THREE.Terrain.generateBlendedMaterial = function(textures, material) {
         }
     }
 
-    var fragBlend = 'float slope = acos(max(min(dot(myNormal, vec3(0.0, 0.0, 1.0)), 1.0), -1.0));\n' +
+    // Enhance color vibrancy in the shader
+    var fragBlend = '// Calculate terrain slope for texture blending\n' +
+        '    float slope = acos(max(min(dot(normalize(myNormal), vec3(0.0, 0.0, 1.0)), 1.0), -1.0));\n' +
         '    diffuseColor = vec4( diffuse, opacity );\n' +
         '    vec4 color = texture2D( texture_0, MyvUv * vec2( ' + glslifyNumber(t0Repeat.x) + ', ' + glslifyNumber(t0Repeat.y) + ' ) + vec2( ' + glslifyNumber(t0Offset.x) + ', ' + glslifyNumber(t0Offset.y) + ' ) ); // base\n' +
             assign +
+        '    // Enhance saturation of the final color\n' +
+        '    vec3 grayScale = vec3(dot(color.rgb, vec3(0.299, 0.587, 0.114)));\n' +
+        '    color.rgb = mix(grayScale, color.rgb, 1.3);\n' + // Increase saturation 
         '    diffuseColor = color;\n';
 
     var fragPars = declare + '\n' +
@@ -97,13 +110,21 @@ THREE.Terrain.generateBlendedMaterial = function(textures, material) {
             'varying vec3 vPosition;\n' +
             'varying vec3 myNormal;\n';
 
-    var mat = material || new THREE.MeshLambertMaterial();
+    // Use MeshPhongMaterial for more realistic lighting
+    var mat = material || new THREE.MeshPhongMaterial({
+        side: THREE.DoubleSide,
+        shininess: 5, 
+        specular: new THREE.Color(0x111111),
+        flatShading: false
+    });
     mat.onBeforeCompile = function(shader) {
         // Patch vertexShader to setup MyUv, vPosition, and myNormal
         shader.vertexShader = shader.vertexShader.replace('#include <common>',
             'varying vec2 MyvUv;\nvarying vec3 vPosition;\nvarying vec3 myNormal;\n#include <common>');
         shader.vertexShader = shader.vertexShader.replace('#include <uv_vertex>',
             'MyvUv = uv;\nvPosition = position;\nmyNormal = normal;\n#include <uv_vertex>');
+        shader.vertexShader = shader.vertexShader.replace('#include <worldpos_vertex>', 
+            '#include <worldpos_vertex>\n#ifdef USE_INSTANCING\nmyNormal = mat3(instanceMatrix) * myNormal;\n#endif');
 
         shader.fragmentShader = shader.fragmentShader.replace('#include <common>', fragPars + '\n#include <common>');
         shader.fragmentShader = shader.fragmentShader.replace('#include <map_fragment>', fragBlend);
@@ -118,4 +139,6 @@ THREE.Terrain.generateBlendedMaterial = function(textures, material) {
     };
 
     return mat;
-};
+}
+
+export { generateBlendedMaterial };

@@ -1,3 +1,10 @@
+import * as THREE from 'three';
+import { TerrainNS, ceilPowerOfTwo } from './core.js';
+import { noise } from './noise.js';
+
+// Debug to check if TerrainNS is properly imported
+console.log('TerrainNS in generators.js:', TerrainNS);
+
 /**
  * A utility for generating heightmap functions by additive composition.
  *
@@ -20,7 +27,7 @@
  *     smaller features). Often running multiple generation functions with
  *     different frequencies and amplitudes results in nice detail.
  */
-THREE.Terrain.MultiPass = function(g, options, passes) {
+TerrainNS.MultiPass = function(g, options, passes) {
     var clonedOptions = {};
     for (var opt in options) {
         if (options.hasOwnProperty(opt)) {
@@ -55,7 +62,7 @@ THREE.Terrain.MultiPass = function(g, options, passes) {
  *   y-coordinates) are given as percentages of a phase (i.e. how far across
  *   the terrain in the relevant direction they are).
  */
-THREE.Terrain.Curve = function(g, options, curve) {
+TerrainNS.Curve = function(g, options, curve) {
     var range = (options.maxHeight - options.minHeight) * 0.5,
         scalar = options.frequency / (Math.min(options.xSegments, options.ySegments) + 1);
     for (var i = 0, xl = options.xSegments + 1, yl = options.ySegments + 1; i < xl; i++) {
@@ -68,9 +75,9 @@ THREE.Terrain.Curve = function(g, options, curve) {
 /**
  * Generate random terrain using the Cosine waves.
  *
- * Parameters are the same as those for {@link THREE.Terrain.DiamondSquare}.
+ * Parameters are the same as those for {@link TerrainNS.DiamondSquare}.
  */
-THREE.Terrain.Cosine = function(g, options) {
+TerrainNS.Cosine = function(g, options) {
     var amplitude = (options.maxHeight - options.minHeight) * 0.5,
         frequencyScalar = options.frequency * Math.PI / (Math.min(options.xSegments, options.ySegments) + 1),
         phase = Math.random() * Math.PI * 2;
@@ -84,14 +91,14 @@ THREE.Terrain.Cosine = function(g, options) {
 /**
  * Generate random terrain using layers of Cosine waves.
  *
- * Parameters are the same as those for {@link THREE.Terrain.DiamondSquare}.
+ * Parameters are the same as those for {@link TerrainNS.DiamondSquare}.
  */
-THREE.Terrain.CosineLayers = function(g, options) {
-    THREE.Terrain.MultiPass(g, options, [
-        { method: THREE.Terrain.Cosine,                   frequency:  2.5 },
-        { method: THREE.Terrain.Cosine, amplitude: 0.1,   frequency:  12  },
-        { method: THREE.Terrain.Cosine, amplitude: 0.05,  frequency:  15  },
-        { method: THREE.Terrain.Cosine, amplitude: 0.025, frequency:  20  },
+TerrainNS.CosineLayers = function(g, options) {
+    TerrainNS.MultiPass(g, options, [
+        { method: TerrainNS.Cosine,                   frequency:  2.5 },
+        { method: TerrainNS.Cosine, amplitude: 0.1,   frequency:  12  },
+        { method: TerrainNS.Cosine, amplitude: 0.05,  frequency:  15  },
+        { method: TerrainNS.Cosine, amplitude: 0.025, frequency:  20  },
     ]);
 };
 
@@ -105,12 +112,15 @@ THREE.Terrain.CosineLayers = function(g, options) {
  * @param {Object} options
  *   A map of settings that control how the terrain is constructed and
  *   displayed. Valid values are the same as those for the `options` parameter
- *   of {@link THREE.Terrain}().
+ *   of {@link TerrainNS}().
  */
-THREE.Terrain.DiamondSquare = function(g, options) {
+TerrainNS.DiamondSquare = function(g, options) {
     // Set the segment length to the smallest power of 2 that is greater than
     // the number of vertices in either dimension of the plane
-    var segments = THREE.Math.ceilPowerOfTwo(Math.max(options.xSegments, options.ySegments) + 1);
+    var segments = ceilPowerOfTwo(Math.max(options.xSegments, options.ySegments) + 1);
+
+    console.log('Generating Diamond-Square terrain with segments:', segments);
+    console.log('Height range:', options.minHeight, 'to', options.maxHeight);
 
     // Initialize heightmap
     var size = segments + 1,
@@ -171,7 +181,15 @@ THREE.Terrain.DiamondSquare = function(g, options) {
         }
     }
 
-    // THREE.Terrain.SmoothConservative(g, options);
+    // Log min/max heights for debugging
+    var minHeight = Infinity, maxHeight = -Infinity;
+    for (i = 0; i < g.length; i++) {
+        if (g[i] < minHeight) minHeight = g[i];
+        if (g[i] > maxHeight) maxHeight = g[i];
+    }
+    console.log('Diamond-Square terrain generated, height range:', minHeight, 'to', maxHeight);
+
+    // TerrainNS.SmoothConservative(g, options);
 };
 
 /**
@@ -181,9 +199,9 @@ THREE.Terrain.DiamondSquare = function(g, options) {
  * Repeatedly draw random lines that cross the terrain. Raise the terrain on
  * one side of the line and lower it on the other.
  *
- * Parameters are the same as those for {@link THREE.Terrain.DiamondSquare}.
+ * Parameters are the same as those for {@link TerrainNS.DiamondSquare}.
  */
-THREE.Terrain.Fault = function(g, options) {
+TerrainNS.Fault = function(g, options) {
     var d = Math.sqrt(options.xSegments*options.xSegments + options.ySegments*options.ySegments),
         iterations = d * options.frequency,
         range = (options.maxHeight - options.minHeight) * 0.5,
@@ -209,7 +227,7 @@ THREE.Terrain.Fault = function(g, options) {
             }
         }
     }
-    // THREE.Terrain.Smooth(g, options);
+    // TerrainNS.Smooth(g, options);
 };
 
 /**
@@ -224,8 +242,8 @@ THREE.Terrain.Fault = function(g, options) {
  * @param {Object} options
  *   A map of settings that control how the terrain is constructed and
  *   displayed. Valid values are the same as those for the `options` parameter
- *   of {@link THREE.Terrain}().
- * @param {Function} [feature=THREE.Terrain.Influences.Hill]
+ *   of {@link TerrainNS}().
+ * @param {Function} [feature=TerrainNS.Influences.Hill]
  *   A function describing the feature to raise at the randomly chosen points.
  *   Typically this is a hill shape so that the accumulated features result in
  *   something resembling mountains, but it could be any function that accepts
@@ -234,7 +252,7 @@ THREE.Terrain.Fault = function(g, options) {
  *   a second and third parameter, which are the x- and y- distances from the
  *   feature's origin, respectively. It should return a number between -1 and 1
  *   representing the height of the feature at the given coordinate.
- *   `THREE.Terrain.Influences` contains some useful functions for this
+ *   `TerrainNS.Influences` contains some useful functions for this
  *   purpose.
  * @param {Function} [shape]
  *   A function that takes an object with `x` and `y` properties consisting of
@@ -242,7 +260,7 @@ THREE.Terrain.Fault = function(g, options) {
  *   typically by transforming it over a distribution. The result affects where
  *   small hills are raised thereby affecting the overall shape of the terrain.
  */
-THREE.Terrain.Hill = function(g, options, feature, shape) {
+TerrainNS.Hill = function(g, options, feature, shape) {
     var frequency = options.frequency * 2,
         numFeatures = frequency * frequency * 10,
         heightRange = options.maxHeight - options.minHeight,
@@ -251,7 +269,7 @@ THREE.Terrain.Hill = function(g, options, feature, shape) {
         smallerSideLength = Math.min(options.xSize, options.ySize),
         minRadius = smallerSideLength / (frequency * frequency),
         maxRadius = smallerSideLength / frequency;
-    feature = feature || THREE.Terrain.Influences.Hill;
+    feature = feature || TerrainNS.Influences.Hill;
 
     var coords = { x: 0, y: 0 };
     for (var i = 0; i < numFeatures; i++) {
@@ -263,13 +281,13 @@ THREE.Terrain.Hill = function(g, options, feature, shape) {
         coords.x = Math.random();
         coords.y = Math.random();
         if (typeof shape === 'function') shape(coords);
-        THREE.Terrain.Influence(
+        TerrainNS.Influence(
             g, options,
             feature,
             coords.x, coords.y,
             radius, height,
             THREE.AdditiveBlending,
-            THREE.Terrain.EaseInStrong
+            TerrainNS.EaseInStrong
         );
     }
 };
@@ -286,25 +304,25 @@ THREE.Terrain.Hill = function(g, options, feature, shape) {
  * @param {Object} options
  *   A map of settings that control how the terrain is constructed and
  *   displayed. Valid values are the same as those for the `options` parameter
- *   of {@link THREE.Terrain}().
- * @param {Function} [feature=THREE.Terrain.Influences.Hill]
+ *   of {@link TerrainNS}().
+ * @param {Function} [feature=TerrainNS.Influences.Hill]
  *   A function describing the feature. The function should accept one
  *   parameter representing the distance from the feature's origin expressed as
  *   a number between -1 and 1 inclusive. Optionally it can accept a second and
  *   third parameter, which are the x- and y- distances from the feature's
  *   origin, respectively. It should return a number between -1 and 1
  *   representing the height of the feature at the given coordinate.
- *   `THREE.Terrain.Influences` contains some useful functions for this
+ *   `TerrainNS.Influences` contains some useful functions for this
  *   purpose.
  */
-THREE.Terrain.HillIsland = (function() {
+TerrainNS.HillIsland = (function() {
     var island = function(coords) {
         var theta = Math.random() * Math.PI * 2;
         coords.x = 0.5 + Math.cos(theta) * coords.x * 0.4;
         coords.y = 0.5 + Math.sin(theta) * coords.y * 0.4;
     };
     return function(g, options, feature) {
-        THREE.Terrain.Hill(g, options, feature, island);
+        TerrainNS.Hill(g, options, feature, island);
     };
 })();
 
@@ -357,9 +375,9 @@ THREE.Terrain.HillIsland = (function() {
      * 0.25 generally result in archipelagos whereas the default of 2.5
      * generally results in one large mountainous island.
      *
-     * Parameters are the same as those for {@link THREE.Terrain.DiamondSquare}.
+     * Parameters are the same as those for {@link TerrainNS.DiamondSquare}.
      */
-    THREE.Terrain.Particles = function(g, options) {
+    TerrainNS.Particles = function(g, options) {
         var iterations = Math.sqrt(options.xSegments*options.xSegments + options.ySegments*options.ySegments) * options.frequency * 300,
             xl = options.xSegments + 1,
             displacement = (options.maxHeight - options.minHeight) / iterations * 1000,
@@ -379,62 +397,75 @@ THREE.Terrain.HillIsland = (function() {
                 j = Math.floor(options.ySegments*(0.5+yDeviation) + Math.sin(d) * Math.random() * options.ySegments*(0.5-Math.abs(yDeviation)));
             }
         }
-        // THREE.Terrain.Smooth(g, options, 3);
+        // TerrainNS.Smooth(g, options, 3);
     };
 })();
 
 /**
  * Generate random terrain using the Perlin Noise method.
  *
- * Parameters are the same as those for {@link THREE.Terrain.DiamondSquare}.
+ * Parameters are the same as those for {@link TerrainNS.DiamondSquare}.
  */
-THREE.Terrain.Perlin = function(g, options) {
+TerrainNS.Perlin = function(g, options) {
     noise.seed(Math.random());
     var range = (options.maxHeight - options.minHeight) * 0.5,
         divisor = (Math.min(options.xSegments, options.ySegments) + 1) / options.frequency;
-    for (var i = 0, xl = options.xSegments + 1; i < xl; i++) {
-        for (var j = 0, yl = options.ySegments + 1; j < yl; j++) {
-            g[j * xl + i] += noise.perlin(i / divisor, j / divisor) * range;
+
+    console.log('Generating Perlin noise terrain with range:', range, 'divisor:', divisor);
+
+    for (var i = 0, xl = options.xSegments + 1, yl = options.ySegments + 1; i < xl; i++) {
+        for (var j = 0; j < yl; j++) {
+            var k = j * xl + i;
+            var noiseValue = noise.perlin(i / divisor, j / divisor);
+            g[k] += noiseValue * range;
         }
     }
+
+    // Log min/max heights for debugging
+    var minHeight = Infinity, maxHeight = -Infinity;
+    for (var i = 0; i < g.length; i++) {
+        if (g[i] < minHeight) minHeight = g[i];
+        if (g[i] > maxHeight) maxHeight = g[i];
+    }
+    console.log('Perlin noise terrain generated, height range:', minHeight, 'to', maxHeight);
 };
 
 /**
  * Generate random terrain using the Perlin and Diamond-Square methods composed.
  *
- * Parameters are the same as those for {@link THREE.Terrain.DiamondSquare}.
+ * Parameters are the same as those for {@link TerrainNS.DiamondSquare}.
  */
-THREE.Terrain.PerlinDiamond = function(g, options) {
-    THREE.Terrain.MultiPass(g, options, [
-        { method: THREE.Terrain.Perlin },
-        { method: THREE.Terrain.DiamondSquare, amplitude: 0.75 },
-        { method: function(g, o) { return THREE.Terrain.SmoothMedian(g, o); } },
+TerrainNS.PerlinDiamond = function(g, options) {
+    TerrainNS.MultiPass(g, options, [
+        { method: TerrainNS.Perlin },
+        { method: TerrainNS.DiamondSquare, amplitude: 0.75 },
+        { method: function(g, o) { return TerrainNS.SmoothMedian(g, o); } },
     ]);
 };
 
 /**
  * Generate random terrain using layers of Perlin noise.
  *
- * Parameters are the same as those for {@link THREE.Terrain.DiamondSquare}.
+ * Parameters are the same as those for {@link TerrainNS.DiamondSquare}.
  */
-THREE.Terrain.PerlinLayers = function(g, options) {
-    THREE.Terrain.MultiPass(g, options, [
-        { method: THREE.Terrain.Perlin,                  frequency:  1.25 },
-        { method: THREE.Terrain.Perlin, amplitude: 0.05, frequency:  2.5  },
-        { method: THREE.Terrain.Perlin, amplitude: 0.35, frequency:  5    },
-        { method: THREE.Terrain.Perlin, amplitude: 0.15, frequency: 10    },
+TerrainNS.PerlinLayers = function(g, options) {
+    TerrainNS.MultiPass(g, options, [
+        { method: TerrainNS.Perlin,                  frequency:  1.25 },
+        { method: TerrainNS.Perlin, amplitude: 0.05, frequency:  2.5  },
+        { method: TerrainNS.Perlin, amplitude: 0.35, frequency:  5    },
+        { method: TerrainNS.Perlin, amplitude: 0.15, frequency: 10    },
     ]);
 };
 
 /**
  * Generate random terrain using the Simplex Noise method.
  *
- * Parameters are the same as those for {@link THREE.Terrain.DiamondSquare}.
+ * Parameters are the same as those for {@link TerrainNS.DiamondSquare}.
  *
  * See https://github.com/mrdoob/three.js/blob/master/examples/webgl_terrain_dynamic.html
  * for an interesting comparison where the generation happens in GLSL.
  */
-THREE.Terrain.Simplex = function(g, options) {
+TerrainNS.Simplex = function(g, options) {
     noise.seed(Math.random());
     var range = (options.maxHeight - options.minHeight) * 0.5,
         divisor = (Math.min(options.xSegments, options.ySegments) + 1) * 2 / options.frequency;
@@ -448,15 +479,15 @@ THREE.Terrain.Simplex = function(g, options) {
 /**
  * Generate random terrain using layers of Simplex noise.
  *
- * Parameters are the same as those for {@link THREE.Terrain.DiamondSquare}.
+ * Parameters are the same as those for {@link TerrainNS.DiamondSquare}.
  */
-THREE.Terrain.SimplexLayers = function(g, options) {
-    THREE.Terrain.MultiPass(g, options, [
-        { method: THREE.Terrain.Simplex,                    frequency:  1.25 },
-        { method: THREE.Terrain.Simplex, amplitude: 0.5,    frequency:  2.5  },
-        { method: THREE.Terrain.Simplex, amplitude: 0.25,   frequency:  5    },
-        { method: THREE.Terrain.Simplex, amplitude: 0.125,  frequency: 10    },
-        { method: THREE.Terrain.Simplex, amplitude: 0.0625, frequency: 20    },
+TerrainNS.SimplexLayers = function(g, options) {
+    TerrainNS.MultiPass(g, options, [
+        { method: TerrainNS.Simplex,                    frequency:  1.25 },
+        { method: TerrainNS.Simplex, amplitude: 0.5,    frequency:  2.5  },
+        { method: TerrainNS.Simplex, amplitude: 0.25,   frequency:  5    },
+        { method: TerrainNS.Simplex, amplitude: 0.125,  frequency: 10    },
+        { method: TerrainNS.Simplex, amplitude: 0.0625, frequency: 20    },
     ]);
 };
 
@@ -532,12 +563,12 @@ THREE.Terrain.SimplexLayers = function(g, options) {
      * smaller octave than the target and then interpolate to get a higher-
      * resolution result. This is then repeated at different resolutions.
      *
-     * Parameters are the same as those for {@link THREE.Terrain.DiamondSquare}.
+     * Parameters are the same as those for {@link TerrainNS.DiamondSquare}.
      */
-    THREE.Terrain.Value = function(g, options) {
+    TerrainNS.Value = function(g, options) {
         // Set the segment length to the smallest power of 2 that is greater
         // than the number of vertices in either dimension of the plane
-        var segments = THREE.Math.ceilPowerOfTwo(Math.max(options.xSegments, options.ySegments) + 1);
+        var segments = TerrainNS.ceilPowerOfTwo(Math.max(options.xSegments, options.ySegments) + 1);
 
         // Store the array of white noise outside of the WhiteNoise function to
         // avoid allocating a bunch of unnecessary arrays; we can just
@@ -551,8 +582,8 @@ THREE.Terrain.SimplexLayers = function(g, options) {
         }
 
         // White noise creates some weird artifacts; fix them.
-        // THREE.Terrain.Smooth(g, options, 1);
-        THREE.Terrain.Clamp(g, {
+        // TerrainNS.Smooth(g, options, 1);
+        TerrainNS.Clamp(g, {
             maxHeight: options.maxHeight,
             minHeight: options.minHeight,
             stretch: true,
@@ -567,9 +598,9 @@ THREE.Terrain.SimplexLayers = function(g, options) {
  * anywhere. This produces some nice shapes that look terrain-like, but can
  * look repetitive from above.
  *
- * Parameters are the same as those for {@link THREE.Terrain.DiamondSquare}.
+ * Parameters are the same as those for {@link TerrainNS.DiamondSquare}.
  */
-THREE.Terrain.Weierstrass = function(g, options) {
+TerrainNS.Weierstrass = function(g, options) {
     var range = (options.maxHeight - options.minHeight) * 0.5,
         dir1 = Math.random() < 0.5 ? 1 : -1,
         dir2 = Math.random() < 0.5 ? 1 : -1,
@@ -592,5 +623,5 @@ THREE.Terrain.Weierstrass = function(g, options) {
             g[j * xl + i] += sum * range;
         }
     }
-    THREE.Terrain.Clamp(g, options);
+    TerrainNS.Clamp(g, options);
 };

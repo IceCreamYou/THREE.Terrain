@@ -1,3 +1,6 @@
+import * as THREE from 'three';
+import { TerrainNS } from './core.js';
+
 /**
  * Rescale the heightmap of a terrain to keep it within the maximum range.
  *
@@ -6,15 +9,15 @@
  * @param {Object} options
  *   A map of settings that control how the terrain is constructed and
  *   displayed. Valid values are the same as those for the `options` parameter
- *   of {@link THREE.Terrain}() but only `maxHeight`, `minHeight`, and `easing`
+ *   of {@link TerrainNS.Terrain}() but only `maxHeight`, `minHeight`, and `easing`
  *   are used.
  */
-THREE.Terrain.Clamp = function(g, options) {
+TerrainNS.Clamp = function(g, options) {
     var min = Infinity,
         max = -Infinity,
         l = g.length,
         i;
-    options.easing = options.easing || THREE.Terrain.Linear;
+    options.easing = options.easing || TerrainNS.Linear;
     for (i = 0; i < l; i++) {
         if (g[i] < min) min = g[i];
         if (g[i] > max) max = g[i];
@@ -44,27 +47,27 @@ THREE.Terrain.Clamp = function(g, options) {
  * @param {Object} options
  *   A map of settings that control how the terrain is constructed and
  *   displayed. Valid values are the same as those for the `options` parameter
- *   of {@link THREE.Terrain}().
+ *   of {@link TerrainNS.Terrain}().
  * @param {Boolean} direction
  *   `true` if the edges should be turned up; `false` if they should be turned
  *   down.
  * @param {Number} distance
  *   The distance from the edge at which the edges should begin to be affected
  *   by this operation.
- * @param {Number/Function} [e=THREE.Terrain.EaseInOut]
+ * @param {Number/Function} [e=TerrainNS.EaseInOut]
  *   A function that determines how quickly the terrain will transition between
  *   its current height and the edge shape as distance to the edge decreases.
  *   It does this by interpolating the height of each vertex along a curve.
- *   Valid values include `THREE.Terrain.Linear`, `THREE.Terrain.EaseIn`,
- *   `THREE.Terrain.EaseOut`, `THREE.Terrain.EaseInOut`,
- *   `THREE.Terrain.InEaseOut`, and any custom function that accepts a float
+ *   Valid values include `TerrainNS.Linear`, `TerrainNS.EaseIn`,
+ *   `TerrainNS.EaseOut`, `TerrainNS.EaseInOut`,
+ *   `TerrainNS.InEaseOut`, and any custom function that accepts a float
  *   between 0 and 1 and returns a float between 0 and 1.
  * @param {Object} [edges={top: true, bottom: true, left: true, right: true}]
  *   Determines which edges should be affected by this function. Defaults to
  *   all edges. If passed, should be an object with `top`, `bottom`, `left`,
  *   and `right` Boolean properties specifying which edges to affect.
  */
-THREE.Terrain.Edges = function(g, options, direction, distance, easing, edges) {
+TerrainNS.Edges = function(g, options, direction, distance, easing, edges) {
     var numXSegments = Math.floor(distance / (options.xSize / options.xSegments)) || 1,
         numYSegments = Math.floor(distance / (options.ySize / options.ySegments)) || 1,
         peak = direction ? options.maxHeight : options.minHeight,
@@ -72,7 +75,7 @@ THREE.Terrain.Edges = function(g, options, direction, distance, easing, edges) {
         xl = options.xSegments + 1,
         yl = options.ySegments + 1,
         i, j, multiplier, k1, k2;
-    easing = easing || THREE.Terrain.EaseInOut;
+    easing = easing || TerrainNS.EaseInOut;
     if (typeof edges !== 'object') {
         edges = {top: true, bottom: true, left: true, right: true};
     }
@@ -102,7 +105,7 @@ THREE.Terrain.Edges = function(g, options, direction, distance, easing, edges) {
             }
         }
     }
-    THREE.Terrain.Clamp(g, {
+    TerrainNS.Clamp(g, {
         maxHeight: options.maxHeight,
         minHeight: options.minHeight,
         stretch: true,
@@ -119,23 +122,23 @@ THREE.Terrain.Edges = function(g, options, direction, distance, easing, edges) {
  * @param {Object} options
  *   A map of settings that control how the terrain is constructed and
  *   displayed. Valid values are the same as those for the `options` parameter
- *   of {@link THREE.Terrain}().
+ *   of {@link TerrainNS.Terrain}().
  * @param {Boolean} direction
  *   `true` if the edges should be turned up; `false` if they should be turned
  *   down.
  * @param {Number} distance
  *   The distance from the center at which the edges should begin to be
  *   affected by this operation.
- * @param {Number/Function} [e=THREE.Terrain.EaseInOut]
+ * @param {Number/Function} [e=TerrainNS.EaseInOut]
  *   A function that determines how quickly the terrain will transition between
  *   its current height and the edge shape as distance to the edge decreases.
  *   It does this by interpolating the height of each vertex along a curve.
- *   Valid values include `THREE.Terrain.Linear`, `THREE.Terrain.EaseIn`,
- *   `THREE.Terrain.EaseOut`, `THREE.Terrain.EaseInOut`,
- *   `THREE.Terrain.InEaseOut`, and any custom function that accepts a float
+ *   Valid values include `TerrainNS.Linear`, `TerrainNS.EaseIn`,
+ *   `TerrainNS.EaseOut`, `TerrainNS.EaseInOut`,
+ *   `TerrainNS.InEaseOut`, and any custom function that accepts a float
  *   between 0 and 1 and returns a float between 0 and 1.
  */
-THREE.Terrain.RadialEdges = function(g, options, direction, distance, easing) {
+TerrainNS.RadialEdges = function(g, options, direction, distance, easing) {
     var peak = direction ? options.maxHeight : options.minHeight,
         max = direction ? Math.max : Math.min,
         xl = (options.xSegments + 1),
@@ -168,12 +171,12 @@ THREE.Terrain.RadialEdges = function(g, options, direction, distance, easing) {
  * @param {Object} options
  *   A map of settings that control how the terrain is constructed and
  *   displayed. Valid values are the same as those for the `options` parameter
- *   of {@link THREE.Terrain}().
+ *   of {@link TerrainNS.Terrain}().
  * @param {Number} [weight=0]
  *   How much to weight the original vertex height against the average of its
  *   neighbors.
  */
-THREE.Terrain.Smooth = function(g, options, weight) {
+TerrainNS.Smooth = function(g, options, weight) {
     var heightmap = new Float32Array(g.length);
     for (var i = 0, xl = options.xSegments + 1, yl = options.ySegments + 1; i < xl; i++) {
         for (var j = 0; j < yl; j++) {
@@ -206,9 +209,9 @@ THREE.Terrain.Smooth = function(g, options, weight) {
  * @param {Object} options
  *   A map of settings that control how the terrain is constructed and
  *   displayed. Valid values are the same as those for the `options` parameter
- *   of {@link THREE.Terrain}().
+ *   of {@link TerrainNS.Terrain}().
  */
-THREE.Terrain.SmoothMedian = function(g, options) {
+TerrainNS.SmoothMedian = function(g, options) {
     var heightmap = new Float32Array(g.length),
         neighborValues = [],
         neighborKeys = [],
@@ -253,14 +256,14 @@ THREE.Terrain.SmoothMedian = function(g, options) {
  * @param {Object} options
  *   A map of settings that control how the terrain is constructed and
  *   displayed. Valid values are the same as those for the `options` parameter
- *   of {@link THREE.Terrain}().
+ *   of {@link TerrainNS.Terrain}().
  * @param {Number} [multiplier=1]
  *   By default, this filter clamps each point within the highest and lowest
  *   value of its neighbors. This parameter is a multiplier for the range
  *   outside of which the point will be clamped. Higher values mean that the
  *   point can be farther outside the range of its neighbors.
  */
-THREE.Terrain.SmoothConservative = function(g, options, multiplier) {
+TerrainNS.SmoothConservative = function(g, options, multiplier) {
     var heightmap = new Float32Array(g.length);
     for (var i = 0, xl = options.xSegments + 1, yl = options.ySegments + 1; i < xl; i++) {
         for (var j = 0; j < yl; j++) {
@@ -299,7 +302,7 @@ THREE.Terrain.SmoothConservative = function(g, options, multiplier) {
  *   The number of steps to divide the terrain into. Defaults to
  *   (g.length/2)^(1/4).
  */
-THREE.Terrain.Step = function(g, levels) {
+TerrainNS.Step = function(g, levels) {
     // Calculate the max, min, and avg values for each bucket
     var i = 0,
         j = 0,
@@ -347,10 +350,10 @@ THREE.Terrain.Step = function(g, levels) {
  * @param {Float32Array} g
  *   The geometry's z-positions to modify with heightmap data.
  * @param {Object} [options]
- *   The same map of settings you'd pass to {@link THREE.Terrain()}. Only
+ *   The same map of settings you'd pass to {@link TerrainNS.Terrain()}. Only
  *   `minHeight` and `maxHeight` are used (and required) here.
  */
-THREE.Terrain.Turbulence = function(g, options) {
+TerrainNS.Turbulence = function(g, options) {
     var range = options.maxHeight - options.minHeight;
     for (var i = 0, l = g.length; i < l; i++) {
         g[i] = options.minHeight + Math.abs((g[i] - options.minHeight) * 2 - range);

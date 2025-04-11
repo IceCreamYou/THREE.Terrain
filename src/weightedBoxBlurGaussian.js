@@ -1,5 +1,5 @@
-// jscs:disable disallowSpaceBeforeSemicolon, requireBlocksOnNewline
-(function() {
+import * as THREE from 'three';
+import { TerrainNS } from './core.js';
 
 /**
  * Perform Gaussian smoothing on terrain vertices.
@@ -9,7 +9,7 @@
  * @param {Object} options
  *   A map of settings that control how the terrain is constructed and
  *   displayed. Valid values are the same as those for the `options` parameter
- *   of {@link THREE.Terrain}().
+ *   of {@link TerrainNS.Terrain}().
  * @param {Number} [s=1]
  *   The standard deviation of the Gaussian kernel to use. Higher values result
  *   in smoothing across more cells of the src matrix.
@@ -17,7 +17,7 @@
  *   The number of box blurs to use in the approximation. Larger values result
  *   in slower but more accurate smoothing.
  */
-THREE.Terrain.GaussianBoxBlur = function(g, options, s, n) {
+TerrainNS.GaussianBoxBlur = function(g, options, s, n) {
     gaussianBoxBlur(
         g,
         options.xSegments+1,
@@ -158,5 +158,3 @@ function boxBlurV(scl, tcl, w, h, r) {
         for (j = h-r; j < h  ; j++) { val += lv      - scl[li]; tcl[ti] = val*iarr; li+=w; ti+=w; }
     }
 }
-
-})();

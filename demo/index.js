@@ -1,10 +1,34 @@
-var camera, scene, renderer, clock, player, terrainScene, decoScene, lastOptions, controls = {}, fpsCamera, skyDome, skyLight, sand, water; // jscs:ignore requireLineBreakAfterVariableAssignment
-var INV_MAX_FPS = 1 / 100,
+import * as THREE from 'three';
+import { FirstPersonControls } from 'three/examples/jsm/controls/FirstPersonControls.js';
+import { GUI } from 'dat.gui';
+import Terrain, { TerrainNS } from '../src/index.js'; // Default import for Terrain function
+import { generateBlendedMaterial } from '../src/materials.js'; // Named import
+
+// Global variables (use let)
+let camera, scene, renderer, clock, player, terrainScene, decoScene, lastOptions, controls = {}, fpsCamera, skyDome, skyLight, sand, water; // jscs:ignore requireLineBreakAfterVariableAssignment
+let INV_MAX_FPS = 1 / 100,
     frameDelta = 0,
     paused = true,
     mouseX = 0,
     mouseY = 0,
     useFPS = false;
+
+// Define stats globally (using a simple placeholder)
+let stats = {
+  begin: function() {},
+  end: function() {},
+  showPanel: function() {},
+  dom: document.createElement('div')
+};
+// // Optional: Add back dynamic Stats.js loading if needed
+// const statsPromise = import('stats-js').then(module => {
+//   const Stats = module.default;
+//   stats = new Stats();
+//   stats.showPanel(0);
+//   document.body.appendChild(stats.dom);
+// }).catch(err => {
+//   console.error("Failed to load Stats.js:", err);
+// });
 
 function animate() {
   stats.begin();
@@ -70,7 +94,7 @@ function setupThreeJS() {
 function setupControls() {
   fpsCamera = new THREE.PerspectiveCamera(60, renderer.domElement.width / renderer.domElement.height, 1, 10000);
   scene.add(fpsCamera);
-  controls = new THREE.FirstPersonControls(fpsCamera, renderer.domElement);
+  controls = new FirstPersonControls(fpsCamera, renderer.domElement); // Use imported control
   controls.enabled = false;
   controls.movementSpeed = 100;
   controls.lookSpeed = 0.075;
@@ -88,37 +112,48 @@ function setupWorld() {
   });
 
   water = new THREE.Mesh(
-    new THREE.PlaneBufferGeometry(16384+1024, 16384+1024, 16, 16),
+    new THREE.PlaneGeometry(16384+1024, 16384+1024, 16, 16), // Use PlaneGeometry
     new THREE.MeshLambertMaterial({color: 0x006ba0, transparent: true, opacity: 0.6})
   );
   water.position.y = -99;
   water.rotation.x = -0.5 * Math.PI;
   scene.add(water);
 
-  skyLight = new THREE.DirectionalLight(0xe8bdb0, 1.5);
+  // Create warmer, more vibrant lighting
+  skyLight = new THREE.DirectionalLight(0xffe8d6, 1.75); 
   skyLight.position.set(2950, 2625, -160); // Sun on the sky texture
   scene.add(skyLight);
-  var light = new THREE.DirectionalLight(0xc3eaff, 0.75);
+  // Add slightly cooler fill light to simulate sky light
+  var light = new THREE.DirectionalLight(0xadd8e6, 0.85);
   light.position.set(-1, -0.5, -1);
   scene.add(light);
+  
+  // Add warmer ambient light to enhance greens and prevent dark shadows
+  var ambientLight = new THREE.AmbientLight(0x90a355, 0.35);
+  scene.add(ambientLight);
 }
 
 function setupDatGui() {
   var heightmapImage = new Image();
   heightmapImage.src = 'demo/img/heightmap.png';
+  // var blend; // Move inside Settings
   function Settings() {
     var that = this;
     var mat = new THREE.MeshBasicMaterial({color: 0x5566aa, wireframe: true});
     var gray = new THREE.MeshPhongMaterial({ color: 0x88aaaa, specular: 0x444455, shininess: 10 });
-    var blend;
+    var blend; // Declare blend here
     var elevationGraph = document.getElementById('elevation-graph'),
         slopeGraph = document.getElementById('slope-graph'),
         analyticsValues = document.getElementsByClassName('value');
     var loader = new THREE.TextureLoader();
     loader.load('demo/img/sand1.jpg', function(t1) {
       t1.wrapS = t1.wrapT = THREE.RepeatWrapping;
+      t1.repeat.set(4, 4); // Repeat the texture more for better detail
+      t1.encoding = THREE.sRGBEncoding;
+      t1.colorSpace = THREE.SRGBColorSpace;
+      t1.anisotropy = renderer.capabilities.getMaxAnisotropy();
       sand = new THREE.Mesh(
-        new THREE.PlaneBufferGeometry(16384+1024, 16384+1024, 64, 64),
+        new THREE.PlaneGeometry(16384+1024, 16384+1024, 64, 64), // Use PlaneGeometry
         new THREE.MeshLambertMaterial({map: t1})
       );
       sand.position.y = -101;
@@ -127,11 +162,25 @@ function setupDatGui() {
       loader.load('demo/img/grass1.jpg', function(t2) {
         loader.load('demo/img/stone1.jpg', function(t3) {
           loader.load('demo/img/snow1.jpg', function(t4) {
-            // t2.repeat.x = t2.repeat.y = 2;
-            blend = THREE.Terrain.generateBlendedMaterial([
+            // Set texture repeats for more detail
+            t2.repeat.set(8, 8); 
+            t3.repeat.set(6, 6);
+            t4.repeat.set(6, 6);
+            
+            // Make sure textures use proper filtering
+            [t1, t2, t3, t4].forEach(tex => {
+              tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+              tex.colorSpace = THREE.SRGBColorSpace;
+              tex.encoding = THREE.sRGBEncoding;
+              tex.anisotropy = renderer.capabilities.getMaxAnisotropy();
+              tex.needsUpdate = true;
+            });
+           
+            // Enhanced terrain material settings
+            blend = generateBlendedMaterial([ // Use imported function
               {texture: t1},
-              {texture: t2, levels: [-80, -35, 20, 50]},
-              {texture: t3, levels: [20, 50, 60, 85]},
+              {texture: t2, levels: [-80, -35, 20, 50]}, // Grass texture
+              {texture: t3, levels: [20, 50, 60, 85]},   // Stone texture
               {texture: t4, glsl: '1.0 - smoothstep(65.0 + smoothstep(-256.0, 256.0, vPosition.x) * 10.0, 80.0, vPosition.z)'},
               {texture: t3, glsl: 'slope > 0.7853981633974483 ? 0.2 : 1.0 - smoothstep(0.47123889803846897, 0.7853981633974483, slope) + 0.2'}, // between 27 and 45 degrees
             ]);
@@ -161,23 +210,32 @@ function setupDatGui() {
     this.scattering = 'PerlinAltitude';
     this.after = function(vertices, options) {
       if (that.edgeDirection !== 'Normal') {
-        (that.edgeType === 'Box' ? THREE.Terrain.Edges : THREE.Terrain.RadialEdges)(
+        (that.edgeType === 'Box' ? TerrainNS.Edges : TerrainNS.RadialEdges)( // Use TerrainNS
           vertices,
           options,
           that.edgeDirection === 'Up' ? true : false,
           that.edgeType === 'Box' ? that.edgeDistance : Math.min(options.xSize, options.ySize) * 0.5 - that.edgeDistance,
-          THREE.Terrain[that.edgeCurve]
+          TerrainNS[that.edgeCurve] // Use TerrainNS
         );
       }
+    };
+    function altitudeProbability(z) { // Keep this helper local to Settings
+        if (z > -80 && z < -50) return TerrainNS.EaseInOut((z + 80) / (-50 + 80)) * that.spread * 0.002;
+        else if (z > -50 && z < 20) return that.spread * 0.002;
+        else if (z > 20 && z < 50) return TerrainNS.EaseInOut((z - 20) / (50 - 20)) * that.spread * 0.002;
+        return 0;
+      }
+    this.altitudeSpread = function(v, k) {
+      return k % 4 === 0 && Math.random() < altitudeProbability(v.z);
     };
     window.rebuild = this.Regenerate = function() {
       var s = parseInt(that.segments, 10),
           h = that.heightmap === 'heightmap.png';
       var o = {
         after: that.after,
-        easing: THREE.Terrain[that.easing],
-        heightmap: h ? heightmapImage : (that.heightmap === 'influences' ? customInfluences : THREE.Terrain[that.heightmap]),
-        material: that.texture == 'Wireframe' ? mat : (that.texture == 'Blended' ? blend : gray),
+        easing: TerrainNS[that.easing], // Use TerrainNS
+        heightmap: h ? heightmapImage : (that.heightmap === 'influences' ? customInfluences : TerrainNS[that.heightmap]), // Use TerrainNS
+        material: that.texture == 'Wireframe' ? mat : (that.texture == 'Blended' && blend ? blend : gray), // check blend
         maxHeight: that.maxHeight - 100,
         minHeight: -100,
         steps: that.steps,
@@ -189,19 +247,20 @@ function setupDatGui() {
         ySegments: Math.round(s * that['width:length ratio']),
       };
       scene.remove(terrainScene);
-      terrainScene = THREE.Terrain(o);
+      terrainScene = Terrain(o); // Use imported Terrain
       applySmoothing(that.smoothing, o);
       scene.add(terrainScene);
       skyDome.visible = sand.visible = water.visible = that.texture != 'Wireframe';
       var he = document.getElementById('heightmap');
       if (he) {
         o.heightmap = he;
-        THREE.Terrain.toHeightmap(terrainScene.children[0].geometry.attributes.position.array, o);
+        TerrainNS.toHeightmap(terrainScene.children[0].geometry.attributes.position.array, o); // Use TerrainNS
       }
       that['Scatter meshes']();
       lastOptions = o;
 
-      var analysis = THREE.Terrain.Analyze(terrainScene.children[0], o),
+      // Run analytics
+      var analysis = TerrainNS.Analyze(terrainScene.children[0], o), // Use TerrainNS
           deviations = getSummary(analysis),
           prop;
       analysis.elevation.drawHistogram(elevationGraph, 10);
@@ -220,16 +279,7 @@ function setupDatGui() {
         }
       }
     };
-    function altitudeProbability(z) {
-      if (z > -80 && z < -50) return THREE.Terrain.EaseInOut((z + 80) / (-50 + 80)) * that.spread * 0.002;
-      else if (z > -50 && z < 20) return that.spread * 0.002;
-      else if (z > 20 && z < 50) return THREE.Terrain.EaseInOut((z - 20) / (50 - 20)) * that.spread * 0.002;
-      return 0;
-    }
-    this.altitudeSpread = function(v, k) {
-      return k % 4 === 0 && Math.random() < altitudeProbability(v.z);
-    };
-    var mesh = buildTree();
+    var mesh = buildTree(); // Declare tree mesh once
     this['Scatter meshes'] = function() {
       var s = parseInt(that.segments, 10),
           spread,
@@ -247,8 +297,8 @@ function setupDatGui() {
       }
       else if (that.scattering === 'PerlinAltitude') {
         spread = (function() {
-          var h = THREE.Terrain.ScatterHelper(THREE.Terrain.Perlin, o, 2, 0.125)(),
-              hs = THREE.Terrain.InEaseOut(that.spread * 0.01);
+          var h = TerrainNS.ScatterHelper(TerrainNS.Perlin, o, 2, 0.125)(), // Use TerrainNS
+              hs = TerrainNS.InEaseOut(that.spread * 0.01); // Use TerrainNS
           return function(v, k) {
             var rv = h[k],
                 place = false;
@@ -256,20 +306,20 @@ function setupDatGui() {
               place = true;
             }
             else if (rv < hs + 0.2) {
-              place = THREE.Terrain.EaseInOut((rv - hs) * 5) * hs < Math.random();
+              place = TerrainNS.EaseInOut((rv - hs) * 5) * hs < Math.random(); // Use TerrainNS
             }
             return Math.random() < altitudeProbability(v.z) * 5 && place;
           };
         })();
       }
       else {
-        spread = THREE.Terrain.InEaseOut(that.spread*0.01) * (that.scattering === 'Worley' ? 1 : 0.5);
-        randomness = THREE.Terrain.ScatterHelper(THREE.Terrain[that.scattering], o, 2, 0.125);
+        spread = TerrainNS.InEaseOut(that.spread*0.01) * (that.scattering === 'Worley' ? 1 : 0.5); // Use TerrainNS
+        randomness = TerrainNS.ScatterHelper(TerrainNS[that.scattering], o, 2, 0.125); // Use TerrainNS
       }
       var geo = terrainScene.children[0].geometry;
       terrainScene.remove(decoScene);
-      decoScene = THREE.Terrain.ScatterMeshes(geo, {
-        mesh: mesh,
+      decoScene = TerrainNS.ScatterMeshes(geo, { // Use TerrainNS
+        mesh: mesh, // Use pre-built tree mesh
         w: s,
         h: Math.round(s * that['width:length ratio']),
         spread: spread,
@@ -279,17 +329,11 @@ function setupDatGui() {
         maxTilt: 0.15707963267948966, //  9deg or  9 / 180 * Math.PI. Trees grow up regardless of slope but we can allow a small variation
       });
       if (decoScene) {
-        // if (that.texture == 'Wireframe') {
-        //   decoScene.children[0].material = decoMat;
-        // }
-        // else if (that.texture == 'Grayscale') {
-        //   decoScene.children[0].material = gray;
-        // }
         terrainScene.add(decoScene);
       }
     };
   }
-  var gui = new dat.GUI();
+  var gui = new GUI(); // Use imported GUI
   var settings = new Settings();
   var heightmapFolder = gui.addFolder('Heightmap');
   heightmapFolder.add(settings, 'heightmap', ['Brownian', 'Cosine', 'CosineLayers', 'DiamondSquare', 'Fault', 'heightmap.png', 'Hill', 'HillIsland', 'influences', 'Particles', 'Perlin', 'PerlinDiamond', 'PerlinLayers', 'Simplex', 'SimplexLayers', 'Value', 'Weierstrass', 'Worley']).onFinishChange(settings.Regenerate);
@@ -298,7 +342,7 @@ function setupDatGui() {
     applySmoothing(val, lastOptions);
     settings['Scatter meshes']();
     if (lastOptions.heightmap) {
-      THREE.Terrain.toHeightmap(terrainScene.children[0].geometry.attributes.position.array, lastOptions);
+      TerrainNS.toHeightmap(terrainScene.children[0].geometry.attributes.position.array, lastOptions); // Use TerrainNS
     }
   });
   heightmapFolder.add(settings, 'segments', 7, 127).step(1).onFinishChange(settings.Regenerate);
@@ -341,19 +385,6 @@ function setupDatGui() {
   });
   gui.add(settings, 'Scatter meshes');
   gui.add(settings, 'Regenerate');
-
-  if (typeof window.Stats !== 'undefined' && /[?&]stats=1\b/g.test(location.search)) {
-    stats = new Stats();
-    stats.setMode(0);
-    stats.domElement.style.position = 'absolute';
-    stats.domElement.style.left = '20px';
-    stats.domElement.style.bottom = '0px';
-    document.body.appendChild(stats.domElement);
-    document.getElementById('code').style.left = '120px';
-  }
-  else {
-    stats = {begin: function() {}, end: function() {}};
-  }
 }
 
 window.addEventListener('resize', function() {
@@ -363,7 +394,7 @@ window.addEventListener('resize', function() {
   fpsCamera.aspect = renderer.domElement.width / renderer.domElement.height;
   fpsCamera.updateProjectionMatrix();
   draw();
-}, false);
+}, { passive: true });
 
 function draw() {
   renderer.render(scene, useFPS ? fpsCamera : camera);
@@ -378,14 +409,14 @@ document.addEventListener('keyup', function(event) {
   if (event.key === 'q' && useFPS) {
     controls.enabled = !controls.enabled;
   }
-});
+}, { passive: true }); // Added passive listener
 
 document.addEventListener('mousemove', function(event) {
   if (!paused) {
     mouseX = event.pageX;
     mouseY = event.pageY;
   }
-}, false);
+}, { passive: true }); // Added passive listener
 
 // Stop animating if the window is out of focus
 function watchFocus() {
@@ -396,19 +427,19 @@ function watchFocus() {
       startAnimating();
       controls.enabled = true;
     }
-  });
+  }, { passive: true });
   window.addEventListener('blur', function() {
     stopAnimating();
     _blurred = true;
     controls.enabled = false;
-  });
+  }, { passive: true });
 }
 
 document.querySelector('#analytics .close').addEventListener('click', function(event) {
   event.preventDefault();
   document.getElementById('analytics').classList.remove('visible');
   document.getElementById('show-analytics').classList.add('visible');
-}, false);
+}, { passive: false });
 
 document.querySelector('#show-analytics').addEventListener('click', function(event) {
   event.preventDefault();
@@ -416,7 +447,7 @@ document.querySelector('#show-analytics').addEventListener('click', function(eve
   var analytics = document.getElementById('analytics');
   analytics.scrollTop = 0;
   analytics.classList.add('visible');
-}, false);
+}, { passive: false });
 
 function __printCameraData() {
   var s = '';
@@ -431,22 +462,22 @@ function __printCameraData() {
 
 function applySmoothing(smoothing, o) {
   var m = terrainScene.children[0];
-  var g = THREE.Terrain.toArray1D(m.geometry.attributes.position.array);
-  if (smoothing === 'Conservative (0.5)') THREE.Terrain.SmoothConservative(g, o, 0.5);
-  if (smoothing === 'Conservative (1)') THREE.Terrain.SmoothConservative(g, o, 1);
-  if (smoothing === 'Conservative (10)') THREE.Terrain.SmoothConservative(g, o, 10);
-  else if (smoothing === 'Gaussian (0.5, 7)') THREE.Terrain.Gaussian(g, o, 0.5, 7);
-  else if (smoothing === 'Gaussian (1.0, 7)') THREE.Terrain.Gaussian(g, o, 1, 7);
-  else if (smoothing === 'Gaussian (1.5, 7)') THREE.Terrain.Gaussian(g, o, 1.5, 7);
-  else if (smoothing === 'Gaussian (1.0, 5)') THREE.Terrain.Gaussian(g, o, 1, 5);
-  else if (smoothing === 'Gaussian (1.0, 11)') THREE.Terrain.Gaussian(g, o, 1, 11);
-  else if (smoothing === 'GaussianBox') THREE.Terrain.GaussianBoxBlur(g, o, 1, 3);
-  else if (smoothing === 'Mean (0)') THREE.Terrain.Smooth(g, o, 0);
-  else if (smoothing === 'Mean (1)') THREE.Terrain.Smooth(g, o, 1);
-  else if (smoothing === 'Mean (8)') THREE.Terrain.Smooth(g, o, 8);
-  else if (smoothing === 'Median') THREE.Terrain.SmoothMedian(g, o);
-  THREE.Terrain.fromArray1D(m.geometry.attributes.position.array, g);
-  THREE.Terrain.Normalize(m, o);
+  var g = TerrainNS.toArray1D(m.geometry.attributes.position.array); // Use TerrainNS
+  if (smoothing === 'Conservative (0.5)') TerrainNS.SmoothConservative(g, o, 0.5); // Use TerrainNS
+  if (smoothing === 'Conservative (1)') TerrainNS.SmoothConservative(g, o, 1); // Use TerrainNS
+  if (smoothing === 'Conservative (10)') TerrainNS.SmoothConservative(g, o, 10); // Use TerrainNS
+  else if (smoothing === 'Gaussian (0.5, 7)') TerrainNS.Gaussian(g, o, 0.5, 7); // Use TerrainNS
+  else if (smoothing === 'Gaussian (1.0, 7)') TerrainNS.Gaussian(g, o, 1, 7); // Use TerrainNS
+  else if (smoothing === 'Gaussian (1.5, 7)') TerrainNS.Gaussian(g, o, 1.5, 7); // Use TerrainNS
+  else if (smoothing === 'Gaussian (1.0, 5)') TerrainNS.Gaussian(g, o, 1, 5); // Use TerrainNS
+  else if (smoothing === 'Gaussian (1.0, 11)') TerrainNS.Gaussian(g, o, 1, 11); // Use TerrainNS
+  else if (smoothing === 'GaussianBox') TerrainNS.GaussianBoxBlur(g, o, 1, 3); // Use TerrainNS
+  else if (smoothing === 'Mean (0)') TerrainNS.Smooth(g, o, 0); // Use TerrainNS
+  else if (smoothing === 'Mean (1)') TerrainNS.Smooth(g, o, 1); // Use TerrainNS
+  else if (smoothing === 'Mean (8)') TerrainNS.Smooth(g, o, 8); // Use TerrainNS
+  else if (smoothing === 'Median') TerrainNS.SmoothMedian(g, o); // Use TerrainNS
+  TerrainNS.fromArray1D(m.geometry.attributes.position.array, g); // Use TerrainNS
+  TerrainNS.Normalize(m, o); // Use TerrainNS
 }
 
 function buildTree() {
@@ -484,41 +515,41 @@ function customInfluences(g, options) {
   }
   clonedOptions.maxHeight = options.maxHeight * 0.67;
   clonedOptions.minHeight = options.minHeight * 0.67;
-  THREE.Terrain.DiamondSquare(g, clonedOptions);
+  TerrainNS.DiamondSquare(g, clonedOptions); // Use TerrainNS
 
   var radius = Math.min(options.xSize, options.ySize) * 0.21,
       height = options.maxHeight * 0.8;
-  THREE.Terrain.Influence(
+  TerrainNS.Influence( // Use TerrainNS
     g, options,
-    THREE.Terrain.Influences.Hill,
+    TerrainNS.Influences.Hill, // Use TerrainNS
     0.25, 0.25,
     radius, height,
     THREE.AdditiveBlending,
-    THREE.Terrain.Linear
+    TerrainNS.Linear // Use TerrainNS
   );
-  THREE.Terrain.Influence(
+  TerrainNS.Influence( // Use TerrainNS
     g, options,
-    THREE.Terrain.Influences.Mesa,
+    TerrainNS.Influences.Mesa, // Use TerrainNS
     0.75, 0.75,
     radius, height,
     THREE.SubtractiveBlending,
-    THREE.Terrain.EaseInStrong
+    TerrainNS.EaseInStrong // Use TerrainNS
   );
-  THREE.Terrain.Influence(
+  TerrainNS.Influence( // Use TerrainNS
     g, options,
-    THREE.Terrain.Influences.Flat,
+    TerrainNS.Influences.Flat, // Use TerrainNS
     0.75, 0.25,
     radius, options.maxHeight,
     THREE.NormalBlending,
-    THREE.Terrain.EaseIn
+    TerrainNS.EaseIn // Use TerrainNS
   );
-  THREE.Terrain.Influence(
+  TerrainNS.Influence( // Use TerrainNS
     g, options,
-    THREE.Terrain.Influences.Volcano,
+    TerrainNS.Influences.Volcano, // Use TerrainNS
     0.25, 0.75,
     radius, options.maxHeight,
     THREE.NormalBlending,
-    THREE.Terrain.EaseInStrong
+    TerrainNS.EaseInStrong // Use TerrainNS
   );
 }
 
@@ -530,7 +561,7 @@ function cleanAnalytic(val) {
     else {
       var str = val.map(function(v) { return Math.round(v); }).join(', ');
       if (str.length > 9) str = val.join(',');
-      if (str.length > 9) str = str.substring(0, str.lastIndexOf(',', 7)) + ',&hellip;';
+      if (str.length > 9) str = str.substring(0, str.lastIndexOf(',', 7)) + ',…';
       return str;
     }
   }
@@ -551,8 +582,6 @@ var moments = {
         stdev: 6.353,
     },
     'elevation.pearsonSkew': {
-        // mean: 0.100,
-        // stdev: 0.566,
         levels: {
             '+high': -1.032,
             '+medium': -0.277,
@@ -566,8 +595,6 @@ var moments = {
         stdev: 3.586,
     },
     'slope.groeneveldMeedenSkew': {
-        // mean: -0.021,
-        // stdev: 0.163,
         levels: {
             '+high': -0.347,
             '+medium': -0.130,
@@ -665,3 +692,6 @@ Number.prototype.round = function(v, a) {
   var m = Math.pow(10, a|0);
   return Math.round(v*m)/m;
 };
+
+// Run setup
+setup();

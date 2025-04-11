@@ -25,11 +25,32 @@ include it on a page client-side without a module loader:
 You then have access to the `THREE.Terrain` object. (Make sure the `three.js`
 library is loaded first.)
 
-The latest releases of this project have been tested with three.js
-[r130](https://github.com/mrdoob/three.js/releases/tag/r130).
+### ES Modules Version
 
-For compatibility with r160 and later, which require the use of ES Modules,
-check out [this fork](https://github.com/oliver408i/THREE.Terrain).
+This project has been updated to support ES Modules for compatibility with modern
+Three.js versions (r160+). You can import it in your ES modules project as:
+
+```javascript
+// Import the main Terrain function and the TerrainNS namespace
+import Terrain, { TerrainNS } from './path/to/src/index.js';
+
+// Use like this
+const terrainScene = Terrain({ /* options */ });
+
+// Utility functions are available in the TerrainNS namespace
+TerrainNS.Smooth(geometry, options);
+```
+
+The latest releases of this project have been tested with three.js
+[r160](https://github.com/mrdoob/three.js/releases/tag/r160) using the ES Modules
+format. The library now properly handles newer Three.js features like:
+- ES Module imports/exports
+- BufferGeometry (no more Geometry support)
+- Modern color space handling (`THREE.SRGBColorSpace`)
+- Current shader syntax
+
+The original non-module version (compatible with r130 and earlier) is still 
+available in the legacy branches.
 
 ### Procedurally Generate a Terrain
 
@@ -38,10 +59,11 @@ In your own script, generate a terrain and add it to your scene:
 ```javascript
 // Generate a terrain
 var xS = 63, yS = 63;
-terrainScene = THREE.Terrain({
-    easing: THREE.Terrain.Linear,
+// With ES modules:
+terrainScene = Terrain({
+    easing: TerrainNS.Linear,
     frequency: 2.5,
-    heightmap: THREE.Terrain.DiamondSquare,
+    heightmap: TerrainNS.DiamondSquare,
     material: new THREE.MeshBasicMaterial({color: 0x5566aa}),
     maxHeight: 100,
     minHeight: -100,
@@ -58,7 +80,7 @@ scene.add(terrainScene);
 // Get the geometry of the terrain across which you want to scatter meshes
 var geo = terrainScene.children[0].geometry;
 // Add randomly distributed foliage
-decoScene = THREE.Terrain.ScatterMeshes(geo, {
+decoScene = TerrainNS.ScatterMeshes(geo, {
     mesh: new THREE.Mesh(new THREE.CylinderGeometry(2, 2, 12, 6)),
     w: xS,
     h: yS,
@@ -67,6 +89,11 @@ decoScene = THREE.Terrain.ScatterMeshes(geo, {
 });
 terrainScene.add(decoScene);
 ```
+
+## Screenshots
+
+![Screenshot 1](https://raw.githubusercontent.com/IceCreamYou/THREE.Terrain/gh-pages/demo/img/screenshot1.jpg)
+![Screenshot 2](https://raw.githubusercontent.com/IceCreamYou/THREE.Terrain/gh-pages/demo/img/screenshot2.jpg)
 
 All parameters are optional and thoroughly documented in the
 [source code](https://github.com/IceCreamYou/THREE.Terrain/blob/gh-pages/build/THREE.Terrain.js).
@@ -86,7 +113,7 @@ Export a terrain to a heightmap image:
 ```javascript
 // Returns a canvas with the heightmap drawn on it.
 // Append to your document body to view; right click to save as a PNG image.
-var canvas = THREE.Terrain.toHeightmap(
+var canvas = TerrainNS.toHeightmap(
     // terrainScene.children[0] is the most detailed version of the terrain mesh
     terrainScene.children[0].geometry.attributes.position.array,
     { xSegments: 63, ySegments: 63 }
@@ -105,7 +132,7 @@ the heightmap yourself.
 
 To import a heightmap, create a terrain as explained above, but pass the loaded
 heightmap image (or a canvas containing a heightmap) to the `heightmap` option
-for the `THREE.Terrain()` function (instead of passing a procedural generation
+for the `Terrain()` function (instead of passing a procedural generation
 function).
 
 ### Dynamic Terrain Materials
@@ -120,7 +147,11 @@ it is the same as a `MeshLambertMaterial`).
 // The function takes an array specifying textures to blend together and how to do so.
 // The `levels` property indicates at what height to blend the texture in and out.
 // The `glsl` property allows specifying a GLSL expression for texture blending.
-var material = THREE.Terrain.generateBlendedMaterial([
+
+// In ES modules:
+import { generateBlendedMaterial } from './path/to/src/materials.js';
+
+var material = generateBlendedMaterial([
     // The first texture is the base; other textures are blended in on top.
     { texture: t1 },
     // Start blending in at height -80; opaque between -35 and 20; blend out by 50
@@ -143,12 +174,15 @@ kinds of smoothing; and more. These features are all fully documented in the
 Additionally, you can create custom methods for generating terrain or affecting
 other processes.
 
+To start the development server:
+
+```bash
+npm start
+```
+
+This will start a Vite development server, allowing you to view and test the demo locally.
+
 There is also a
 [simulation](https://github.com/IceCreamYou/THREE.Terrain/tree/gh-pages/statistics)
 included that calculates statistics about each major procedural terrain
 generation method included in the `THREE.Terrain` library.
-
-## Screenshots
-
-![Screenshot 1](https://raw.githubusercontent.com/IceCreamYou/THREE.Terrain/gh-pages/demo/img/screenshot1.jpg)
-![Screenshot 2](https://raw.githubusercontent.com/IceCreamYou/THREE.Terrain/gh-pages/demo/img/screenshot2.jpg)

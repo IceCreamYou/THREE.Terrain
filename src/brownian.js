@@ -1,11 +1,12 @@
+import * as THREE from 'three';
+import { TerrainNS } from './core.js';
+
 /**
- * Generate random terrain using Brownian motion.
+ * A terrain generation method using Brownian motion.
  *
- * Note that this method takes a particularly long time to run (a few seconds).
- *
- * Parameters are the same as those for {@link THREE.Terrain.DiamondSquare}.
+ * Parameters are the same as those for {@link TerrainNS.Terrain}().
  */
-THREE.Terrain.Brownian = function(g, options) {
+TerrainNS.Brownian = function(g, options) {
     var untouched = [],
         touched = [],
         smallerSideSize = Math.min(options.xSize, options.ySize),
@@ -127,7 +128,7 @@ THREE.Terrain.Brownian = function(g, options) {
             if (!lastAdjust || Math.random() < changeDirectionProbability) {
                 lastAdjust = Math.random();
             }
-            current.z = sum / c + THREE.Terrain.EaseInWeak(lastAdjust) * maxHeightAdjust * 2 - maxHeightAdjust;
+            current.z = sum / c + TerrainNS.EaseInWeak(lastAdjust) * maxHeightAdjust * 2 - maxHeightAdjust;
         }
         touched.push(current);
     }
@@ -137,6 +138,6 @@ THREE.Terrain.Brownian = function(g, options) {
     }
 
     // Erase artifacts.
-    THREE.Terrain.Smooth(g, options);
-    THREE.Terrain.Smooth(g, options);
+    TerrainNS.Smooth(g, options);
+    TerrainNS.Smooth(g, options);
 };

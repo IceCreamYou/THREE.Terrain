@@ -1,3 +1,6 @@
+import * as THREE from 'three';
+import { TerrainNS } from './core.js';
+
 /**
  * Convert an image-based heightmap into vertex-based height data.
  *
@@ -8,7 +11,7 @@
  *   displayed. Valid values are the same as those for the `options` parameter
  *   of {@link THREE.Terrain}().
  */
-THREE.Terrain.fromHeightmap = function(g, options) {
+TerrainNS.fromHeightmap = function(g, options, img) {
     var canvas = document.createElement('canvas'),
         context = canvas.getContext('2d'),
         rows = options.ySegments + 1,
@@ -16,7 +19,15 @@ THREE.Terrain.fromHeightmap = function(g, options) {
         spread = options.maxHeight - options.minHeight;
     canvas.width = cols;
     canvas.height = rows;
-    context.drawImage(options.heightmap, 0, 0, canvas.width, canvas.height);
+
+    // Use the provided image or the one from options
+    var heightmapImg = img || options.heightmap;
+    if (!heightmapImg) {
+        console.error('No heightmap image provided');
+        return;
+    }
+
+    context.drawImage(heightmapImg, 0, 0, canvas.width, canvas.height);
     var data = context.getImageData(0, 0, canvas.width, canvas.height).data;
     for (var row = 0; row < rows; row++) {
         for (var col = 0; col < cols; col++) {
@@ -44,7 +55,7 @@ THREE.Terrain.fromHeightmap = function(g, options) {
  * @return {HTMLCanvasElement}
  *   A canvas with the relevant heightmap painted on it.
  */
-THREE.Terrain.toHeightmap = function(g, options) {
+TerrainNS.toHeightmap = function(g, options) {
     var hasMax = typeof options.maxHeight !== 'undefined',
         hasMin = typeof options.minHeight !== 'undefined',
         max = hasMax ? options.maxHeight : -Infinity,

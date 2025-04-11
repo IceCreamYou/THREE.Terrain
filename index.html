@@ -11,6 +11,10 @@
   <link rel="icon" href="demo/img/favicon.png"/>
 
   <link rel="stylesheet" href="demo/index.css">
+  <!-- Define the __DEFINES__ global for Vite -->
+  <script>
+    window.__DEFINES__ = {};
+  </script>
 </head>
 <body>
   <canvas id="heightmap"></canvas>
@@ -121,17 +125,7 @@
   <div id="code"><a href="https://github.com/IceCreamYou/THREE.Terrain" target="_blank">Fork me on Github</a></div>
   <div id="fpscontrols">W = Forward, S = Back, A = Left, D = Right, R = Up, F = Down, Q = Freeze, Mouse = Look</div>
 
-  <script src="demo/libs/stats.min.js"></script>
-  <script src="demo/libs/dat.gui.min.js"></script>
-  <script src="demo/libs/three.min.js"></script>
-  <script src="demo/libs/FirstPersonControls.js"></script>
-  <script src="build/THREE.Terrain.min.js"></script>
-  <script src="src/worley.js"></script>
-  <script src="src/brownian.js"></script>
-  <script src="src/gaussian.js"></script>
-  <script src="src/weightedBoxBlurGaussian.js"></script>
-  <script src="src/analysis.js"></script>
-  <script src="demo/index.js"></script>
-  <script>setup();</script>
+  <!-- Use standard import for module loading -->
+  <script type="module" src="./demo/index.js"></script>
 </body>
 </html>
