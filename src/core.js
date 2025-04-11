@@ -5,7 +5,7 @@ import * as THREE from 'three';
 const TerrainNS = {};
 
 // Debug to check if TerrainNS is properly initialized
-console.log('TerrainNS initialized in core.js');
+//console.log('TerrainNS initialized in core.js');
 
 /**
  * Returns the smallest power of 2 that is greater than or equal to the given number.
@@ -94,7 +94,7 @@ const Terrain = function(options) {
         after: null,
         easing: TerrainNS.Linear,
         heightmap: function(g, options) {
-            console.log('Using fallback heightmap function');
+            //console.log('Using fallback heightmap function');
             // Simple random heightmap
             for (var i = 0; i < g.length; i++) {
                 g[i] = Math.random() * (options.maxHeight - options.minHeight) + options.minHeight;

@@ -90,7 +90,7 @@ TerrainNS.Worley = function(g, options) {
     var distributionFunc = options.worleyDistribution || 
         TerrainNS.Worley.randomPoints || 
         function(width, height, numPoints) {
-            console.log('Using fallback distribution function');
+            //console.log('Using fallback distribution function');
             numPoints = numPoints || Math.floor(Math.sqrt(width * height * 0.025)) || 1;
             var points = new Array(numPoints);
             for (var i = 0; i < numPoints; i++) {

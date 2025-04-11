@@ -3,7 +3,7 @@ import { TerrainNS, ceilPowerOfTwo } from './core.js';
 import { noise } from './noise.js';
 
 // Debug to check if TerrainNS is properly imported
-console.log('TerrainNS in generators.js:', TerrainNS);
+//console.log('TerrainNS in generators.js:', TerrainNS);
 
 /**
  * A utility for generating heightmap functions by additive composition.
@@ -119,8 +119,8 @@ TerrainNS.DiamondSquare = function(g, options) {
     // the number of vertices in either dimension of the plane
     var segments = ceilPowerOfTwo(Math.max(options.xSegments, options.ySegments) + 1);
 
-    console.log('Generating Diamond-Square terrain with segments:', segments);
-    console.log('Height range:', options.minHeight, 'to', options.maxHeight);
+    //('Generating Diamond-Square terrain with segments:', segments);
+    //console.log('Height range:', options.minHeight, 'to', options.maxHeight);
 
     // Initialize heightmap
     var size = segments + 1,
@@ -187,7 +187,7 @@ TerrainNS.DiamondSquare = function(g, options) {
         if (g[i] < minHeight) minHeight = g[i];
         if (g[i] > maxHeight) maxHeight = g[i];
     }
-    console.log('Diamond-Square terrain generated, height range:', minHeight, 'to', maxHeight);
+    //console.log('Diamond-Square terrain generated, height range:', minHeight, 'to', maxHeight);
 
     // TerrainNS.SmoothConservative(g, options);
 };
@@ -411,7 +411,7 @@ TerrainNS.Perlin = function(g, options) {
     var range = (options.maxHeight - options.minHeight) * 0.5,
         divisor = (Math.min(options.xSegments, options.ySegments) + 1) / options.frequency;
 
-    console.log('Generating Perlin noise terrain with range:', range, 'divisor:', divisor);
+    //console.log('Generating Perlin noise terrain with range:', range, 'divisor:', divisor);
 
     for (var i = 0, xl = options.xSegments + 1, yl = options.ySegments + 1; i < xl; i++) {
         for (var j = 0; j < yl; j++) {
@@ -427,7 +427,7 @@ TerrainNS.Perlin = function(g, options) {
         if (g[i] < minHeight) minHeight = g[i];
         if (g[i] > maxHeight) maxHeight = g[i];
     }
-    console.log('Perlin noise terrain generated, height range:', minHeight, 'to', maxHeight);
+    //console.log('Perlin noise terrain generated, height range:', minHeight, 'to', maxHeight);
 };
 
 /**
