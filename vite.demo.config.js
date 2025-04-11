@@ -8,17 +8,21 @@ export default defineConfig({
     topLevelAwait()
   ],
   server: {
-    open: true
+    open: true,
+    fs: {
+      // Allow serving files from demo, src, and node_modules
+      allow: ['demo', 'src', 'node_modules']
+    }
   },
   build: {
     outDir: 'dist/demo',
     rollupOptions: {
       input: {
-        main: 'index.html'
+        main: 'demo/index.html'
       }
     }
   },
   // Specify the entry point
   root: './',
-  publicDir: './',
+  publicDir: 'demo',
 }); 

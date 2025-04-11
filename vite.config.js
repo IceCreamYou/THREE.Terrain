@@ -11,8 +11,8 @@ export default defineConfig({
   server: {
     open: true,
     fs: {
-      // Allow serving files from the project root
-      allow: ['.']
+      // Allow serving files from src, public, demo, and node_modules
+      allow: ['src', 'public', 'demo', 'node_modules']
     }
   },
   build: {
