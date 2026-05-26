@@ -26,9 +26,10 @@ npx serve .
 # open http://localhost:3000/statistics/
 ```
 
-The page loads `three` and the library from `src/` as ES modules. An import map
-in `statistics/index.html` points `three` at unpkg for static hosting without
-Vite; when using `npm start`, Vite resolves `three` from `node_modules`.
+The page loads `three` and the library from `src/` as ES modules. Both pages
+use `vendor/importmap.json` (populated by `npm run vendor` from `node_modules`)
+so static hosting works without a CDN. When using `npm start`, Vite resolves the
+same packages from `node_modules`.
 
 ## Live demo
 

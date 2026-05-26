@@ -147,6 +147,11 @@ npm start
 This starts a Vite development server. Append `?stats=1` to the URL to show a
 frame-time overlay.
 
+Note: `npm install` runs `npm run vendor`, which copies `three`, `dat.gui`, and
+`stats-js` from `node_modules` into `vendor/` for static hosting (GitHub Pages).
+The demo and statistics pages load those copies via `vendor/importmap.json`.
+Vite still resolves the same packages from `node_modules` during development.
+
 To rebuild the library bundles in `dist/`:
 
 ```bash

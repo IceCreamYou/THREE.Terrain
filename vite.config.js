@@ -11,6 +11,7 @@ export default defineConfig({
         resolve(__dirname, 'public'),
         resolve(__dirname, 'demo'),
         resolve(__dirname, 'statistics'),
+        resolve(__dirname, 'vendor'),
         resolve(__dirname, 'node_modules'),
       ]
     }

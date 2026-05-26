@@ -22,7 +22,9 @@
     "scripts": {
         "start": "vite",
         "build": "vite build",
-        "preview": "vite preview"
+        "preview": "vite preview",
+        "vendor": "node scripts/vendor-deps.mjs",
+        "postinstall": "npm run vendor"
     },
     "directories": {
         "lib": "dist",
