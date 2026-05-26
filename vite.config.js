@@ -1,18 +1,18 @@
 import { defineConfig } from 'vite';
-import topLevelAwait from 'vite-plugin-top-level-await';
-import wasm from 'vite-plugin-wasm';
 import { resolve } from 'path';
 
 export default defineConfig({
-  plugins: [
-    wasm(),
-    topLevelAwait()
-  ],
   server: {
     open: true,
     fs: {
-      // Allow serving files from src, public, demo, and node_modules
-      allow: ['src', 'public', 'demo', 'node_modules']
+      allow: [
+        resolve(__dirname),
+        resolve(__dirname, 'src'),
+        resolve(__dirname, 'public'),
+        resolve(__dirname, 'demo'),
+        resolve(__dirname, 'statistics'),
+        resolve(__dirname, 'node_modules'),
+      ]
     }
   },
   build: {
@@ -37,17 +37,14 @@ export default defineConfig({
   },
   optimizeDeps: {
     include: [
-      'three', 
+      'three',
       'three/examples/jsm/controls/FirstPersonControls.js',
       'stats-js',
       'dat.gui'
     ]
   },
-  // Specify the entry point
   root: './',
   publicDir: 'public',
-  
-  // Enable proper resolution of Node modules
   resolve: {
     dedupe: ['three']
   }

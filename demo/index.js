@@ -1,8 +1,7 @@
 import * as THREE from 'three';
 import { FirstPersonControls } from 'three/examples/jsm/controls/FirstPersonControls.js';
 import { GUI } from 'dat.gui';
-import Terrain, { TerrainNS } from '../src/index.js';
-import { generateBlendedMaterial } from '../src/materials.js';
+import Terrain, { TerrainNS, generateBlendedMaterial } from '../src/index.js';
 
 // Global variables (use let)
 let camera, scene, renderer, clock, player, terrainScene, decoScene, lastOptions, controls = {}, fpsCamera, skyDome, skyLight, sand, water; // jscs:ignore requireLineBreakAfterVariableAssignment
@@ -13,22 +12,12 @@ let INV_MAX_FPS = 1 / 100,
     mouseY = 0,
     useFPS = false;
 
-// Define stats globally (using a simple placeholder)
 let stats = {
   begin: function() {},
   end: function() {},
   showPanel: function() {},
   dom: document.createElement('div')
 };
-// // Optional: Add back dynamic Stats.js loading if needed
-// const statsPromise = import('stats-js').then(module => {
-//   const Stats = module.default;
-//   stats = new Stats();
-//   stats.showPanel(0);
-//   document.body.appendChild(stats.dom);
-// }).catch(err => {
-//   console.error("Failed to load Stats.js:", err);
-// });
 
 function animate() {
   stats.begin();
@@ -385,6 +374,21 @@ function setupDatGui() {
   });
   gui.add(settings, 'Scatter meshes');
   gui.add(settings, 'Regenerate');
+
+  if (/[?&]stats=1\b/g.test(location.search)) {
+    import('stats-js').then(function(module) {
+      var Stats = module.default;
+      stats = new Stats();
+      stats.showPanel(0);
+      stats.dom.style.top = 'auto';
+      stats.dom.style.left = '20px';
+      stats.dom.style.bottom = '0px';
+      document.body.appendChild(stats.dom);
+      document.getElementById('code').style.left = '120px';
+    }).catch(function(err) {
+      console.error('Failed to load Stats.js:', err);
+    });
+  }
 }
 
 window.addEventListener('resize', function() {

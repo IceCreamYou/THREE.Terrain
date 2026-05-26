@@ -568,7 +568,7 @@ TerrainNS.SimplexLayers = function(g, options) {
     TerrainNS.Value = function(g, options) {
         // Set the segment length to the smallest power of 2 that is greater
         // than the number of vertices in either dimension of the plane
-        var segments = TerrainNS.ceilPowerOfTwo(Math.max(options.xSegments, options.ySegments) + 1);
+        var segments = ceilPowerOfTwo(Math.max(options.xSegments, options.ySegments) + 1);
 
         // Store the array of white noise outside of the WhiteNoise function to
         // avoid allocating a bunch of unnecessary arrays; we can just

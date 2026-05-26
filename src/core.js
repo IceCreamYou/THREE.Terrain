@@ -4,9 +4,6 @@ import * as THREE from 'three';
 // Use a global variable to ensure it's accessible across modules
 const TerrainNS = {};
 
-// Debug to check if TerrainNS is properly initialized
-//console.log('TerrainNS initialized in core.js');
-
 /**
  * Returns the smallest power of 2 that is greater than or equal to the given number.
  * @param {number} n The number to find the next power of 2 for.
@@ -93,13 +90,7 @@ const Terrain = function(options) {
     var defaultOptions = {
         after: null,
         easing: TerrainNS.Linear,
-        heightmap: function(g, options) {
-            //console.log('Using fallback heightmap function');
-            // Simple random heightmap
-            for (var i = 0; i < g.length; i++) {
-                g[i] = Math.random() * (options.maxHeight - options.minHeight) + options.minHeight;
-            }
-        },
+        heightmap: TerrainNS.DiamondSquare,
         material: null,
         maxHeight: 100,
         minHeight: -100,

@@ -140,4 +140,6 @@ function generateBlendedMaterial(textures, material) {
     return mat;
 }
 
+TerrainNS.generateBlendedMaterial = generateBlendedMaterial;
+
 export { generateBlendedMaterial };

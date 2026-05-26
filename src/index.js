@@ -17,7 +17,7 @@ import './gaussian.js';
 import './weightedBoxBlurGaussian.js';
 import './worley.js';
 
-// Export the Terrain function and TerrainNS namespace
+export { generateBlendedMaterial } from './materials.js';
 export { Terrain as default, TerrainNS };
 
 // For backwards compatibility with the global THREE.Terrain namespace

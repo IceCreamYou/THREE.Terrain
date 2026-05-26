@@ -7,50 +7,21 @@
 
 ## Usage
 
-You can download the script normally, install it with Bower (`bower install
-THREE.Terrain`), or install it with npm (`npm install three.terrain.js`). To
-include it on a page client-side without a module loader:
-
-```html
-<!-- from a direct download or git clone -->
-<script src="build/THREE.Terrain.min.js"></script>
-
-<!-- from Bower -->
-<script src="bower_components/THREE.Terrain/build/THREE.Terrain.min.js"></script>
-
-<!-- from npm -->
-<script src="node_modules/three.terrain.js/build/THREE.Terrain.min.js"></script>
-```
-
-You then have access to the `THREE.Terrain` object. (Make sure the `three.js`
-library is loaded first.)
-
-### ES Modules Version
-
-This project has been updated to support ES Modules for compatibility with modern
-Three.js versions (r160+). You can import it in your ES modules project as:
+Install with npm (`npm install three.terrain.js`) and import as an ES module.
+You also need a compatible version of [three.js](https://www.npmjs.com/package/three)
+(r160 or later) in your project.
 
 ```javascript
-// Import the main Terrain function and the TerrainNS namespace
-import Terrain, { TerrainNS } from './path/to/src/index.js';
-
-// Use like this
-const terrainScene = Terrain({ /* options */ });
-
-// Utility functions are available in the TerrainNS namespace
-TerrainNS.Smooth(geometry, options);
+import * as THREE from 'three';
+import Terrain, { TerrainNS, generateBlendedMaterial } from 'three.terrain.js';
+// Or from a local checkout: import Terrain, { TerrainNS, generateBlendedMaterial } from './src/index.js';
 ```
 
-The latest releases of this project have been tested with three.js
-[r160](https://github.com/mrdoob/three.js/releases/tag/r160) using the ES Modules
-format. The library now properly handles newer Three.js features like:
-- ES Module imports/exports
-- BufferGeometry (no more Geometry support)
-- Modern color space handling (`THREE.SRGBColorSpace`)
-- Current shader syntax
-
-The original non-module version (compatible with r130 and earlier) is still 
-available in the legacy branches.
+- `Terrain` (default export) builds a terrain mesh.
+- `TerrainNS` holds generators, filters, and other helpers (for example
+  `TerrainNS.DiamondSquare`, `TerrainNS.Smooth`, `TerrainNS.ScatterMeshes`).
+- `generateBlendedMaterial` (also available as
+  `TerrainNS.generateBlendedMaterial`) helps texture the terrain.
 
 ### Procedurally Generate a Terrain
 
@@ -59,8 +30,7 @@ In your own script, generate a terrain and add it to your scene:
 ```javascript
 // Generate a terrain
 var xS = 63, yS = 63;
-// With ES modules:
-terrainScene = Terrain({
+var terrainScene = Terrain({
     easing: TerrainNS.Linear,
     frequency: 2.5,
     heightmap: TerrainNS.DiamondSquare,
@@ -80,7 +50,7 @@ scene.add(terrainScene);
 // Get the geometry of the terrain across which you want to scatter meshes
 var geo = terrainScene.children[0].geometry;
 // Add randomly distributed foliage
-decoScene = TerrainNS.ScatterMeshes(geo, {
+var decoScene = TerrainNS.ScatterMeshes(geo, {
     mesh: new THREE.Mesh(new THREE.CylinderGeometry(2, 2, 12, 6)),
     w: xS,
     h: yS,
@@ -90,13 +60,8 @@ decoScene = TerrainNS.ScatterMeshes(geo, {
 terrainScene.add(decoScene);
 ```
 
-## Screenshots
-
-![Screenshot 1](https://raw.githubusercontent.com/IceCreamYou/THREE.Terrain/gh-pages/demo/img/screenshot1.jpg)
-![Screenshot 2](https://raw.githubusercontent.com/IceCreamYou/THREE.Terrain/gh-pages/demo/img/screenshot2.jpg)
-
 All parameters are optional and thoroughly documented in the
-[source code](https://github.com/IceCreamYou/THREE.Terrain/blob/gh-pages/build/THREE.Terrain.js).
+[source code](https://github.com/IceCreamYou/THREE.Terrain/blob/gh-pages/src/).
 You can play around with some of the parameters and see what happens in the
 [demo](https://icecreamyou.github.io/THREE.Terrain/).
 
@@ -147,10 +112,6 @@ it is the same as a `MeshLambertMaterial`).
 // The function takes an array specifying textures to blend together and how to do so.
 // The `levels` property indicates at what height to blend the texture in and out.
 // The `glsl` property allows specifying a GLSL expression for texture blending.
-
-// In ES modules:
-import { generateBlendedMaterial } from './path/to/src/materials.js';
-
 var material = generateBlendedMaterial([
     // The first texture is the base; other textures are blended in on top.
     { texture: t1 },
@@ -170,19 +131,33 @@ Many other utilities are provided, for example for compositing different
 terrain generation methods; creating islands, cliffs, canyons, and plateaus;
 manually influencing the terrain's shape at different locations; different
 kinds of smoothing; and more. These features are all fully documented in the
-[source code](https://github.com/IceCreamYou/THREE.Terrain/blob/gh-pages/build/THREE.Terrain.js).
+[source code](https://github.com/IceCreamYou/THREE.Terrain/tree/gh-pages/src).
 Additionally, you can create custom methods for generating terrain or affecting
 other processes.
 
-To start the development server:
+### Development
+
+To run the demo locally:
 
 ```bash
+npm install
 npm start
 ```
 
-This will start a Vite development server, allowing you to view and test the demo locally.
+This starts a Vite development server. Append `?stats=1` to the URL to show a
+frame-time overlay.
 
-There is also a
-[simulation](https://github.com/IceCreamYou/THREE.Terrain/tree/gh-pages/statistics)
-included that calculates statistics about each major procedural terrain
-generation method included in the `THREE.Terrain` library.
+To rebuild the library bundles in `dist/`:
+
+```bash
+npm run build
+```
+
+There is also a [statistics simulation](statistics/) that compares procedural
+generation methods. Run it with `npm start` and open `/statistics/`, or see
+[statistics/README.md](statistics/README.md).
+
+## Screenshots
+
+![Screenshot 1](https://raw.githubusercontent.com/IceCreamYou/THREE.Terrain/gh-pages/demo/img/screenshot1.jpg)
+![Screenshot 2](https://raw.githubusercontent.com/IceCreamYou/THREE.Terrain/gh-pages/demo/img/screenshot2.jpg)

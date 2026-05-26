@@ -1,18 +1,31 @@
 {
     "name": "three.terrain.js",
-    "version": "2.0.0",
+    "version": "3.0.0",
     "description": "Extends the Three.js web-based 3D graphics framework to support generating random terrains and rendering terrain from predetermined heightmaps.",
     "homepage": "https://github.com/IceCreamYou/THREE.Terrain",
     "bugs": "https://github.com/IceCreamYou/THREE.Terrain/issues",
-    "main": "src/index.js",
     "type": "module",
+    "main": "./dist/three.terrain.umd.cjs",
+    "module": "./dist/three.terrain.js",
+    "exports": {
+        ".": {
+            "import": "./dist/three.terrain.js",
+            "require": "./dist/three.terrain.umd.cjs"
+        }
+    },
+    "files": [
+        "dist",
+        "src",
+        "LICENSE.txt",
+        "README.md"
+    ],
     "scripts": {
         "start": "vite",
-        "build": "node build.js",
+        "build": "vite build",
         "preview": "vite preview"
     },
     "directories": {
-        "lib": "build",
+        "lib": "dist",
         "example": "demo"
     },
     "repository": {
@@ -31,21 +44,13 @@
     "author": "Isaac Sukin (http://www.isaacsukin.com/)",
     "license": "MIT",
     "readmeFilename": "README.md",
+    "peerDependencies": {
+        "three": ">=0.160.0"
+    },
     "devDependencies": {
         "dat.gui": "^0.7.9",
-        "grunt": "^1.4.1",
-        "grunt-contrib-concat": "^1.0.1",
-        "grunt-contrib-jshint": "^2.1.0",
-        "grunt-contrib-uglify": "^5.0.1",
-        "grunt-contrib-watch": "^1.1.0",
-        "grunt-jscs": "^3.0.1",
         "stats-js": "^1.0.1",
-        "three": "^0.175.0",
-        "vite": "^6.2.5",
-        "vite-plugin-top-level-await": "^1.5.0",
-        "vite-plugin-wasm": "^3.4.1"
-    },
-    "dependencies": {
-        "@dimforge/rapier3d": "^0.15.0"
+        "three": "^0.184.0",
+        "vite": "^8.0.14"
     }
 }
