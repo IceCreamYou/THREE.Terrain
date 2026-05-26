@@ -26,10 +26,10 @@ npx serve .
 # open http://localhost:3000/statistics/
 ```
 
-The page loads `three` and the library from `src/` as ES modules. Both pages
-use `vendor/importmap.json` (populated by `npm run vendor` from `node_modules`)
-so static hosting works without a CDN. When using `npm start`, Vite resolves the
-same packages from `node_modules`.
+The page loads `three` and the library from `src/` as ES modules. For static
+hosting, run `npm run vendor` from the repo root (see the main README) so
+`vendor/importmap.json` points at local copies of `three`. When using
+`npm start`, Vite resolves `three` from `node_modules` instead.
 
 ## Live demo
 

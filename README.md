@@ -144,13 +144,9 @@ npm install
 npm start
 ```
 
-This starts a Vite development server. Append `?stats=1` to the URL to show a
+This starts a Vite development server, which resolves `three` and other demo
+dependencies from `node_modules`. Append `?stats=1` to the URL to show a
 frame-time overlay.
-
-Note: `npm install` runs `npm run vendor`, which copies `three`, `dat.gui`, and
-`stats-js` from `node_modules` into `vendor/` for static hosting (GitHub Pages).
-The demo and statistics pages load those copies via `vendor/importmap.json`.
-Vite still resolves the same packages from `node_modules` during development.
 
 To rebuild the library bundles in `dist/`:
 
@@ -161,6 +157,21 @@ npm run build
 There is also a [statistics simulation](statistics/) that compares procedural
 generation methods. Run it with `npm start` and open `/statistics/`, or see
 [statistics/README.md](statistics/README.md).
+
+### Static hosting (GitHub Pages)
+
+The published npm package does not include demo assets. For this repository’s
+demo and statistics pages without Vite (for example GitHub Pages), copy runtime
+dependencies from `node_modules` into `vendor/` and commit the result:
+
+```bash
+npm install
+npm run vendor
+```
+
+That updates `vendor/` and `vendor/importmap.json` so the HTML pages can load
+`three`, `dat.gui`, and `stats-js` locally. Re-run `npm run vendor` after
+bumping those devDependencies.
 
 ## Screenshots
 
