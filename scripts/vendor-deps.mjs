@@ -18,7 +18,7 @@ async function copy(from, to) {
 async function vendorStats() {
   const src = join(nm, 'stats-js', 'src', 'Stats.js');
   let code = await readFile(src, 'utf8');
-  if (!code.includes('export default')) {
+  if (!/export\s+default|Stats\s+as\s+default/.test(code)) {
     code += '\nexport default Stats;\n';
   }
   const out = join(vendor, 'stats-js', 'stats.module.mjs');
@@ -33,6 +33,10 @@ async function main() {
   await copy(
     join(nm, 'three', 'build', 'three.module.js'),
     join(vendor, 'three', 'build', 'three.module.js')
+  );
+  await copy(
+    join(nm, 'three', 'build', 'three.core.js'),
+    join(vendor, 'three', 'build', 'three.core.js')
   );
   await copy(
     join(nm, 'three', 'examples', 'jsm', 'controls', 'FirstPersonControls.js'),

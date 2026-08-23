@@ -27,9 +27,9 @@ npx serve .
 ```
 
 The page loads `three` and the library from `src/` as ES modules. For static
-hosting, run `npm run vendor` from the repo root (see the main README) so
-`vendor/importmap.json` points at local copies of `three`. When using
-`npm start`, Vite resolves `three` from `node_modules` instead.
+hosting, run `npm run vendor` from the repo root (see the main README) so the
+inline import map can load the local copy of `three`. When using `npm start`,
+Vite resolves `three` from `node_modules` instead.
 
 ## Live demo
 

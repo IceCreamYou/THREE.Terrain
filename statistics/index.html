@@ -11,7 +11,14 @@
   <link rel="icon" href="../demo/img/favicon.png"/>
 
   <link rel="stylesheet" href="styles/index.css">
-  <script type="importmap" src="../vendor/importmap.json"></script>
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "../vendor/three/build/three.module.js",
+        "three/": "../vendor/three/"
+      }
+    }
+  </script>
 </head>
 <body>
   <div id="analytics" class="">

@@ -16,7 +16,16 @@
   <script>
     window.__DEFINES__ = {};
   </script>
-  <script type="importmap" src="vendor/importmap.json"></script>
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "./vendor/three/build/three.module.js",
+        "three/": "./vendor/three/",
+        "dat.gui": "./vendor/dat.gui/build/dat.gui.module.js",
+        "stats-js": "./vendor/stats-js/stats.module.mjs"
+      }
+    }
+  </script>
 </head>
 <body>
   <canvas id="heightmap"></canvas>

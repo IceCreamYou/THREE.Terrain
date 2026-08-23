@@ -169,9 +169,9 @@ npm install
 npm run vendor
 ```
 
-That updates `vendor/` and `vendor/importmap.json` so the HTML pages can load
-`three`, `dat.gui`, and `stats-js` locally. Re-run `npm run vendor` after
-bumping those devDependencies.
+The HTML pages use inline import maps to load `three`, `dat.gui`, and `stats-js`
+from those local copies. Re-run `npm run vendor` after bumping those
+devDependencies.
 
 ## Screenshots
 
