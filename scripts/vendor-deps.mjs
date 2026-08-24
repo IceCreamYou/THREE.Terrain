@@ -2,7 +2,7 @@
  * Copy runtime dependencies from node_modules into vendor/ for static
  * hosting (GitHub Pages) without a CDN. Run via: npm run vendor
  */
-import { cp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { cp, mkdir, rm } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -13,17 +13,6 @@ const nm = join(root, 'node_modules');
 async function copy(from, to) {
   await mkdir(dirname(to), { recursive: true });
   await cp(from, to, { recursive: true });
-}
-
-async function vendorStats() {
-  const src = join(nm, 'stats-js', 'src', 'Stats.js');
-  let code = await readFile(src, 'utf8');
-  if (!/export\s+default|Stats\s+as\s+default/.test(code)) {
-    code += '\nexport default Stats;\n';
-  }
-  const out = join(vendor, 'stats-js', 'stats.module.mjs');
-  await mkdir(dirname(out), { recursive: true });
-  await writeFile(out, code);
 }
 
 async function main() {
@@ -50,8 +39,6 @@ async function main() {
     join(nm, 'dat.gui', 'build', 'dat.gui.css'),
     join(vendor, 'dat.gui', 'build', 'dat.gui.css')
   );
-
-  await vendorStats();
 
   console.log('Vendored dependencies into vendor/');
 }

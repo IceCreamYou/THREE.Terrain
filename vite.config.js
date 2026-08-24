@@ -40,7 +40,6 @@ export default defineConfig({
     include: [
       'three',
       'three/examples/jsm/controls/FirstPersonControls.js',
-      'stats-js',
       'dat.gui'
     ]
   },

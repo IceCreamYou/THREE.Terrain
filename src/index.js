@@ -6,6 +6,7 @@ import Terrain, { TerrainNS } from './core.js';
 // Then import all the modules that extend TerrainNS
 import './filters.js';
 import './generators.js';
+import './grass.js';
 import './images.js';
 import './influences.js';
 import './materials.js';
@@ -18,6 +19,7 @@ import './weightedBoxBlurGaussian.js';
 import './worley.js';
 
 export { generateBlendedMaterial } from './materials.js';
+export { createGrassTexture, createGrass, grassPatchNoise, grassTextureWeight, updateGrass, updateGrassLOD, scatterGrass } from './grass.js';
 export { Terrain as default, TerrainNS };
 
 // For backwards compatibility with the global THREE.Terrain namespace

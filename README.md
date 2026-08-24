@@ -13,7 +13,7 @@ You also need a compatible version of [three.js](https://www.npmjs.com/package/t
 
 ```javascript
 import * as THREE from 'three';
-import Terrain, { TerrainNS, generateBlendedMaterial } from 'three.terrain.js';
+import Terrain, { TerrainNS, createGrass, generateBlendedMaterial, grassTextureWeight, updateGrass, updateGrassLOD } from 'three.terrain.js';
 // Or from a local checkout: import Terrain, { TerrainNS, generateBlendedMaterial } from './src/index.js';
 ```
 
@@ -58,6 +58,31 @@ var decoScene = TerrainNS.ScatterMeshes(geo, {
     randomness: Math.random,
 });
 terrainScene.add(decoScene);
+
+// Add dense, instanced grass where the terrain's grass texture is visible.
+var grass = createGrass({
+    bladeCount: 20,
+    height: 9,
+    minimumLight: 1.85,
+    width: 7,
+});
+var grassScene = TerrainNS.ScatterGrass(geo, {
+    instanced: true,
+    mesh: grass,
+    // Match the grass layer's [-80, -35, 20, 50] height blend.
+    spread: function(vertex) {
+        return grassTextureWeight(vertex.z) > 0;
+    },
+    maxTilt: 0,
+    randomRotationAxis: 'z',
+    positionJitter: 2.5,
+    tintRange: { min: 0x6f9147, max: 0xb9c95f },
+});
+terrainScene.add(grassScene);
+
+// In the render loop, update wind and compact distant instances before draw.
+updateGrass(grass, elapsedSeconds);
+updateGrassLOD(grassScene, camera, 1200);
 ```
 
 All parameters are optional and thoroughly documented in the
@@ -134,6 +159,8 @@ kinds of smoothing; and more. These features are all fully documented in the
 [source code](https://github.com/IceCreamYou/THREE.Terrain/tree/gh-pages/src).
 Additionally, you can create custom methods for generating terrain or affecting
 other processes.
+The demo uses [`@dgreenheck/ez-tree`](https://github.com/dgreenheck/ez-tree)
+(MIT licensed) for trees.
 
 ### Development
 
@@ -145,8 +172,7 @@ npm start
 ```
 
 This starts a Vite development server, which resolves `three` and other demo
-dependencies from `node_modules`. Append `?stats=1` to the URL to show a
-frame-time overlay.
+dependencies from `node_modules`.
 
 To rebuild the library bundles in `dist/`:
 
@@ -169,7 +195,7 @@ npm install
 npm run vendor
 ```
 
-The HTML pages use inline import maps to load `three`, `dat.gui`, and `stats-js`
+The HTML pages use inline import maps to load `three` and `dat.gui`
 from those local copies. Re-run `npm run vendor` after bumping those
 devDependencies.
 

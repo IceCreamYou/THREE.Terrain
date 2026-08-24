@@ -1,10 +1,12 @@
 import * as THREE from 'three';
 import { FirstPersonControls } from 'three/examples/jsm/controls/FirstPersonControls.js';
 import { GUI } from 'dat.gui';
-import Terrain, { TerrainNS, generateBlendedMaterial } from '../src/index.js';
+import Terrain, { TerrainNS, createGrass, generateBlendedMaterial, grassPatchNoise, grassTextureWeight, updateGrass, updateGrassLOD } from '../src/index.js';
+import { Tree } from '../vendor/eztree/lib/index.js';
 
 // Global variables (use let)
-let camera, scene, renderer, clock, player, terrainScene, decoScene, lastOptions, controls = {}, fpsCamera, skyDome, skyLight, sand, water; // jscs:ignore requireLineBreakAfterVariableAssignment
+let camera, scene, renderer, clock, player, terrainScene, decoScene, grassScene, grassMesh, lastOptions, controls = {}, fpsCamera, skyDome, skyLight, sand, water; // jscs:ignore requireLineBreakAfterVariableAssignment
+let grassMaxDistance = 1200;
 let INV_MAX_FPS = 1 / 100,
     frameDelta = 0,
     paused = true,
@@ -12,15 +14,7 @@ let INV_MAX_FPS = 1 / 100,
     mouseY = 0,
     useFPS = false;
 
-let stats = {
-  begin: function() {},
-  end: function() {},
-  showPanel: function() {},
-  dom: document.createElement('div')
-};
-
 function animate() {
-  stats.begin();
   draw();
 
   frameDelta += clock.getDelta();
@@ -29,7 +23,6 @@ function animate() {
     frameDelta -= INV_MAX_FPS;
   }
 
-  stats.end();
   if (!paused) {
     requestAnimationFrame(animate);
   }
@@ -118,7 +111,7 @@ function setupWorld() {
   scene.add(light);
   
   // Add warmer ambient light to enhance greens and prevent dark shadows
-  var ambientLight = new THREE.AmbientLight(0x90a355, 0.35);
+  var ambientLight = new THREE.AmbientLight(0xb3a35e, 0.45);
   scene.add(ambientLight);
 }
 
@@ -195,8 +188,23 @@ function setupDatGui() {
     this['width:length ratio'] = 1.0;
     this['Flight mode'] = useFPS;
     this['Light color'] = '#' + skyLight.color.getHexString();
-    this.spread = 60;
+    this.grassEnabled = true;
+    this.grassDensity = 1.35;
+    this.grassHeight = 7;
+    this.grassWidth = 5;
+    this.grassAlphaTest = 0.65;
+    this.grassMinimumLight = 1.85;
+    this.grassLodDistance = 1200;
+    this.grassMaxSlope = 1.35;
+    this.grassPositionJitter = 2.8;
+    this.grassWindSpeed = 1.15;
+    this.grassWindStrength = 3.5;
+    this.grassTintLow = '#6f9147';
+    this.grassTintHigh = '#b9c95f';
+    grassMaxDistance = this.grassLodDistance;
+    this.spread = 58;
     this.scattering = 'PerlinAltitude';
+    this.bushPreset = 'Bush 1';
     this.after = function(vertices, options) {
       if (that.edgeDirection !== 'Normal') {
         (that.edgeType === 'Box' ? TerrainNS.Edges : TerrainNS.RadialEdges)( // Use TerrainNS
@@ -268,7 +276,27 @@ function setupDatGui() {
         }
       }
     };
-    var mesh = buildTree(); // Declare tree mesh once
+    var treeMeshCache = {};
+    function getTreeMesh(preset) {
+      if (!treeMeshCache[preset]) treeMeshCache[preset] = buildTree(undefined, preset);
+      return treeMeshCache[preset];
+    }
+    function rebuildGrassMesh() {
+      grassMesh = createGrass({
+        alphaTest: that.grassAlphaTest,
+        bladeCount: 24,
+        color: 0xffffff,
+        emissive: 0x476327,
+        emissiveIntensity: 0.4,
+        height: that.grassHeight,
+        minimumLight: that.grassMinimumLight,
+        name: 'Dense Grass Patch',
+        width: that.grassWidth,
+        windSpeed: that.grassWindSpeed,
+        windStrength: that.grassWindStrength,
+      });
+    }
+    rebuildGrassMesh();
     this['Scatter meshes'] = function() {
       var s = parseInt(that.segments, 10),
           spread,
@@ -307,19 +335,75 @@ function setupDatGui() {
       }
       var geo = terrainScene.children[0].geometry;
       terrainScene.remove(decoScene);
-      decoScene = TerrainNS.ScatterMeshes(geo, { // Use TerrainNS
-        mesh: mesh, // Use pre-built tree mesh
-        w: s,
-        h: Math.round(s * that['width:length ratio']),
-        spread: spread,
-        smoothSpread: that.scattering === 'Linear' ? 0 : 0.2,
-        randomness: randomness,
-        maxSlope: 0.6283185307179586, // 36deg or 36 / 180 * Math.PI, about the angle of repose of earth
-        maxTilt: 0.15707963267948966, //  9deg or  9 / 180 * Math.PI. Trees grow up regardless of slope but we can allow a small variation
-      });
+      var useWoodlandDistribution = that.scattering === 'PerlinAltitude';
+      var treePresets = ['Oak Medium', 'Ash Medium', 'Aspen Medium'];
+      if (that.bushPreset !== 'None') treePresets.push(that.bushPreset);
+      decoScene = new THREE.Object3D();
+      for (var treeMeshIndex = 0; treeMeshIndex < treePresets.length; treeMeshIndex++) {
+        TerrainNS.ScatterMeshes(geo, { // Use vendored Eztree prototypes
+          scene: decoScene,
+          mesh: getTreeMesh(treePresets[treeMeshIndex]),
+          w: s,
+          h: Math.round(s * that['width:length ratio']),
+          randomDistribution: useWoodlandDistribution,
+          randomDistributionMinDistance: 60,
+          sampleCount: Math.round(s * s * 0.03),
+          spread: useWoodlandDistribution ? function(v) {
+            return v.z > -100 && v.z < 100 && Math.random() < Math.min(1, that.spread / 60);
+          } : spread,
+          smoothSpread: that.scattering === 'Linear' ? 0 : 0.2,
+          randomness: randomness,
+          maxSlope: 0.6283185307179586, // 36deg or 36 / 180 * Math.PI, about the angle of repose of earth
+          maxTilt: 0.15707963267948966, //  9deg or  9 / 180 * Math.PI. Trees grow up regardless of slope but we can allow a small variation
+          sizeVariance: 0.22,
+        });
+      }
       if (decoScene) {
         terrainScene.add(decoScene);
       }
+      terrainScene.remove(grassScene);
+      grassScene = null;
+      grassMaxDistance = that.grassLodDistance;
+      if (that.grassEnabled && that.texture === 'Blended' && blend) {
+        grassScene = TerrainNS.ScatterGrass(geo, {
+          h: Math.round(s * that['width:length ratio']),
+          instanced: true,
+          maxSlope: that.grassMaxSlope,
+          maxTilt: 0,
+          mesh: grassMesh,
+          nonUniformSizeVariance: true,
+          randomDistribution: true,
+          randomDistributionMinDistance: Math.max(0.55, 2.8 - that.grassPositionJitter * 0.7),
+          randomRotationAxis: 'z',
+          sampleCount: Math.round(s * s * 26 * that.grassDensity),
+          // Random distribution already samples inside each face; expose
+          // grassPositionJitter as the minimum-spacing control above.
+          positionJitter: 0,
+          sizeVariance: 0.14,
+          tintRange: {
+            min: that.grassTintLow,
+            max: that.grassTintHigh,
+          },
+          spread: function(v, k) {
+            // Use the same fade curve as the grass texture. This prevents
+            // geometry from appearing on the sand, stone, or snow bands.
+            var coverage = grassTextureWeight(v.z);
+            if (coverage <= 0) return false;
+            // Keep the altitude band, but break it into irregular 2D patches
+            // so grass does not follow continuous contour lines or read as a
+            // green carpet.
+            var patch = grassPatchNoise(v.x, v.y);
+            coverage *= 0.95 + patch * 0.05;
+            return Math.random() < Math.max(0, Math.min(1, coverage));
+          },
+          w: s,
+        });
+        terrainScene.add(grassScene);
+      }
+    };
+    this['Rebuild grass'] = function() {
+      rebuildGrassMesh();
+      that['Scatter meshes']();
     };
   }
   var gui = new GUI(); // Use imported GUI
@@ -342,9 +426,27 @@ function setupDatGui() {
   decoFolder.add(settings, 'texture', ['Blended', 'Grayscale', 'Wireframe']).onFinishChange(settings.Regenerate);
   decoFolder.add(settings, 'scattering', ['Altitude', 'Linear', 'Cosine', 'CosineLayers', 'DiamondSquare', 'Particles', 'Perlin', 'PerlinAltitude', 'Simplex', 'Value', 'Weierstrass', 'Worley']).onFinishChange(settings['Scatter meshes']);
   decoFolder.add(settings, 'spread', 0, 100).step(1).onFinishChange(settings['Scatter meshes']);
+  decoFolder.add(settings, 'bushPreset', ['None', 'Bush 1', 'Bush 2', 'Bush 3']).name('Bush preset').onFinishChange(settings['Scatter meshes']);
   decoFolder.addColor(settings, 'Light color').onChange(function(val) {
     skyLight.color.set(val);
   });
+  var grassFolder = decoFolder.addFolder('Grass');
+  grassFolder.add(settings, 'grassEnabled').name('Enabled').onChange(settings['Scatter meshes']);
+  grassFolder.add(settings, 'grassDensity', 0, 2).step(0.01).name('Density').onFinishChange(settings['Scatter meshes']);
+  grassFolder.add(settings, 'grassHeight', 4, 24).step(1).name('Height').onFinishChange(settings['Rebuild grass']);
+  grassFolder.add(settings, 'grassWidth', 4, 32).step(1).name('Width').onFinishChange(settings['Rebuild grass']);
+  grassFolder.add(settings, 'grassAlphaTest', 0.1, 0.95).step(0.01).name('Alpha test').onFinishChange(settings['Rebuild grass']);
+  grassFolder.add(settings, 'grassMinimumLight', 0, 2).step(0.01).name('Min light').onFinishChange(settings['Rebuild grass']);
+  grassFolder.add(settings, 'grassLodDistance', 0, 2000).step(50).name('LOD distance').onChange(function(val) {
+    grassMaxDistance = val;
+  });
+  grassFolder.add(settings, 'grassMaxSlope', 0.1, 1.57).step(0.01).name('Max slope').onFinishChange(settings['Scatter meshes']);
+  grassFolder.add(settings, 'grassPositionJitter', 0, 3).step(0.05).name('Jitter / spacing').onFinishChange(settings['Scatter meshes']);
+  grassFolder.add(settings, 'grassWindSpeed', 0, 3).step(0.05).name('Wind speed').onFinishChange(settings['Rebuild grass']);
+  grassFolder.add(settings, 'grassWindStrength', 0, 12).step(0.1).name('Wind strength').onFinishChange(settings['Rebuild grass']);
+  grassFolder.addColor(settings, 'grassTintLow').name('Tint low').onFinishChange(settings['Scatter meshes']);
+  grassFolder.addColor(settings, 'grassTintHigh').name('Tint high').onFinishChange(settings['Scatter meshes']);
+  grassFolder.open();
   var sizeFolder = gui.addFolder('Size');
   sizeFolder.add(settings, 'size', 1024, 3072).step(256).onFinishChange(settings.Regenerate);
   sizeFolder.add(settings, 'maxHeight', 2, 300).step(2).onFinishChange(settings.Regenerate);
@@ -375,20 +477,6 @@ function setupDatGui() {
   gui.add(settings, 'Scatter meshes');
   gui.add(settings, 'Regenerate');
 
-  if (/[?&]stats=1\b/g.test(location.search)) {
-    import('stats-js').then(function(module) {
-      var Stats = module.default;
-      stats = new Stats();
-      stats.showPanel(0);
-      stats.dom.style.top = 'auto';
-      stats.dom.style.left = '20px';
-      stats.dom.style.bottom = '0px';
-      document.body.appendChild(stats.dom);
-      document.getElementById('code').style.left = '120px';
-    }).catch(function(err) {
-      console.error('Failed to load Stats.js:', err);
-    });
-  }
 }
 
 window.addEventListener('resize', function() {
@@ -401,7 +489,10 @@ window.addEventListener('resize', function() {
 }, { passive: true });
 
 function draw() {
-  renderer.render(scene, useFPS ? fpsCamera : camera);
+  updateGrass(grassMesh, clock.elapsedTime);
+  var activeCamera = useFPS ? fpsCamera : camera;
+  updateGrassLOD(grassScene, activeCamera, grassMaxDistance);
+  renderer.render(scene, activeCamera);
 }
 
 function update(delta) {
@@ -453,17 +544,6 @@ document.querySelector('#show-analytics').addEventListener('click', function(eve
   analytics.classList.add('visible');
 }, { passive: false });
 
-function __printCameraData() {
-  var s = '';
-  s += 'camera.position.x = ' + Math.round(fpsCamera.position.x) + ';\n';
-  s += 'camera.position.y = ' + Math.round(fpsCamera.position.y) + ';\n';
-  s += 'camera.position.z = ' + Math.round(fpsCamera.position.z) + ';\n';
-  s += 'camera.rotation.x = ' + Math.round(fpsCamera.rotation.x * 180 / Math.PI) + ' * Math.PI / 180;\n';
-  s += 'camera.rotation.y = ' + Math.round(fpsCamera.rotation.y * 180 / Math.PI) + ' * Math.PI / 180;\n';
-  s += 'camera.rotation.z = ' + Math.round(fpsCamera.rotation.z * 180 / Math.PI) + ' * Math.PI / 180;\n';
-  console.log(s);
-}
-
 function applySmoothing(smoothing, o) {
   var m = terrainScene.children[0];
   var g = TerrainNS.toArray1D(m.geometry.attributes.position.array); // Use TerrainNS
@@ -484,30 +564,24 @@ function applySmoothing(smoothing, o) {
   TerrainNS.Normalize(m, o); // Use TerrainNS
 }
 
-function buildTree() {
-  var green = new THREE.MeshLambertMaterial({ color: 0x2d4c1e });
-
-  var c0 = new THREE.Mesh(
-    new THREE.CylinderGeometry(2, 2, 12, 6, 1, true),
-    new THREE.MeshLambertMaterial({ color: 0x3d2817 }) // brown
-  );
-  c0.position.setY(6);
-
-  var c1 = new THREE.Mesh(new THREE.CylinderGeometry(0, 10, 14, 8), green);
-  c1.position.setY(18);
-  var c2 = new THREE.Mesh(new THREE.CylinderGeometry(0, 9, 13, 8), green);
-  c2.position.setY(25);
-  var c3 = new THREE.Mesh(new THREE.CylinderGeometry(0, 8, 12, 8), green);
-  c3.position.setY(32);
-
-  var s = new THREE.Object3D();
-  s.add(c0);
-  s.add(c1);
-  s.add(c2);
-  s.add(c3);
-  s.scale.set(5, 1.25, 5);
-
-  return s;
+function buildTree(seed, preset) {
+  var tree = new Tree();
+  tree.loadPreset(preset || 'Oak Medium');
+  tree.options.seed = typeof seed === 'number' ? seed : tree.options.seed;
+  var isBush = /^Bush /.test(preset || '');
+  if (!isBush) {
+    tree.options.leaves.count = 48;
+    tree.options.leaves.size = 2.8;
+    tree.options.leaves.sizeVariance = 0.8;
+    tree.options.leaves.tint = 0xabc06b;
+  }
+  tree.options.bark.textureScale.y = 8;
+  tree.scale.set(0.82, 0.82, 0.82);
+  tree.generate();
+  tree.leavesMesh.material.emissive.set(0x2d471a);
+  tree.leavesMesh.material.emissiveIntensity = 0.28;
+  tree.name = 'Eztree ' + (preset || 'Oak Medium');
+  return tree;
 }
 
 function customInfluences(g, options) {
