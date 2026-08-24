@@ -1,19 +1,19 @@
-import ashSmall from './ash_small.json' assert { type: 'json' };
-import ashMedium from './ash_medium.json' assert { type: 'json' };
-import ashLarge from './ash_large.json' assert { type: 'json' };
-import aspenSmall from './aspen_small.json' assert { type: 'json' };
-import aspenMedium from './aspen_medium.json' assert { type: 'json' };
-import aspenLarge from './aspen_large.json' assert { type: 'json' };
-import bush1 from './bush_1.json' assert { type: 'json' };
-import bush2 from './bush_2.json' assert { type: 'json' };
-import bush3 from './bush_3.json' assert { type: 'json' };
-import oakSmall from './oak_small.json' assert { type: 'json' };
-import oakMedium from './oak_medium.json' assert { type: 'json' };
-import oakLarge from './oak_large.json' assert { type: 'json' };
-import pineSmall from './pine_small.json' assert { type: 'json' };
-import pineMedium from './pine_medium.json' assert { type: 'json' };
-import pineLarge from './pine_large.json' assert { type: 'json' };
-import trellis from './trellis.json' assert { type: 'json' };
+import ashSmall from './ash_small.json' with { type: 'json' };
+import ashMedium from './ash_medium.json' with { type: 'json' };
+import ashLarge from './ash_large.json' with { type: 'json' };
+import aspenSmall from './aspen_small.json' with { type: 'json' };
+import aspenMedium from './aspen_medium.json' with { type: 'json' };
+import aspenLarge from './aspen_large.json' with { type: 'json' };
+import bush1 from './bush_1.json' with { type: 'json' };
+import bush2 from './bush_2.json' with { type: 'json' };
+import bush3 from './bush_3.json' with { type: 'json' };
+import oakSmall from './oak_small.json' with { type: 'json' };
+import oakMedium from './oak_medium.json' with { type: 'json' };
+import oakLarge from './oak_large.json' with { type: 'json' };
+import pineSmall from './pine_small.json' with { type: 'json' };
+import pineMedium from './pine_medium.json' with { type: 'json' };
+import pineLarge from './pine_large.json' with { type: 'json' };
+import trellis from './trellis.json' with { type: 'json' };
 import TreeOptions from '../options.js';
 
 export const TreePreset = {
