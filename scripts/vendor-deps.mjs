@@ -16,7 +16,11 @@ async function copy(from, to) {
 }
 
 async function main() {
-  await rm(vendor, { recursive: true, force: true });
+  // Keep vendored source that is maintained in this repository, such as
+  // Eztree. Only the dependency directories owned by this script are
+  // replaced.
+  await rm(join(vendor, 'three'), { recursive: true, force: true });
+  await rm(join(vendor, 'dat.gui'), { recursive: true, force: true });
   await mkdir(vendor, { recursive: true });
 
   await copy(

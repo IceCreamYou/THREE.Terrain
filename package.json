@@ -23,7 +23,8 @@
         "start": "vite",
         "build": "vite build",
         "preview": "vite preview",
-        "vendor": "node scripts/vendor-deps.mjs"
+        "vendor": "node scripts/vendor-deps.mjs && node scripts/build-eztree.mjs",
+        "build:eztree": "node scripts/build-eztree.mjs"
     },
     "directories": {
         "lib": "dist",

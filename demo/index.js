@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { FirstPersonControls } from 'three/examples/jsm/controls/FirstPersonControls.js';
 import { GUI } from 'dat.gui';
 import Terrain, { TerrainNS, createGrass, generateBlendedMaterial, grassPatchNoise, grassTextureWeight, updateGrass, updateGrassLOD } from '../src/index.js';
-import { Tree } from '../vendor/eztree/lib/index.js';
+import { Tree } from '../vendor/eztree/build/eztree.module.js';
 
 // Global variables (use let)
 let camera, scene, renderer, clock, player, terrainScene, decoScene, grassScene, grassMesh, lastOptions, controls = {}, fpsCamera, skyDome, skyLight, sand, water; // jscs:ignore requireLineBreakAfterVariableAssignment

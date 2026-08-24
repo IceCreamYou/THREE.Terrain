@@ -1,11 +1,11 @@
 import * as THREE from 'three';
-import RNG from './rng.js';
-import { Branch } from './branch.js';
-import { Billboard, TreeType } from './enums.js';
-import TreeOptions from './options.js';
-import { loadPreset } from './presets/index.js';
-import { getBarkTexture, getLeafTexture } from './textures.js';
-import { Trellis } from './trellis.js';
+import RNG from './rng';
+import { Branch } from './branch';
+import { Billboard, TreeType } from './enums';
+import TreeOptions from './options';
+import { loadPreset } from './presets/index';
+import { getBarkTexture, getLeafTexture } from './textures';
+import { Trellis } from './trellis';
 
 export class Tree extends THREE.Group {
   /**
