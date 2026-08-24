@@ -1,4 +1,4 @@
-import { BarkType, Billboard, LeafType, TreeType } from './enums';
+import { BarkType, Billboard, LeafType, TreeType } from './enums.js';
 
 export default class TreeOptions {
   constructor() {

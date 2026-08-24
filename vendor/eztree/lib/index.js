@@ -1,4 +1,4 @@
-export { Tree } from './tree';
-export { Trellis } from './trellis';
-export { TreePreset } from './presets/index';
-export { BarkType, Billboard, LeafType, TreeType } from './enums';
+export { Tree } from './tree.js';
+export { Trellis } from './trellis.js';
+export { TreePreset } from './presets/index.js';
+export { BarkType, Billboard, LeafType, TreeType } from './enums.js';
