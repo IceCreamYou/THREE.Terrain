@@ -55,6 +55,9 @@ function ceilPowerOfTwo(n) {
  *     `THREE.Terrain.DiamondSquare`.
  *   - `material`: a THREE.Material instance used to display the terrain.
  *     Defaults to `new THREE.MeshBasicMaterial({color: 0xee6633})`.
+ *   - `random`: An optional function returning values from 0 to 1. Terrain
+ *     generators use it instead of `Math.random` when reproducible output is
+ *     required; the native source remains the default.
  *   - `maxHeight`: the highest point, in Three.js units, that a peak should
  *     reach. Defaults to 100. Setting to `undefined`, `null`, or `Infinity`
  *     removes the cap, but this is generally not recommended because many

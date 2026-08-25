@@ -23,6 +23,7 @@
         "start": "vite",
         "build": "vite build",
         "preview": "vite preview",
+        "screenshots": "node scripts/capture-readme-screenshots.mjs",
         "vendor": "node scripts/vendor-deps.mjs && node scripts/build-eztree.mjs",
         "build:eztree": "node scripts/build-eztree.mjs"
     },
@@ -51,6 +52,7 @@
     },
     "devDependencies": {
         "dat.gui": "^0.7.9",
+        "playwright": "^1.62.1",
         "three": "^0.184.0",
         "vite": "^8.0.14"
     }

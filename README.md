@@ -59,24 +59,26 @@ var decoScene = TerrainNS.ScatterMeshes(geo, {
 });
 terrainScene.add(decoScene);
 
-// Add dense, instanced grass where the terrain's grass texture is visible.
+// Optional:
+// Add dense, instanced grass
 var grass = createGrass({
     bladeCount: 20,
     height: 9,
-    minimumLight: 1.85,
+    minimumLight: 0.58,
     width: 7,
 });
 var grassScene = TerrainNS.ScatterGrass(geo, {
     instanced: true,
     mesh: grass,
-    // Match the grass layer's [-80, -35, 20, 50] height blend.
+    // Use this to match where your grass layer is displayed if you use
+    // generateBlendedMaterial (described below)
     spread: function(vertex) {
         return grassTextureWeight(vertex.z) > 0;
     },
     maxTilt: 0,
-    randomRotationAxis: 'z',
+    randomRotationAxis: 'y',
     positionJitter: 2.5,
-    tintRange: { min: 0x6f9147, max: 0xb9c95f },
+    tintRange: { min: 0x496b34, max: 0x78934a },
 });
 terrainScene.add(grassScene);
 
@@ -201,5 +203,5 @@ devDependencies.
 
 ## Screenshots
 
-![Screenshot 1](https://raw.githubusercontent.com/IceCreamYou/THREE.Terrain/gh-pages/demo/img/screenshot1.jpg)
-![Screenshot 2](https://raw.githubusercontent.com/IceCreamYou/THREE.Terrain/gh-pages/demo/img/screenshot2.jpg)
+![Terrain analytics, decoration controls, grass meshes, and a beach shoreline](https://raw.githubusercontent.com/IceCreamYou/THREE.Terrain/gh-pages/demo/img/screenshot1.jpg)
+![HUD-free beach terrain showing grass meshes and blended material layers](https://raw.githubusercontent.com/IceCreamYou/THREE.Terrain/gh-pages/demo/img/screenshot2.jpg)

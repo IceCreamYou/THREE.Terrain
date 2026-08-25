@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { TerrainNS, ceilPowerOfTwo } from './core.js';
 import { noise } from './noise.js';
+import { getRandom } from './random.js';
 
 /**
  * A utility for generating heightmap functions by additive composition.
@@ -75,9 +76,10 @@ TerrainNS.Curve = function(g, options, curve) {
  * Parameters are the same as those for {@link TerrainNS.DiamondSquare}.
  */
 TerrainNS.Cosine = function(g, options) {
-    var amplitude = (options.maxHeight - options.minHeight) * 0.5,
+    var random = getRandom(options),
+        amplitude = (options.maxHeight - options.minHeight) * 0.5,
         frequencyScalar = options.frequency * Math.PI / (Math.min(options.xSegments, options.ySegments) + 1),
-        phase = Math.random() * Math.PI * 2;
+        phase = random() * Math.PI * 2;
     for (var i = 0, xl = options.xSegments + 1; i < xl; i++) {
         for (var j = 0, yl = options.ySegments + 1; j < yl; j++) {
             g[j * xl + i] += amplitude * (Math.cos(i * frequencyScalar + phase) + Math.cos(j * frequencyScalar + phase));
@@ -112,6 +114,7 @@ TerrainNS.CosineLayers = function(g, options) {
  *   of {@link TerrainNS}().
  */
 TerrainNS.DiamondSquare = function(g, options) {
+    var random = getRandom(options);
     // Set the segment length to the smallest power of 2 that is greater than
     // the number of vertices in either dimension of the plane
     var segments = ceilPowerOfTwo(Math.max(options.xSegments, options.ySegments) + 1);
@@ -141,7 +144,7 @@ TerrainNS.DiamondSquare = function(g, options) {
         // square
         for (x = 0; x < segments; x += whole) {
             for (y = 0; y < segments; y += whole) {
-                d = Math.random() * smoothing * 2 - smoothing;
+                d = random() * smoothing * 2 - smoothing;
                 avg = heightmap[x][y] +            // top left
                       heightmap[x+whole][y] +      // top right
                       heightmap[x][y+whole] +      // bottom left
@@ -153,7 +156,7 @@ TerrainNS.DiamondSquare = function(g, options) {
         // diamond
         for (x = 0; x < segments; x += half) {
             for (y = (x+half) % l; y < segments; y += l) {
-                d = Math.random() * smoothing * 2 - smoothing;
+                d = random() * smoothing * 2 - smoothing;
                 avg = heightmap[(x-half+size)%size][y] + // middle left
                       heightmap[(x+half)%size][y] +      // middle right
                       heightmap[x][(y+half)%size] +      // middle top
@@ -188,16 +191,17 @@ TerrainNS.DiamondSquare = function(g, options) {
  * Parameters are the same as those for {@link TerrainNS.DiamondSquare}.
  */
 TerrainNS.Fault = function(g, options) {
-    var d = Math.sqrt(options.xSegments*options.xSegments + options.ySegments*options.ySegments),
+    var random = getRandom(options),
+        d = Math.sqrt(options.xSegments*options.xSegments + options.ySegments*options.ySegments),
         iterations = d * options.frequency,
         range = (options.maxHeight - options.minHeight) * 0.5,
         displacement = range / iterations,
         smoothDistance = Math.min(options.xSize / options.xSegments, options.ySize / options.ySegments) * options.frequency;
     for (var k = 0; k < iterations; k++) {
-        var v = Math.random(),
+        var v = random(),
             a = Math.sin(v * Math.PI * 2),
             b = Math.cos(v * Math.PI * 2),
-            c = Math.random() * d - d*0.5;
+            c = random() * d - d*0.5;
         for (var i = 0, xl = options.xSegments + 1; i < xl; i++) {
             for (var j = 0, yl = options.ySegments + 1; j < yl; j++) {
                 var distance = a*i + b*j - c;
@@ -247,7 +251,8 @@ TerrainNS.Fault = function(g, options) {
  *   small hills are raised thereby affecting the overall shape of the terrain.
  */
 TerrainNS.Hill = function(g, options, feature, shape) {
-    var frequency = options.frequency * 2,
+    var random = getRandom(options),
+        frequency = options.frequency * 2,
         numFeatures = frequency * frequency * 10,
         heightRange = options.maxHeight - options.minHeight,
         minHeight = heightRange / (frequency * frequency),
@@ -259,13 +264,13 @@ TerrainNS.Hill = function(g, options, feature, shape) {
 
     var coords = { x: 0, y: 0 };
     for (var i = 0; i < numFeatures; i++) {
-        var radius = Math.random() * (maxRadius - minRadius) + minRadius,
-            height = Math.random() * (maxHeight - minHeight) + minHeight;
+        var radius = random() * (maxRadius - minRadius) + minRadius,
+            height = random() * (maxHeight - minHeight) + minHeight;
         var min = 0 - radius,
             maxX = options.xSize + radius,
             maxY = options.ySize + radius;
-        coords.x = Math.random();
-        coords.y = Math.random();
+        coords.x = random();
+        coords.y = random();
         if (typeof shape === 'function') shape(coords);
         TerrainNS.Influence(
             g, options,
@@ -302,13 +307,24 @@ TerrainNS.Hill = function(g, options, feature, shape) {
  *   purpose.
  */
 TerrainNS.HillIsland = (function() {
-    var island = function(coords) {
-        var theta = Math.random() * Math.PI * 2;
+    /**
+     * Bias a pair of normalized coordinates toward a random island sector.
+     *
+     * @param {Object} coords
+     *   Coordinates to modify in place.
+     * @param {Function} random
+     *   Random-number source for the sector angle.
+     */
+    var island = function(coords, random) {
+        var theta = random() * Math.PI * 2;
         coords.x = 0.5 + Math.cos(theta) * coords.x * 0.4;
         coords.y = 0.5 + Math.sin(theta) * coords.y * 0.4;
     };
     return function(g, options, feature) {
-        TerrainNS.Hill(g, options, feature, island);
+        var random = getRandom(options);
+        TerrainNS.Hill(g, options, feature, function(coords) {
+            island(coords, random);
+        });
     };
 })();
 
@@ -316,11 +332,11 @@ TerrainNS.HillIsland = (function() {
     /**
      * Deposit a particle at a vertex.
      */
-    function deposit(g, i, j, xl, displacement) {
+    function deposit(g, i, j, xl, displacement, random) {
         var currentKey = j * xl + i;
         // Pick a random neighbor.
         for (var k = 0; k < 3; k++) {
-            var r = Math.floor(Math.random() * 8);
+            var r = Math.floor(random() * 8);
             switch (r) {
                 case 0: i++; break;
                 case 1: i--; break;
@@ -335,12 +351,12 @@ TerrainNS.HillIsland = (function() {
             // If the neighbor is lower, move the particle to that neighbor and re-evaluate.
             if (typeof g[neighborKey] !== 'undefined') {
                 if (g[neighborKey] < g[currentKey]) {
-                    deposit(g, i, j, xl, displacement);
+                    deposit(g, i, j, xl, displacement, random);
                     return;
                 }
             }
             // Deposit some particles on the edge.
-            else if (Math.random() < 0.2) {
+            else if (random() < 0.2) {
                 g[currentKey] += displacement;
                 return;
             }
@@ -364,23 +380,24 @@ TerrainNS.HillIsland = (function() {
      * Parameters are the same as those for {@link TerrainNS.DiamondSquare}.
      */
     TerrainNS.Particles = function(g, options) {
-        var iterations = Math.sqrt(options.xSegments*options.xSegments + options.ySegments*options.ySegments) * options.frequency * 300,
+        var random = getRandom(options),
+            iterations = Math.sqrt(options.xSegments*options.xSegments + options.ySegments*options.ySegments) * options.frequency * 300,
             xl = options.xSegments + 1,
             displacement = (options.maxHeight - options.minHeight) / iterations * 1000,
-            i = Math.floor(Math.random() * options.xSegments),
-            j = Math.floor(Math.random() * options.ySegments),
-            xDeviation = Math.random() * 0.2 - 0.1,
-            yDeviation = Math.random() * 0.2 - 0.1;
+            i = Math.floor(random() * options.xSegments),
+            j = Math.floor(random() * options.ySegments),
+            xDeviation = random() * 0.2 - 0.1,
+            yDeviation = random() * 0.2 - 0.1;
         for (var k = 0; k < iterations; k++) {
-            deposit(g, i, j, xl, displacement);
-            var d = Math.random() * Math.PI * 2;
+            deposit(g, i, j, xl, displacement, random);
+            var d = random() * Math.PI * 2;
             if (k % 1000 === 0) {
-                xDeviation = Math.random() * 0.2 - 0.1;
-                yDeviation = Math.random() * 0.2 - 0.1;
+                xDeviation = random() * 0.2 - 0.1;
+                yDeviation = random() * 0.2 - 0.1;
             }
             if (k % 100 === 0) {
-                i = Math.floor(options.xSegments*(0.5+xDeviation) + Math.cos(d) * Math.random() * options.xSegments*(0.5-Math.abs(xDeviation)));
-                j = Math.floor(options.ySegments*(0.5+yDeviation) + Math.sin(d) * Math.random() * options.ySegments*(0.5-Math.abs(yDeviation)));
+                i = Math.floor(options.xSegments*(0.5+xDeviation) + Math.cos(d) * random() * options.xSegments*(0.5-Math.abs(xDeviation)));
+                j = Math.floor(options.ySegments*(0.5+yDeviation) + Math.sin(d) * random() * options.ySegments*(0.5-Math.abs(yDeviation)));
             }
         }
         // TerrainNS.Smooth(g, options, 3);
@@ -393,7 +410,7 @@ TerrainNS.HillIsland = (function() {
  * Parameters are the same as those for {@link TerrainNS.DiamondSquare}.
  */
 TerrainNS.Perlin = function(g, options) {
-    noise.seed(Math.random());
+    noise.seed(getRandom(options)());
     var range = (options.maxHeight - options.minHeight) * 0.5,
         divisor = (Math.min(options.xSegments, options.ySegments) + 1) / options.frequency;
 
@@ -443,7 +460,7 @@ TerrainNS.PerlinLayers = function(g, options) {
  * for an interesting comparison where the generation happens in GLSL.
  */
 TerrainNS.Simplex = function(g, options) {
-    noise.seed(Math.random());
+    noise.seed(getRandom(options)());
     var range = (options.maxHeight - options.minHeight) * 0.5,
         divisor = (Math.min(options.xSegments, options.ySegments) + 1) * 2 / options.frequency;
     for (var i = 0, xl = options.xSegments + 1; i < xl; i++) {
@@ -479,7 +496,7 @@ TerrainNS.SimplexLayers = function(g, options) {
      * @param {Number} range The altitude of the noise.
      * @param {Number[]} data The target heightmap.
      */
-    function WhiteNoise(g, options, scale, segments, range, data) {
+    function WhiteNoise(g, options, scale, segments, range, data, random) {
         if (scale > segments) return;
         var i = 0,
             j = 0,
@@ -493,7 +510,7 @@ TerrainNS.SimplexLayers = function(g, options) {
         for (i = 0; i <= xl; i += inc) {
             for (j = 0; j <= yl; j += inc) {
                 var k = j * xl + i;
-                data[k] = Math.random() * range;
+                data[k] = random() * range;
                 if (lastX < 0 && lastY < 0) continue;
                 // jscs:disable disallowSpacesInsideBrackets
                 /* c b *
@@ -543,6 +560,7 @@ TerrainNS.SimplexLayers = function(g, options) {
      * Parameters are the same as those for {@link TerrainNS.DiamondSquare}.
      */
     TerrainNS.Value = function(g, options) {
+        var random = getRandom(options);
         // Set the segment length to the smallest power of 2 that is greater
         // than the number of vertices in either dimension of the plane
         var segments = ceilPowerOfTwo(Math.max(options.xSegments, options.ySegments) + 1);
@@ -555,7 +573,7 @@ TerrainNS.SimplexLayers = function(g, options) {
         // Layer white noise at different resolutions.
         var range = options.maxHeight - options.minHeight;
         for (var i = 2; i < 7; i++) {
-            WhiteNoise(g, options, Math.pow(2, i), segments, range * Math.pow(2, 2.4-i*1.2), data);
+            WhiteNoise(g, options, Math.pow(2, i), segments, range * Math.pow(2, 2.4-i*1.2), data, random);
         }
 
         // White noise creates some weird artifacts; fix them.
@@ -578,17 +596,18 @@ TerrainNS.SimplexLayers = function(g, options) {
  * Parameters are the same as those for {@link TerrainNS.DiamondSquare}.
  */
 TerrainNS.Weierstrass = function(g, options) {
-    var range = (options.maxHeight - options.minHeight) * 0.5,
-        dir1 = Math.random() < 0.5 ? 1 : -1,
-        dir2 = Math.random() < 0.5 ? 1 : -1,
-        r11  =  0.5   + Math.random() * 1.0,
-        r12  =  0.5   + Math.random() * 1.0,
-        r13  =  0.025 + Math.random() * 0.10,
-        r14  = -1.0   + Math.random() * 2.0,
-        r21  =  0.5   + Math.random() * 1.0,
-        r22  =  0.5   + Math.random() * 1.0,
-        r23  =  0.025 + Math.random() * 0.10,
-        r24  = -1.0   + Math.random() * 2.0;
+    var random = getRandom(options),
+        range = (options.maxHeight - options.minHeight) * 0.5,
+        dir1 = random() < 0.5 ? 1 : -1,
+        dir2 = random() < 0.5 ? 1 : -1,
+        r11  =  0.5   + random() * 1.0,
+        r12  =  0.5   + random() * 1.0,
+        r13  =  0.025 + random() * 0.10,
+        r14  = -1.0   + random() * 2.0,
+        r21  =  0.5   + random() * 1.0,
+        r22  =  0.5   + random() * 1.0,
+        r23  =  0.025 + random() * 0.10,
+        r24  = -1.0   + random() * 2.0;
     for (var i = 0, xl = options.xSegments + 1; i < xl; i++) {
         for (var j = 0, yl = options.ySegments + 1; j < yl; j++) {
             var sum = 0;

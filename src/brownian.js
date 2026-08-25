@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { TerrainNS } from './core.js';
+import { getRandom } from './random.js';
 
 /**
  * A terrain generation method using Brownian motion.
@@ -7,15 +8,16 @@ import { TerrainNS } from './core.js';
  * Parameters are the same as those for {@link TerrainNS.Terrain}().
  */
 TerrainNS.Brownian = function(g, options) {
-    var untouched = [],
+    var random = getRandom(options),
+        untouched = [],
         touched = [],
         smallerSideSize = Math.min(options.xSize, options.ySize),
         changeDirectionProbability = Math.sqrt(smallerSideSize) / smallerSideSize,
         maxHeightAdjust = Math.sqrt(options.maxHeight - options.minHeight),
         xl = options.xSegments + 1,
         yl = options.ySegments + 1,
-        i = Math.floor(Math.random() * options.xSegments),
-        j = Math.floor(Math.random() * options.ySegments),
+        i = Math.floor(random() * options.xSegments),
+        j = Math.floor(random() * options.ySegments),
         x = i,
         y = j,
         numVertices = g.length,
@@ -23,7 +25,7 @@ TerrainNS.Brownian = function(g, options) {
             return { z: z };
         }),
         current = vertices[j * xl + i],
-        randomDirection = Math.random() * Math.PI * 2,
+        randomDirection = random() * Math.PI * 2,
         addX = Math.cos(randomDirection),
         addY = Math.sin(randomDirection),
         n,
@@ -35,7 +37,7 @@ TerrainNS.Brownian = function(g, options) {
         index;
 
     // Initialize the first vertex.
-    current.z = Math.random() * (options.maxHeight - options.minHeight) + options.minHeight;
+    current.z = random() * (options.maxHeight - options.minHeight) + options.minHeight;
     touched.push(current);
 
     // Walk through all vertices until they've all been adjusted.
@@ -51,9 +53,9 @@ TerrainNS.Brownian = function(g, options) {
         }
 
         // Occasionally, pick a random untouched point instead of continuing.
-        if (Math.random() < changeDirectionProbability) {
-            current = untouched.splice(Math.floor(Math.random() * untouched.length), 1)[0];
-            randomDirection = Math.random() * Math.PI * 2;
+        if (random() < changeDirectionProbability) {
+            current = untouched.splice(Math.floor(random() * untouched.length), 1)[0];
+            randomDirection = random() * Math.PI * 2;
             addX = Math.cos(randomDirection);
             addY = Math.sin(randomDirection);
             index = vertices.indexOf(current);
@@ -75,7 +77,7 @@ TerrainNS.Brownian = function(g, options) {
 
             // If we hit a touched vertex, look in different directions to try to find an untouched one.
             for (var k = 0; i >= 0 && j >= 0 && i < xl && j < yl && touched.indexOf(vertices[j * xl + i]) !== -1 && k < 9; k++) {
-                randomDirection = Math.random() * Math.PI * 2;
+                randomDirection = random() * Math.PI * 2;
                 addX = Math.cos(randomDirection);
                 addY = Math.sin(randomDirection);
                 while (Math.round(u) === i && Math.round(v) === j) {
@@ -100,8 +102,8 @@ TerrainNS.Brownian = function(g, options) {
             // If we couldn't find an untouched vertex near the current point,
             // pick a random untouched vertex instead.
             else {
-                current = untouched.splice(Math.floor(Math.random() * untouched.length), 1)[0];
-                randomDirection = Math.random() * Math.PI * 2;
+                current = untouched.splice(Math.floor(random() * untouched.length), 1)[0];
+                randomDirection = random() * Math.PI * 2;
                 addX = Math.cos(randomDirection);
                 addY = Math.sin(randomDirection);
                 index = vertices.indexOf(current);
@@ -125,8 +127,8 @@ TerrainNS.Brownian = function(g, options) {
             }
         }
         if (c) {
-            if (!lastAdjust || Math.random() < changeDirectionProbability) {
-                lastAdjust = Math.random();
+            if (!lastAdjust || random() < changeDirectionProbability) {
+                lastAdjust = random();
             }
             current.z = sum / c + TerrainNS.EaseInWeak(lastAdjust) * maxHeightAdjust * 2 - maxHeightAdjust;
         }

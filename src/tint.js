@@ -20,6 +20,32 @@ function getTintRange(tintRange) {
 }
 
 /**
+ * Preserve custom shader callbacks when cloning a material for instance tinting.
+ *
+ * Three.js copies the standard material properties and `userData`, but its
+ * material `copy` method intentionally does not copy `onBeforeCompile` or
+ * `customProgramCacheKey`. Grass uses `onBeforeCompile` for wind displacement
+ * and its minimum-light floor, so dropping either callback would silently turn
+ * a tinted grass instance back into the unmodified Lambert shader.
+ *
+ * @param {THREE.Material} source
+ *   Material whose custom shader callbacks should be retained.
+ * @param {THREE.Material} clone
+ *   Material clone receiving the callbacks.
+ * @return {THREE.Material}
+ *   The callback-preserving clone.
+ */
+function preserveMaterialShaderHooks(source, clone) {
+    if (typeof source.onBeforeCompile === 'function') {
+        clone.onBeforeCompile = source.onBeforeCompile;
+    }
+    if (typeof source.customProgramCacheKey === 'function') {
+        clone.customProgramCacheKey = source.customProgramCacheKey;
+    }
+    return clone;
+}
+
+/**
  * Clone a material or material array and enable vertex colors on the clone.
  *
  * Instance tinting multiplies the mesh's vertex colors by
@@ -35,13 +61,13 @@ function getTintRange(tintRange) {
 function cloneMaterialWithVertexColors(material) {
     if (Array.isArray(material)) {
         return material.map(function(item) {
-            var clone = item.clone();
+            var clone = preserveMaterialShaderHooks(item, item.clone());
             clone.vertexColors = true;
             clone.needsUpdate = true;
             return clone;
         });
     }
-    var clone = material.clone();
+    var clone = preserveMaterialShaderHooks(material, material.clone());
     clone.vertexColors = true;
     clone.needsUpdate = true;
     return clone;

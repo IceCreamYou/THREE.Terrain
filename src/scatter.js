@@ -1,12 +1,14 @@
 import * as THREE from 'three';
 import { TerrainNS } from './core.js';
 import { cloneGeometryWithVertexColors, cloneMaterialWithVertexColors, getTintRange } from './tint.js';
+import { getRandom } from './random.js';
 
 function setScatterTransform(mesh, vertex1, vertex2, vertex3, faceNormal, up, options) {
+    var random = getRandom(options);
     mesh.position.addVectors(vertex1, vertex2).add(vertex3).divideScalar(3);
     if (options.positionJitter > 0) {
-        var u = Math.random(),
-            v = Math.random();
+        var u = random(),
+            v = random();
         if (u + v > 1) {
             u = 1 - u;
             v = 1 - v;
@@ -33,17 +35,17 @@ function setScatterTransform(mesh, vertex1, vertex2, vertex3, faceNormal, up, op
     }
     mesh.rotation.x += 90 / 180 * Math.PI;
     if (options.randomRotationAxis === 'z') {
-        mesh.rotateZ(Math.random() * 2 * Math.PI);
+        mesh.rotateZ(random() * 2 * Math.PI);
     }
     else {
-        mesh.rotateY(Math.random() * 2 * Math.PI);
+        mesh.rotateY(random() * 2 * Math.PI);
     }
     if (options.sizeVariance) {
-        var variance = Math.random() * options.sizeVariance * 2 - options.sizeVariance;
+        var variance = random() * options.sizeVariance * 2 - options.sizeVariance;
         if (options.nonUniformSizeVariance) {
             mesh.scale.x *= 1 + variance;
-            mesh.scale.y *= 1 + variance * (0.75 + Math.random() * 0.5);
-            mesh.scale.z *= 1 + (Math.random() * options.sizeVariance * 2 - options.sizeVariance);
+            mesh.scale.y *= 1 + variance * (0.75 + random() * 0.5);
+            mesh.scale.z *= 1 + (random() * options.sizeVariance * 2 - options.sizeVariance);
         }
         else {
             mesh.scale.x = mesh.scale.z = 1 + variance;
@@ -54,6 +56,7 @@ function setScatterTransform(mesh, vertex1, vertex2, vertex3, faceNormal, up, op
 }
 
 function createRandomScatterGeometry(geometry, options) {
+    var random = getRandom(options);
     geometry.computeBoundingBox();
     var source = geometry.index ? geometry.toNonIndexed() : geometry,
         sourceArray = source.attributes.position.array,
@@ -74,15 +77,15 @@ function createRandomScatterGeometry(geometry, options) {
         faceNormal = new THREE.Vector3(),
         sample = new THREE.Vector3();
     for (var sampleIndex = 0; sampleIndex < sampleCount; sampleIndex++) {
-        var faceIndex = Math.floor(Math.random() * faceCount),
+        var faceIndex = Math.floor(random() * faceCount),
             offset = faceIndex * 9;
         vertex1.fromArray(sourceArray, offset);
         vertex2.fromArray(sourceArray, offset + 3);
         vertex3.fromArray(sourceArray, offset + 6);
         THREE.Triangle.getNormal(vertex1, vertex2, vertex3, faceNormal);
 
-        var u = Math.random(),
-            v = Math.random();
+        var u = random(),
+            v = random();
         if (u + v > 1) {
             u = 1 - u;
             v = 1 - v;
@@ -96,9 +99,11 @@ function createRandomScatterGeometry(geometry, options) {
         if (typeof options.spread === 'function') {
             if (!options.spread(sample, faceIndex, faceNormal, offset)) continue;
         }
-        else if (typeof options.spread === 'number' && Math.random() >= options.spread) {
+        else if (typeof options.spread === 'number' && random() >= options.spread) {
             continue;
         }
+        if (typeof options.filter === 'function' &&
+            !options.filter(sample, faceNormal, faceIndex, offset)) continue;
 
         if (minimumDistance > 0) {
             var cellX = Math.floor(sample.x / cellSize),
@@ -161,6 +166,11 @@ function createRandomScatterGeometry(geometry, options) {
  *     boolean indicating whether to place a mesh on that face or not. An
  *     example could be `function(v, k) { return v.z > 0 && !(k % 4); }`.
  *     Defaults to 0.025.
+ *   - `filter`: An optional function called after `spread` accepts a sampled
+ *     vertex, face normal, face index, and position-array offset. Returning
+ *     false rejects the placement without changing the spread probability.
+ *     This is useful for keeping several decorations aligned with the same
+ *     material mask.
  *   - `smoothSpread`: If the `spread` option is a number, this affects how
  *     much placement is "eased in." Specifically, if the `randomness` function
  *     returns a value for a face that is within `smoothSpread` percentiles
@@ -174,9 +184,12 @@ function createRandomScatterGeometry(geometry, options) {
  *   - `sizeVariance`: The percent by which instances of the mesh can be scaled
  *     up or down when placed on the terrain.
  *   - `randomRotationAxis`: Selects the local axis used for the random heading
- *     applied after the scatterer's legacy +90deg X correction. Most meshes
- *     use local Y as their up axis. Use `'z'` when the prototype's up axis is
- *     local Z after that correction, as with a vertical blade mesh.
+ *     applied after the scatterer's legacy +90deg X correction. The default
+ *     `'y'` is correct for ordinary Y-up meshes: after the correction, local Y
+ *     maps to the terrain's Z-up axis, so the random rotation changes heading
+ *     without tilting the mesh. `'z'` rotates around a different local axis
+ *     and is only appropriate for a prototype deliberately authored for that
+ *     orientation; it tilts a normal Y-up mesh.
  *   - `positionJitter`: The amount to move each placement from the face
  *     centroid to a random point inside that face. Defaults to 0.
  *   - `instancesPerFace`: The number of copies to place on each accepted
@@ -189,6 +202,8 @@ function createRandomScatterGeometry(geometry, options) {
  *   - `instanced`: If true and `mesh` is a single `THREE.Mesh`, place all
  *     instances in one `THREE.InstancedMesh`. Object3D groups fall back to
  *     individual clones.
+ *   - `random`: A function returning values from 0 to 1 for placement,
+ *     rotation, size variance, and tint choices. Defaults to `Math.random`.
  *   - `tintRange`: Optional `[minColor, maxColor]` or `{min, max}` color range.
  *     When instancing, each instance receives a random tint between the two
  *     colors through `InstancedMesh.instanceColor`.
@@ -225,7 +240,8 @@ TerrainNS.ScatterMeshes = function(geometry, options) {
         spread: 0.025,
         smoothSpread: 0,
         sizeVariance: 0.1,
-        randomness: Math.random,
+        random: Math.random,
+        randomness: null,
         maxSlope: 0.6283185307179586, // 36deg or 36 / 180 * Math.PI, about the angle of repose of earth
         maxTilt: Infinity,
         randomRotationAxis: 'y',
@@ -235,12 +251,15 @@ TerrainNS.ScatterMeshes = function(geometry, options) {
         h: 0,
         instanced: false,
         tintRange: null,
+        filter: null,
     };
     for (var opt in defaultOptions) {
         if (defaultOptions.hasOwnProperty(opt)) {
             options[opt] = typeof options[opt] === 'undefined' ? defaultOptions[opt] : options[opt];
         }
     }
+    if (typeof options.randomness !== 'function') options.randomness = options.random;
+    var random = getRandom(options);
 
     if (options.randomDistribution) {
         geometry = createRandomScatterGeometry(geometry, options);
@@ -270,7 +289,7 @@ TerrainNS.ScatterMeshes = function(geometry, options) {
     }
     if (spreadIsNumber) {
         randomHeightmap = options.randomness();
-        randomness = typeof randomHeightmap === 'number' ? Math.random : function(k) { return randomHeightmap[k]; };
+        randomness = typeof randomHeightmap === 'number' ? random : function(k) { return randomHeightmap[k]; };
     }
 
     if (geometry.index) geometry = geometry.toNonIndexed();
@@ -291,11 +310,15 @@ TerrainNS.ScatterMeshes = function(geometry, options) {
                 // Interpolate rv between spread and spread + smoothSpread,
                 // then multiply that "easing" value by the probability
                 // that a mesh would get placed on a given face.
-                place = TerrainNS.EaseInOut((rv - options.spread) * spreadRange) * options.spread > Math.random();
+                place = TerrainNS.EaseInOut((rv - options.spread) * spreadRange) * options.spread > random();
             }
         }
         else {
             place = options.spread(vertex1, i / 9, faceNormal, i);
+        }
+        if (place && typeof options.filter === 'function' &&
+            !options.filter(vertex1, faceNormal, i / 9, i)) {
+            place = false;
         }
         if (place) {
             // Don't place a mesh if the angle is too steep.
@@ -313,7 +336,7 @@ TerrainNS.ScatterMeshes = function(geometry, options) {
                         position: instanceTransform.position.clone(),
                     };
                     if (tintRange) {
-                        instance.tint = new THREE.Color().lerpColors(tintRange.min, tintRange.max, Math.random());
+                        instance.tint = new THREE.Color().lerpColors(tintRange.min, tintRange.max, random());
                     }
                     instanceData.push(instance);
                 }
@@ -392,6 +415,8 @@ TerrainNS.ScatterMeshes = function(geometry, options) {
  *   The probability that, if a mesh can be placed on a non-skipped face due to
  *   the shape of the heightmap, a mesh actually will be placed there. Helps
  *   thin out placement and make it less regular. Defaults to 0.25.
+ *   If `options.random` is supplied, the same source controls this thinning
+ *   pass and the heightmap generator.
  *
  * @return {Function}
  *   Returns a function that can be passed as the value of the
@@ -402,6 +427,7 @@ TerrainNS.ScatterHelper = function(method, options, skip, threshold) {
     skip = skip || 1;
     threshold = threshold || 0.25;
     options.frequency = options.frequency || 2.5;
+    var random = getRandom(options);
 
     var clonedOptions = {};
     for (var opt in options) {
@@ -417,7 +443,7 @@ TerrainNS.ScatterHelper = function(method, options, skip, threshold) {
     var heightmap = TerrainNS.heightmapArray(method, clonedOptions);
 
     for (var i = 0, l = heightmap.length; i < l; i++) {
-        if (i % skip || Math.random() > threshold) {
+        if (i % skip || random() > threshold) {
             heightmap[i] = 1; // 0 = place, 1 = don't place
         }
     }

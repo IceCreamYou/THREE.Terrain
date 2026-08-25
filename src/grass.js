@@ -140,6 +140,57 @@ function grassTextureWeight(height, levels) {
 }
 
 /**
+ * Calculate the remaining grass visibility after the material's slope layer.
+ *
+ * The demo's final blended-material layer applies stone from 27 degrees to
+ * 45 degrees of slope and leaves no useful grass coverage at the upper end.
+ * Reusing that interval here prevents scattered blades from appearing on
+ * faces where the shader has already replaced the grass texture with stone.
+ *
+ * @param {number} slope
+ *   Face slope in radians from the terrain's +Z up vector.
+ * @param {number[]} [levels]
+ *   Two radians in the order slope-fade start and no-grass limit.
+ * @return {number}
+ *   Slope visibility in the range [0, 1].
+ */
+function grassSlopeWeight(slope, levels) {
+    levels = levels || [0.47123889803846897, 0.7853981633974483];
+    if (typeof slope !== 'number' || !isFinite(slope)) return 1;
+    var fadeStart = Math.min(levels[0], levels[1]),
+        fadeEnd = Math.max(levels[0], levels[1]);
+    if (slope <= fadeStart) return 1;
+    if (slope >= fadeEnd) return 0;
+    var t = (slope - fadeStart) / Math.max(0.0001, fadeEnd - fadeStart),
+        smooth = t * t * (3 - 2 * t);
+    return 1 - smooth;
+}
+
+/**
+ * Calculate the grass coverage left by the complete blended material stack.
+ *
+ * The altitude weight accounts for the grass layer's own four height levels.
+ * The slope weight accounts for the later stone layer, which otherwise makes
+ * altitude-only scatter place grass on steep faces that cannot display it.
+ * Callers can provide custom level arrays when their material uses different
+ * transitions; the defaults match the demo's shader inputs.
+ *
+ * @param {number} height
+ *   Terrain-local height.
+ * @param {number} slope
+ *   Face slope in radians from the terrain's +Z up vector.
+ * @param {number[]} [altitudeLevels]
+ *   Four grass height levels passed to `grassTextureWeight`.
+ * @param {number[]} [slopeLevels]
+ *   Two slope levels passed to `grassSlopeWeight`.
+ * @return {number}
+ *   Grass coverage in the range [0, 1].
+ */
+function grassMaterialWeight(height, slope, altitudeLevels, slopeLevels) {
+    return grassTextureWeight(height, altitudeLevels) * grassSlopeWeight(slope, slopeLevels);
+}
+
+/**
  * Create a transparent atlas containing small clusters of grass blades.
  *
  * The atlas is intentionally generated at runtime so applications can use
@@ -226,7 +277,6 @@ function createGrassBillboardGeometry(width, height) {
         positions = [],
         normals = [],
         uvs = [],
-        tangents = [],
         indices = [],
         angles = [0, Math.PI / 3, 2 * Math.PI / 3],
         corners = [
@@ -242,8 +292,6 @@ function createGrassBillboardGeometry(width, height) {
             sine = Math.sin(angle),
             normalX = sine,
             normalZ = cosine,
-            tangentX = cosine,
-            tangentZ = -sine,
             vertexOffset = positions.length / 3;
         for (var corner = 0; corner < corners.length; corner++) {
             var point = corners[corner],
@@ -251,7 +299,6 @@ function createGrassBillboardGeometry(width, height) {
             positions.push(x * cosine, point[1], -x * sine);
             normals.push(normalX, 0, normalZ);
             uvs.push(point[2], point[3]);
-            tangents.push(tangentX, 0, tangentZ);
         }
         indices.push(
             vertexOffset, vertexOffset + 1, vertexOffset + 2,
@@ -263,7 +310,6 @@ function createGrassBillboardGeometry(width, height) {
     geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
     geometry.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
     geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
-    geometry.setAttribute('grassTangent', new THREE.Float32BufferAttribute(tangents, 3));
     geometry.setIndex(indices);
     geometry.computeBoundingSphere();
     return geometry;
@@ -289,7 +335,6 @@ function createGrassGeometry(width, height, bladeCount) {
     bladeCount = bladeCount || 4;
     var positions = [],
         uvs = [],
-        tangents = [],
         colors = [],
         indices = [],
         levelT = [0, 0.2, 0.45, 0.72, 1],
@@ -335,7 +380,6 @@ function createGrassGeometry(width, height, bladeCount) {
                     rightVertex = [rightX, bladeHeight * t, rightZ];
                 positions.push(leftVertex[0], leftVertex[1], leftVertex[2], rightVertex[0], rightVertex[1], rightVertex[2]);
                 uvs.push(0, t, 1, t);
-                tangents.push(Math.cos(planeAngle), 0, Math.sin(planeAngle), Math.cos(planeAngle), 0, Math.sin(planeAngle));
                 colors.push(red * colorShade, green * colorShade, blue * colorShade, red * colorShade, green * colorShade, blue * colorShade);
             }
             for (var segment = 0; segment < levelT.length - 1; segment++) {
@@ -349,7 +393,6 @@ function createGrassGeometry(width, height, bladeCount) {
     var geometry = new THREE.BufferGeometry();
     geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
     geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
-    geometry.setAttribute('grassTangent', new THREE.Float32BufferAttribute(tangents, 3));
     geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
     geometry.setIndex(indices);
     geometry.computeVertexNormals();
@@ -400,7 +443,7 @@ function createGrassMaterial(options, texture) {
         shader.uniforms.grassMinimumLight = uniforms.minimumLight;
         shader.vertexShader = shader.vertexShader.replace(
             '#include <common>',
-            '#include <common>\nattribute vec3 grassTangent;\nuniform float grassTime;\nuniform vec2 grassWindDirection;\nuniform float grassWindSpeed;\nuniform float grassWindStrength;'
+            '#include <common>\nuniform float grassTime;\nuniform vec2 grassWindDirection;\nuniform float grassWindSpeed;\nuniform float grassWindStrength;'
         );
         shader.vertexShader = shader.vertexShader.replace(
             '#include <begin_vertex>',
@@ -418,7 +461,10 @@ function createGrassMaterial(options, texture) {
             'float grassPhase = dot(vec2(grassPatchX, grassPatchZ), grassWindDirection) * 0.012 + grassTime * grassWindSpeed;\n' +
             'float grassGust = sin(grassPhase) * 0.7 + sin(grassPhase * 0.43 + 1.7) * 0.3;\n' +
             'float grassBend = grassGust * grassWindStrength * grassHeight * grassHeight;\n' +
-            'transformed += grassTangent * grassBend;'
+            // All ribbons share one local horizontal wind vector. Keep the
+            // tuft upright while still allowing the two ribbons to provide
+            // crossed views.
+            'transformed += vec3(grassWindDirection.x, 0.0, grassWindDirection.y) * grassBend;'
         );
         shader.fragmentShader = shader.fragmentShader.replace(
             'uniform float opacity;',
@@ -573,7 +619,9 @@ TerrainNS.createGrassTexture = createGrassTexture;
 TerrainNS.createGrass = createGrass;
 TerrainNS.grassPatchNoise = grassPatchNoise;
 TerrainNS.grassTextureWeight = grassTextureWeight;
+TerrainNS.grassSlopeWeight = grassSlopeWeight;
+TerrainNS.grassMaterialWeight = grassMaterialWeight;
 TerrainNS.updateGrass = updateGrass;
 TerrainNS.ScatterGrass = scatterGrass;
 
-export { createGrassTexture, createGrass, grassPatchNoise, grassTextureWeight, updateGrass, updateGrassLOD, scatterGrass };
+export { createGrassTexture, createGrass, grassPatchNoise, grassTextureWeight, grassSlopeWeight, grassMaterialWeight, updateGrass, updateGrassLOD, scatterGrass };

@@ -19,7 +19,7 @@ import './weightedBoxBlurGaussian.js';
 import './worley.js';
 
 export { generateBlendedMaterial } from './materials.js';
-export { createGrassTexture, createGrass, grassPatchNoise, grassTextureWeight, updateGrass, updateGrassLOD, scatterGrass } from './grass.js';
+export { createGrassTexture, createGrass, grassPatchNoise, grassTextureWeight, grassSlopeWeight, grassMaterialWeight, updateGrass, updateGrassLOD, scatterGrass } from './grass.js';
 export { Terrain as default, TerrainNS };
 
 // For backwards compatibility with the global THREE.Terrain namespace

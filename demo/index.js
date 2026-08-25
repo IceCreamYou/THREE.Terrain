@@ -1,8 +1,237 @@
 import * as THREE from 'three';
 import { FirstPersonControls } from 'three/examples/jsm/controls/FirstPersonControls.js';
 import { GUI } from 'dat.gui';
-import Terrain, { TerrainNS, createGrass, generateBlendedMaterial, grassPatchNoise, grassTextureWeight, updateGrass, updateGrassLOD } from '../src/index.js';
+import Terrain, { TerrainNS, createGrass, generateBlendedMaterial, grassMaterialWeight, grassPatchNoise, updateGrass, updateGrassLOD } from '../src/index.js';
 import { Tree } from '../vendor/eztree/build/eztree.module.js';
+
+var nativeRandom = Math.random,
+    demoURL = new URL(window.location.href),
+    demoSeed = parseDemoSeed(demoURL.searchParams.get('seed')),
+    demoStatic = demoURL.searchParams.get('static') === '1',
+    terrainRandom,
+    decorationRandom;
+var DEMO_DECORATION_SEED = 0x9e3779b9;
+
+var cameraStarts = {
+  'default': {
+    main: {
+      position: [449, 311, 376],
+      rotation: [-52 * Math.PI / 180, 35 * Math.PI / 180, 37 * Math.PI / 180],
+    },
+    fps: {
+      position: [449, 311, 376],
+      target: [0, 0, 0],
+    },
+  },
+  analytics: {
+    main: {
+      position: [420, 120, 420],
+      target: [0, 25, 0],
+    },
+    fps: {
+      position: [420, 120, 420],
+      target: [0, 25, 0],
+    },
+  },
+  layers: {
+    main: {
+      position: [187, -55, -301],
+      target: [205, -60, -260],
+    },
+    fps: {
+      position: [187, -55, -301],
+      target: [205, -60, -260],
+    },
+  },
+};
+
+var demoStart = normalizeDemoStart(demoURL.searchParams.get('start'));
+var demoInfluence = normalizeDemoInfluence(demoURL.searchParams.get('influence'));
+
+if (demoSeed === null) demoSeed = createDemoSeed(nativeRandom);
+resetDemoRandomness('terrain');
+window.terrainDemoSeed = demoSeed;
+window.terrainDemoStart = demoStart;
+window.terrainDemoInfluence = demoInfluence;
+window.terrainDemoStatic = demoStatic;
+
+/**
+ * Parse an optional unsigned 32-bit seed from the demo URL.
+ *
+ * @param {string|null} value
+ *   URL value supplied by the user.
+ * @return {number|null}
+ *   The normalized seed, or null when no valid seed was supplied.
+ */
+function parseDemoSeed(value) {
+  if (!value || !/^(?:0x[0-9a-f]+|\d+)$/i.test(value)) return null;
+  var seed = Number(value);
+  return Number.isSafeInteger(seed) ? seed >>> 0 : null;
+}
+
+/**
+ * Create a new seed for an ordinary, unparameterized demo visit.
+ *
+ * Cryptographic browser randomness keeps normal visits varied. The fallback
+ * supports older browsers without `crypto.getRandomValues`.
+ *
+ * @param {Function} fallbackRandom
+ *   Native random function used only when browser crypto is unavailable.
+ * @return {number}
+ *   An unsigned 32-bit seed.
+ */
+function createDemoSeed(fallbackRandom) {
+  if (window.crypto && typeof window.crypto.getRandomValues === 'function') {
+    var value = new Uint32Array(1);
+    window.crypto.getRandomValues(value);
+    return value[0];
+  }
+  return Math.floor(fallbackRandom() * 4294967296) >>> 0;
+}
+
+/**
+ * Create the seeded random stream used by the demo's terrain and decoration.
+ *
+ * This small xorshift generator is self-contained. Its unsigned 32-bit state
+ * keeps every call portable and makes a URL seed reproduce terrain, scatter
+ * placement, and tint choices without changing the global random source.
+ *
+ * @param {number} seed
+ *   Unsigned 32-bit initial state.
+ * @return {Function}
+ *   A Math.random-compatible function.
+ */
+function createSeededRandom(seed) {
+  var state = seed >>> 0;
+  if (!state) state = 0x6d2b79f5;
+  return function() {
+    state ^= state << 13;
+    state ^= state >>> 17;
+    state ^= state << 5;
+    return (state >>> 0) / 4294967296;
+  };
+}
+
+/**
+ * Reset the demo's deterministic random stream for a generation phase.
+ *
+ * Terrain and decoration use separate streams. This keeps a GUI regeneration
+ * from changing the heightmap because a tree or grass instance happened to
+ * consume a different number of random values first.
+ *
+ * @param {string} phase
+ *   Either `terrain` or `decoration`.
+ */
+function resetDemoRandomness(phase) {
+  var offset = phase === 'decoration' ? DEMO_DECORATION_SEED : 0;
+  var random = createSeededRandom((demoSeed + offset) >>> 0);
+  if (phase === 'decoration') decorationRandom = random;
+  else terrainRandom = random;
+  return random;
+}
+
+/**
+ * Normalize the optional camera start name from the demo URL.
+ *
+ * `screenshot1` and `screenshot2` are accepted as readable aliases for the
+ * two published compositions; `analytics` and `layers` are the canonical
+ * names used by the capture script.
+ *
+ * @param {string|null} value
+ *   Requested URL start name.
+ * @return {string}
+ *   One of `default`, `analytics`, or `layers`.
+ */
+function normalizeDemoStart(value) {
+  var aliases = {
+    screenshot1: 'analytics',
+    screenshot2: 'layers',
+  };
+  value = aliases[value] || value || 'default';
+  return cameraStarts[value] ? value : 'default';
+}
+
+/**
+ * Normalize the optional terrain influence requested by the demo URL.
+ *
+ * The island mode is applied after the selected heightmap. This lets a
+ * capture keep `PerlinDiamond` visible in the Heightmap panel while adding a
+ * broad, beach-forming hill to that procedural terrain.
+ *
+ * @param {string|null} value
+ *   URL value supplied by the user.
+ * @return {string|null}
+ *   `island` when the hill/island influence is requested, otherwise null.
+ */
+function normalizeDemoInfluence(value) {
+  return value === 'island' ? 'island' : null;
+}
+
+/**
+ * Return the selected camera start definition.
+ *
+ * @return {Object}
+ *   Main and first-person camera poses for the current URL start.
+ */
+function getCameraStart() {
+  return cameraStarts[demoStart] || cameraStarts.default;
+}
+
+/**
+ * Apply a position and either an Euler rotation or a look-at target.
+ *
+ * @param {THREE.Camera} targetCamera
+ *   Camera receiving the pose.
+ * @param {Object} pose
+ *   Pose with `position` and either `rotation` or `target` arrays.
+ */
+function applyCameraPose(targetCamera, pose) {
+  targetCamera.position.fromArray(pose.position);
+  if (pose.rotation) targetCamera.rotation.fromArray(pose.rotation);
+  else if (pose.target) targetCamera.lookAt(new THREE.Vector3().fromArray(pose.target));
+}
+
+/**
+ * Add a broad island hill to the selected procedural terrain.
+ *
+ * HillIsland adds many overlapping, center-biased hills rather than replacing
+ * the base heightmap with one cone. It runs before Terrain's normalization and
+ * clamp pass, so a reduced height range keeps the hills subordinate to
+ * PerlinDiamond instead of allowing repeated additive overlaps to exceed the
+ * terrain's configured maximum.
+ *
+ * @param {Float32Array} vertices
+ *   Terrain height values before THREE.Terrain normalizes them.
+ * @param {Object} options
+ *   Terrain dimensions and height range.
+ */
+function perlinDiamondIsland(vertices, options) {
+  TerrainNS.PerlinDiamond(vertices, options);
+  var hillOptions = {};
+  for (var option in options) {
+    if (options.hasOwnProperty(option)) hillOptions[option] = options[option];
+  }
+  hillOptions.maxHeight = options.maxHeight * 0.3;
+  hillOptions.minHeight = options.minHeight * 0.3;
+  TerrainNS.HillIsland(vertices, hillOptions, TerrainNS.Influences.Hill);
+}
+
+/**
+ * Return a deterministic tree seed derived from the demo seed and preset.
+ *
+ * @param {string} preset
+ *   Eztree preset name.
+ * @return {number}
+ *   Unsigned seed for that preset.
+ */
+function getTreeSeed(preset) {
+  var hash = 2166136261;
+  for (var index = 0; index < preset.length; index++) {
+    hash ^= preset.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (demoSeed ^ hash) >>> 0;
+}
 
 // Global variables (use let)
 let camera, scene, renderer, clock, player, terrainScene, decoScene, grassScene, grassMesh, lastOptions, controls = {}, fpsCamera, skyDome, skyLight, sand, water; // jscs:ignore requireLineBreakAfterVariableAssignment
@@ -63,12 +292,7 @@ function setupThreeJS() {
 
   camera = new THREE.PerspectiveCamera(60, renderer.domElement.width / renderer.domElement.height, 1, 10000);
   scene.add(camera);
-  camera.position.x = 449;
-  camera.position.y = 311;
-  camera.position.z = 376;
-  camera.rotation.x = -52 * Math.PI / 180;
-  camera.rotation.y = 35 * Math.PI / 180;
-  camera.rotation.z = 37 * Math.PI / 180;
+  applyCameraPose(camera, getCameraStart().main);
 
   clock = new THREE.Clock(false);
 }
@@ -80,6 +304,8 @@ function setupControls() {
   controls.enabled = false;
   controls.movementSpeed = 100;
   controls.lookSpeed = 0.075;
+  applyCameraPose(fpsCamera, getCameraStart().fps);
+  controls.lookAt(new THREE.Vector3().fromArray(getCameraStart().fps.target));
 }
 
 function setupWorld() {
@@ -123,6 +349,7 @@ function setupDatGui() {
     var that = this;
     var mat = new THREE.MeshBasicMaterial({color: 0x5566aa, wireframe: true});
     var gray = new THREE.MeshPhongMaterial({ color: 0x88aaaa, specular: 0x444455, shininess: 10 });
+    var terrainUp = new THREE.Vector3(0, 0, 1);
     var blend; // Declare blend here
     var elevationGraph = document.getElementById('elevation-graph'),
         slopeGraph = document.getElementById('slope-graph'),
@@ -183,26 +410,27 @@ function setupDatGui() {
     this.texture = 'Blended';
     this.edgeDirection = 'Normal';
     this.edgeType = 'Box';
-    this.edgeDistance = 256;
+    this.edgeDistance = 480;
     this.edgeCurve = 'EaseInOut';
     this['width:length ratio'] = 1.0;
     this['Flight mode'] = useFPS;
     this['Light color'] = '#' + skyLight.color.getHexString();
     this.grassEnabled = true;
-    this.grassDensity = 1.35;
+    this.grassDensity = 0.75;
     this.grassHeight = 7;
     this.grassWidth = 5;
     this.grassAlphaTest = 0.65;
-    this.grassMinimumLight = 1.85;
+    this.grassMinimumLight = 0.58;
     this.grassLodDistance = 1200;
-    this.grassMaxSlope = 1.35;
+    // The final stone slope layer fully masks the grass by 45 degrees.
+    this.grassMaxSlope = 0.7853981633974483;
     this.grassPositionJitter = 2.8;
     this.grassWindSpeed = 1.15;
     this.grassWindStrength = 3.5;
-    this.grassTintLow = '#6f9147';
-    this.grassTintHigh = '#b9c95f';
+    this.grassTintLow = '#496b34';
+    this.grassTintHigh = '#78934a';
     grassMaxDistance = this.grassLodDistance;
-    this.spread = 58;
+    this.spread = 32;
     this.scattering = 'PerlinAltitude';
     this.bushPreset = 'Bush 1';
     this.after = function(vertices, options) {
@@ -221,17 +449,22 @@ function setupDatGui() {
         else if (z > -50 && z < 20) return that.spread * 0.002;
         else if (z > 20 && z < 50) return TerrainNS.EaseInOut((z - 20) / (50 - 20)) * that.spread * 0.002;
         return 0;
-      }
+    }
     this.altitudeSpread = function(v, k) {
-      return k % 4 === 0 && Math.random() < altitudeProbability(v.z);
+      return k % 4 === 0 && decorationRandom() < altitudeProbability(v.z);
     };
     window.rebuild = this.Regenerate = function() {
-      var s = parseInt(that.segments, 10),
-          h = that.heightmap === 'heightmap.png';
+      var random = resetDemoRandomness('terrain'),
+          s = parseInt(that.segments, 10),
+          h = that.heightmap === 'heightmap.png',
+          heightmap = h ? heightmapImage : (that.heightmap === 'influences' ? customInfluences : TerrainNS[that.heightmap]);
+      if (demoInfluence === 'island' && that.heightmap === 'PerlinDiamond') {
+        heightmap = perlinDiamondIsland;
+      }
       var o = {
         after: that.after,
         easing: TerrainNS[that.easing], // Use TerrainNS
-        heightmap: h ? heightmapImage : (that.heightmap === 'influences' ? customInfluences : TerrainNS[that.heightmap]), // Use TerrainNS
+        heightmap: heightmap, // Use TerrainNS
         material: that.texture == 'Wireframe' ? mat : (that.texture == 'Blended' && blend ? blend : gray), // check blend
         maxHeight: that.maxHeight - 100,
         minHeight: -100,
@@ -242,12 +475,19 @@ function setupDatGui() {
         ySize: Math.round(that.size * that['width:length ratio']),
         xSegments: s,
         ySegments: Math.round(s * that['width:length ratio']),
+        random: random,
       };
       scene.remove(terrainScene);
       terrainScene = Terrain(o); // Use imported Terrain
       applySmoothing(that.smoothing, o);
       scene.add(terrainScene);
-      skyDome.visible = sand.visible = water.visible = that.texture != 'Wireframe';
+      // The GUI is initialized before the asynchronous sky and material
+      // textures finish loading. Regeneration must still be safe during that
+      // short window; the later texture callback regenerates again with the
+      // blended material once all assets are available.
+      if (skyDome) skyDome.visible = that.texture != 'Wireframe';
+      if (sand) sand.visible = that.texture != 'Wireframe';
+      if (water) water.visible = that.texture != 'Wireframe';
       var he = document.getElementById('heightmap');
       if (he) {
         o.heightmap = he;
@@ -278,7 +518,7 @@ function setupDatGui() {
     };
     var treeMeshCache = {};
     function getTreeMesh(preset) {
-      if (!treeMeshCache[preset]) treeMeshCache[preset] = buildTree(undefined, preset);
+      if (!treeMeshCache[preset]) treeMeshCache[preset] = buildTree(getTreeSeed(preset), preset);
       return treeMeshCache[preset];
     }
     function rebuildGrassMesh() {
@@ -286,8 +526,8 @@ function setupDatGui() {
         alphaTest: that.grassAlphaTest,
         bladeCount: 24,
         color: 0xffffff,
-        emissive: 0x476327,
-        emissiveIntensity: 0.4,
+        emissive: 0x1f3215,
+        emissiveIntensity: 0.08,
         height: that.grassHeight,
         minimumLight: that.grassMinimumLight,
         name: 'Dense Grass Patch',
@@ -298,16 +538,18 @@ function setupDatGui() {
     }
     rebuildGrassMesh();
     this['Scatter meshes'] = function() {
-      var s = parseInt(that.segments, 10),
+      var random = resetDemoRandomness('decoration'),
+          s = parseInt(that.segments, 10),
           spread,
           randomness;
       var o = {
         xSegments: s,
         ySegments: Math.round(s * that['width:length ratio']),
+        random: random,
       };
       if (that.scattering === 'Linear') {
         spread = that.spread * 0.0005;
-        randomness = Math.random;
+        randomness = random;
       }
       else if (that.scattering === 'Altitude') {
         spread = that.altitudeSpread;
@@ -323,9 +565,9 @@ function setupDatGui() {
               place = true;
             }
             else if (rv < hs + 0.2) {
-              place = TerrainNS.EaseInOut((rv - hs) * 5) * hs < Math.random(); // Use TerrainNS
+              place = TerrainNS.EaseInOut((rv - hs) * 5) * hs < random(); // Use TerrainNS
             }
-            return Math.random() < altitudeProbability(v.z) * 5 && place;
+            return random() < altitudeProbability(v.z) * 5 && place;
           };
         })();
       }
@@ -348,9 +590,17 @@ function setupDatGui() {
           randomDistribution: useWoodlandDistribution,
           randomDistributionMinDistance: 60,
           sampleCount: Math.round(s * s * 0.03),
+          // Use the same elevation-and-slope mask as the grass material. The
+          // filter is separate from `spread` so each scattering mode keeps
+          // its density and noise pattern while barren faces are rejected.
+          filter: function(v, faceNormal) {
+            var slope = faceNormal ? faceNormal.angleTo(terrainUp) : Math.PI;
+            return grassMaterialWeight(v.z, slope) > 0;
+          },
           spread: useWoodlandDistribution ? function(v) {
-            return v.z > -100 && v.z < 100 && Math.random() < Math.min(1, that.spread / 60);
+            return v.z > -100 && v.z < 100 && random() < Math.min(1, that.spread / 60);
           } : spread,
+          random: random,
           smoothSpread: that.scattering === 'Linear' ? 0 : 0.2,
           randomness: randomness,
           maxSlope: 0.6283185307179586, // 36deg or 36 / 180 * Math.PI, about the angle of repose of earth
@@ -374,7 +624,10 @@ function setupDatGui() {
           nonUniformSizeVariance: true,
           randomDistribution: true,
           randomDistributionMinDistance: Math.max(0.55, 2.8 - that.grassPositionJitter * 0.7),
-          randomRotationAxis: 'z',
+          // Grass is authored Y-up. After ScatterMeshes' legacy +90 degree X
+          // correction, rotate around local Y to vary heading without tilting
+          // the tuft onto a horizontal axis.
+          randomRotationAxis: 'y',
           sampleCount: Math.round(s * s * 26 * that.grassDensity),
           // Random distribution already samples inside each face; expose
           // grassPositionJitter as the minimum-spacing control above.
@@ -384,18 +637,21 @@ function setupDatGui() {
             min: that.grassTintLow,
             max: that.grassTintHigh,
           },
-          spread: function(v, k) {
-            // Use the same fade curve as the grass texture. This prevents
-            // geometry from appearing on the sand, stone, or snow bands.
-            var coverage = grassTextureWeight(v.z);
+          spread: function(v, k, faceNormal) {
+            // Match both the grass altitude layer and the later stone slope
+            // layer. Altitude-only placement would leave blades on steep
+            // faces where the material shader has already hidden the grass.
+            var slope = faceNormal ? faceNormal.angleTo(terrainUp) : Math.PI,
+                coverage = grassMaterialWeight(v.z, slope);
             if (coverage <= 0) return false;
             // Keep the altitude band, but break it into irregular 2D patches
             // so grass does not follow continuous contour lines or read as a
             // green carpet.
             var patch = grassPatchNoise(v.x, v.y);
             coverage *= 0.95 + patch * 0.05;
-            return Math.random() < Math.max(0, Math.min(1, coverage));
+            return random() < Math.max(0, Math.min(1, coverage));
           },
+          random: random,
           w: s,
         });
         terrainScene.add(grassScene);
@@ -458,10 +714,8 @@ function setupDatGui() {
   edgesFolder.add(settings, 'edgeDistance', 0, 512).step(32).onFinishChange(settings.Regenerate);
   gui.add(settings, 'Flight mode').onChange(function(val) {
     useFPS = val;
-    fpsCamera.position.x = 449;
-    fpsCamera.position.y = 311;
-    fpsCamera.position.z = 376;
-    controls.lookAt(terrainScene.children[0].position);
+    applyCameraPose(fpsCamera, getCameraStart().fps);
+    controls.lookAt(new THREE.Vector3().fromArray(getCameraStart().fps.target));
     controls.update(0);
     controls.enabled = false;
     if (useFPS) {
@@ -496,7 +750,7 @@ function draw() {
 }
 
 function update(delta) {
-  if (terrainScene) terrainScene.rotation.z = Date.now() * 0.00001;
+  if (terrainScene && !demoStatic) terrainScene.rotation.z = Date.now() * 0.00001;
   if (controls.update) controls.update(delta);
 }
 

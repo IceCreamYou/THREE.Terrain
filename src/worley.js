@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { TerrainNS } from './core.js';
+import { getRandom } from './random.js';
 
 // Make sure TerrainNS.Worley exists before adding to it
 if (!TerrainNS.Worley) {
@@ -86,21 +87,22 @@ function distanceToNearest(coords, points, distanceType) {
  *     one). Calculated by default based on the size of the terrain.
  */
 TerrainNS.Worley = function(g, options) {
+    var random = getRandom(options);
     // Use the appropriate distribution function
     var distributionFunc = options.worleyDistribution || 
         TerrainNS.Worley.randomPoints || 
-        function(width, height, numPoints) {
+        function(width, height, numPoints, random) {
             numPoints = numPoints || Math.floor(Math.sqrt(width * height * 0.025)) || 1;
             var points = new Array(numPoints);
             for (var i = 0; i < numPoints; i++) {
                 points[i] = new THREE.Vector2(
-                    Math.random() * width,
-                    Math.random() * height
+                    random() * width,
+                    random() * height
                 );
             }
             return points;
         };
-    var points = distributionFunc(options.xSegments, options.ySegments, options.worleyPoints),
+    var points = distributionFunc(options.xSegments, options.ySegments, options.worleyPoints, random),
         transform = options.worleyDistanceTransformation || function(d) { return -d; },
         currentCoords = new THREE.Vector2(0, 0);
     // The height of each heightmap vertex is the distance to the closest Voronoi centroid
@@ -121,14 +123,26 @@ TerrainNS.Worley = function(g, options) {
 
 /**
  * Randomly distribute points in space.
+ *
+ * @param {number} width
+ *   Width of the point domain.
+ * @param {number} height
+ *   Height of the point domain.
+ * @param {number} numPoints
+ *   Number of points to generate.
+ * @param {Function} [random=Math.random]
+ *   Random-number source used to place points.
+ * @return {THREE.Vector2[]}
+ *   Randomly distributed points.
  */
-TerrainNS.Worley.randomPoints = function(width, height, numPoints) {
+TerrainNS.Worley.randomPoints = function(width, height, numPoints, random) {
+    random = random || Math.random;
     numPoints = numPoints || Math.floor(Math.sqrt(width * height * 0.025)) || 1;
     var points = new Array(numPoints);
     for (var i = 0; i < numPoints; i++) {
         points[i] = new THREE.Vector2(
-            Math.random() * width,
-            Math.random() * height
+            random() * width,
+            random() * height
         );
     }
     return points;
@@ -136,8 +150,8 @@ TerrainNS.Worley.randomPoints = function(width, height, numPoints) {
 
 /* Utility functions for Poisson Disks. */
 
-function removeAndReturnRandomElement(arr) {
-    return arr.splice(Math.floor(Math.random() * arr.length), 1)[0];
+function removeAndReturnRandomElement(arr, random) {
+    return arr.splice(Math.floor(random() * arr.length), 1)[0];
 }
 
 function putInGrid(grid, point, cellSize) {
@@ -172,9 +186,9 @@ function inNeighborhood(grid, point, minDist, cellSize) {
     return false;
 }
 
-function generateRandomPointAround(point, minDist) {
-    var radius = minDist * (Math.random() + 1),
-        angle = 2 * Math.PI * Math.random();
+function generateRandomPointAround(point, minDist, random) {
+    var radius = minDist * (random() + 1),
+        angle = 2 * Math.PI * random();
     return new THREE.Vector2(
         point.x + radius * Math.cos(angle),
         point.y + radius * Math.sin(angle)
@@ -188,15 +202,28 @@ function generateRandomPointAround(point, minDist) {
  *
  * Ported from pseudocode at http://devmag.org.za/2009/05/03/poisson-disk-sampling/
  *
- * @param {Object} options
- *   A map of settings that control how the resulting noise should be generated
- *   (with the same parameters as the `options` parameter to the
- *   `THREE.Terrain` function).
+ * @param {number} width
+ *   Width of the point domain.
+ * @param {number} height
+ *   Height of the point domain.
+ * @param {number} numPoints
+ *   Maximum number of points to generate.
+ * @param {number} [minDist]
+ *   Minimum point separation. The implementation derives this value from the
+ *   domain and point count for compatibility with the original helper.
+ * @param {Function} [random=Math.random]
+ *   Random-number source. When the function is passed directly as a Worley
+ *   distribution, the fourth argument is treated as this source.
  *
  * @return {THREE.Vector2[]}
  *   An array of points.
  */
-TerrainNS.Worley.PoissonDisks = function(width, height, numPoints, minDist) {
+TerrainNS.Worley.PoissonDisks = function(width, height, numPoints, minDist, random) {
+    if (typeof minDist === 'function' && typeof random === 'undefined') {
+        random = minDist;
+        minDist = undefined;
+    }
+    random = random || Math.random;
     numPoints = numPoints || Math.floor(Math.sqrt(width * height * 0.2)) || 1;
     minDist = Math.sqrt((width + height) * 2.5);
     if (minDist > numPoints * 0.67) minDist = numPoints * 0.67;
@@ -209,8 +236,8 @@ TerrainNS.Worley.PoissonDisks = function(width, height, numPoints, minDist) {
         samplePoints = [];
 
     var firstPoint = new THREE.Vector2(
-        Math.random() * width,
-        Math.random() * height
+        random() * width,
+        random() * height
     );
     processList.push(firstPoint);
     samplePoints.push(firstPoint);
@@ -218,10 +245,10 @@ TerrainNS.Worley.PoissonDisks = function(width, height, numPoints, minDist) {
 
     var count = 0;
     while (processList.length) {
-        var point = removeAndReturnRandomElement(processList);
+        var point = removeAndReturnRandomElement(processList, random);
         for (var i = 0; i < numPoints; i++) {
             // optionally, minDist = perlin(point.x / width, point.y / height)
-            var newPoint = generateRandomPointAround(point, minDist);
+            var newPoint = generateRandomPointAround(point, minDist, random);
             if (inRectangle(newPoint, width, height) && !inNeighborhood(grid, newPoint, minDist, cellSize)) {
                 processList.push(newPoint);
                 samplePoints.push(newPoint);
