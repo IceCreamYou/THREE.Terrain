@@ -13,7 +13,7 @@ You also need a compatible version of [three.js](https://www.npmjs.com/package/t
 
 ```javascript
 import * as THREE from 'three';
-import Terrain, { TerrainNS, createGrass, generateBlendedMaterial, grassTextureWeight, updateGrass, updateGrassLOD } from 'three.terrain.js';
+import Terrain, { TerrainNS, createGrass, createSeededRandom, generateBlendedMaterial, grassMeshWeight, updateGrass, updateGrassLOD } from 'three.terrain.js';
 // Or from a local checkout: import Terrain, { TerrainNS, generateBlendedMaterial } from './src/index.js';
 ```
 
@@ -22,6 +22,11 @@ import Terrain, { TerrainNS, createGrass, generateBlendedMaterial, grassTextureW
   `TerrainNS.DiamondSquare`, `TerrainNS.Smooth`, `TerrainNS.ScatterMeshes`).
 - `generateBlendedMaterial` (also available as
   `TerrainNS.generateBlendedMaterial`) helps texture the terrain.
+- `createGrass` creates grass blades for terrain cover. Various options and
+  helpers support tints, clustering, density, swaying in the wind, etc.
+- `createSeededRandom` takes a seed and returns a function similar to
+  `Math.random()` which returns a deterministic sequence of random values based
+  on the seed. This can be passed as an option to other methods.
 
 ### Procedurally Generate a Terrain
 
@@ -70,10 +75,10 @@ var grass = createGrass({
 var grassScene = TerrainNS.ScatterGrass(geo, {
     instanced: true,
     mesh: grass,
-    // Use this to match where your grass layer is displayed if you use
-    // generateBlendedMaterial (described below)
-    spread: function(vertex) {
-        return grassTextureWeight(vertex.z) > 0;
+    // Keep mesh placement inside the fully grass-covered part of the
+    // generateBlendedMaterial layer (described below).
+    spread: function(vertex, faceIndex, faceNormal) {
+        return grassMeshWeight(vertex.z, faceNormal.angleTo(new THREE.Vector3(0, 0, 1))) > 0;
     },
     maxTilt: 0,
     randomRotationAxis: 'y',
@@ -85,6 +90,21 @@ terrainScene.add(grassScene);
 // In the render loop, update wind and compact distant instances before draw.
 updateGrass(grass, elapsedSeconds);
 updateGrassLOD(grassScene, camera, 1200);
+```
+
+For repeatable terrain and decoration, pass a seeded random function through
+the `random` option.:
+
+```javascript
+var terrainScene = Terrain({
+    heightmap: TerrainNS.PerlinDiamond,
+    random: createSeededRandom(12345),
+    // ...other terrain options
+});
+var decoScene = TerrainNS.ScatterMeshes(terrainScene.children[0].geometry, {
+    mesh: new THREE.Mesh(new THREE.CylinderGeometry(2, 2, 12, 6)),
+    random: createSeededRandom(67890),
+});
 ```
 
 All parameters are optional and thoroughly documented in the

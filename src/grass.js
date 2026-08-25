@@ -96,9 +96,10 @@ function grassValueNoise(x, y) {
 /**
  * Return a deterministic broad-and-detail coverage value for grass patches.
  *
- * The broad scale (0.018) produces features about 56 terrain units across;
- * the detail scale (0.043) adds features about 23 units across. A 72/28
- * weighted mix keeps the distribution irregular while avoiding noisy holes.
+ * The broad scale (0.009) produces features about 111 terrain units across;
+ * the detail scale (0.026) adds features about 38 units across. A 78/22
+ * weighted mix gives a tuft field recognizable as clusters instead of a
+ * uniform point process while retaining smaller gaps inside each cluster.
  *
  * @param {number} x
  *   Terrain-local x coordinate.
@@ -108,9 +109,31 @@ function grassValueNoise(x, y) {
  *   A coverage variation value in the range [0, 1].
  */
 function grassPatchNoise(x, y) {
-    var broad = grassValueNoise(x * 0.018, y * 0.018),
-        detail = grassValueNoise(x * 0.043 + 17.3, y * 0.043 - 9.1);
-    return broad * 0.72 + detail * 0.28;
+    var broad = grassValueNoise(x * 0.009, y * 0.009),
+        detail = grassValueNoise(x * 0.026 + 17.3, y * 0.026 - 9.1);
+    return broad * 0.78 + detail * 0.22;
+}
+
+/**
+ * Convert patch noise into a soft cluster-density multiplier.
+ *
+ * The lower threshold keeps the field from becoming a set of isolated
+ * islands, while the upper threshold makes the broad noise peak into visible
+ * clumps. The small floor still permits an occasional blade between clumps so
+ * the result does not look like a painted checkerboard.
+ *
+ * @param {number} x
+ *   Terrain-local x coordinate.
+ * @param {number} y
+ *   Terrain-local y coordinate.
+ * @return {number}
+ *   Cluster density in the range [0.15, 1].
+ */
+function grassClusterWeight(x, y) {
+    var patch = grassPatchNoise(x, y),
+        t = Math.max(0, Math.min(1, (patch - 0.36) / 0.32)),
+        smooth = t * t * (3 - 2 * t);
+    return 0.15 + smooth * 0.85;
 }
 
 /**
@@ -188,6 +211,46 @@ function grassSlopeWeight(slope, levels) {
  */
 function grassMaterialWeight(height, slope, altitudeLevels, slopeLevels) {
     return grassTextureWeight(height, altitudeLevels) * grassSlopeWeight(slope, slopeLevels);
+}
+
+/**
+ * Calculate a placement weight for grass meshes inside the full grass layer.
+ *
+ * The material's grass texture is fully opaque only between its second and
+ * third height levels. This helper insets that interval with a smooth margin
+ * and rejects faces at the beginning of the material's slope blend. Therefore
+ * grass meshes can only occupy a strict subset of the visible grass texture;
+ * they cannot leak into sand, rock, or the material's transition bands.
+ *
+ * @param {number} height
+ *   Terrain-local height.
+ * @param {number} slope
+ *   Face slope in radians from the terrain's +Z up vector.
+ * @param {number[]} [altitudeLevels]
+ *   Four grass height levels passed to `grassTextureWeight`.
+ * @param {number[]} [slopeLevels]
+ *   Two slope levels passed to `grassSlopeWeight`.
+ * @param {number} [edgeInset=8]
+ *   Height margin inside the fully grass-covered interval.
+ * @return {number}
+ *   Mesh placement weight in the range [0, 1].
+ */
+function grassMeshWeight(height, slope, altitudeLevels, slopeLevels, edgeInset) {
+    altitudeLevels = altitudeLevels || [-80, -35, 20, 50];
+    slopeLevels = slopeLevels || [0.47123889803846897, 0.7853981633974483];
+    var fullStart = altitudeLevels[1],
+        fullEnd = altitudeLevels[2],
+        inset = typeof edgeInset === 'number' ? Math.max(0, edgeInset) : 8,
+        usableInset = Math.min(inset, (fullEnd - fullStart) * 0.5);
+    if (height <= fullStart || height >= fullEnd) return 0;
+    if (typeof slope === 'number' && isFinite(slope) && slope > slopeLevels[0]) return 0;
+    var fadeInT = usableInset ? (height - fullStart) / usableInset : 1,
+        fadeOutT = usableInset ? (fullEnd - height) / usableInset : 1,
+        fadeIn = Math.max(0, Math.min(1, fadeInT)),
+        fadeOut = Math.max(0, Math.min(1, fadeOutT));
+    fadeIn = fadeIn * fadeIn * (3 - 2 * fadeIn);
+    fadeOut = fadeOut * fadeOut * (3 - 2 * fadeOut);
+    return fadeIn * fadeOut;
 }
 
 /**
@@ -618,10 +681,12 @@ function scatterGrass(geometry, options) {
 TerrainNS.createGrassTexture = createGrassTexture;
 TerrainNS.createGrass = createGrass;
 TerrainNS.grassPatchNoise = grassPatchNoise;
+TerrainNS.grassClusterWeight = grassClusterWeight;
 TerrainNS.grassTextureWeight = grassTextureWeight;
 TerrainNS.grassSlopeWeight = grassSlopeWeight;
 TerrainNS.grassMaterialWeight = grassMaterialWeight;
+TerrainNS.grassMeshWeight = grassMeshWeight;
 TerrainNS.updateGrass = updateGrass;
 TerrainNS.ScatterGrass = scatterGrass;
 
-export { createGrassTexture, createGrass, grassPatchNoise, grassTextureWeight, grassSlopeWeight, grassMaterialWeight, updateGrass, updateGrassLOD, scatterGrass };
+export { createGrassTexture, createGrass, grassPatchNoise, grassClusterWeight, grassTextureWeight, grassSlopeWeight, grassMaterialWeight, grassMeshWeight, updateGrass, updateGrassLOD, scatterGrass };

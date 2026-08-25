@@ -28,10 +28,9 @@ const screenshotTimeout = 300_000;
 function parseArguments(argv) {
     var options = {
         headed: false,
-        layersEdgeDistance: 256,
-        layersInfluence: 'island',
+        layersEdgeDistance: 320,
         layersOnly: false,
-        layersSeed: 987654321,
+        layersSeed: 777777,
         layersSeedProvided: false,
         outputDir: resolve(projectRoot, 'demo/img'),
         port: 4173,
@@ -49,10 +48,6 @@ function parseArguments(argv) {
         }
         else if (argument === '--layers-edge-distance') {
             options.layersEdgeDistance = Number(next);
-            index++;
-        }
-        else if (argument === '--layers-influence') {
-            options.layersInfluence = next === 'none' ? null : next;
             index++;
         }
         else if (argument === '--layers-only') {
@@ -108,11 +103,9 @@ Options:
   --port PORT        Vite port when --url is not supplied (default: 4173).
   --output-dir DIR   Directory for screenshot1.jpg and screenshot2.jpg.
   --seed NUMBER      Seed the analytics beach terrain; defaults to 271828.
-  --layers-seed NUM  Seed the HUD-free beach/material terrain; defaults to 987654321.
-  --layers-influence VALUE
-                     Influence for the HUD-free terrain; use island or none.
+  --layers-seed NUM  Seed the HUD-free beach/material terrain; defaults to 777777.
   --layers-edge-distance NUM
-                     Width of the HUD-free radial beach transition; defaults to 256.
+                     Width of the HUD-free radial beach transition; defaults to 320.
   --layers-only      Capture only screenshot2 while iterating beach compositions.
   --headed           Show the Playwright Chromium window while capturing.
   --help             Show this help.
@@ -159,12 +152,12 @@ async function startDemoServer(port) {
  *   Unsigned 32-bit random seed.
  * @param {string} start
  *   Demo camera start name.
- * @param {string|null} influence
- *   Optional terrain influence mode, such as `island`.
+ * @param {Object} settings
+ *   Dat.GUI settings to encode as URL query parameters.
  * @return {string}
  *   URL containing the requested parameters.
  */
-function createCaptureURL(baseURL, seed, start, influence) {
+function createCaptureURL(baseURL, seed, start, settings) {
     var url = new URL(baseURL);
     url.searchParams.set('seed', String(seed >>> 0));
     url.searchParams.set('start', start);
@@ -172,8 +165,12 @@ function createCaptureURL(baseURL, seed, start, influence) {
     // the same seed and camera remain pixel-stable while ordinary visits keep
     // their normal animated presentation.
     url.searchParams.set('static', '1');
-    if (influence) url.searchParams.set('influence', influence);
-    else url.searchParams.delete('influence');
+    url.searchParams.delete('influence');
+    for (var setting in settings) {
+        if (settings.hasOwnProperty(setting)) {
+            url.searchParams.set(setting, String(settings[setting]));
+        }
+    }
     return url.toString();
 }
 
@@ -201,62 +198,6 @@ async function waitForDemo(page) {
 }
 
 /**
- * Select a value in a dat.GUI controller and allow its regeneration callback
- * to finish before the next control is changed.
- *
- * @param {import('playwright').Page} page
- *   Page containing the terrain demo.
- * @param {string} property
- *   dat.GUI property name, such as `edgeType`.
- * @param {string} value
- *   Visible option label to select.
- */
-async function selectGuiValue(page, property, value) {
-    var row = page.locator('.dg .cr').filter({hasText: property}).first();
-    await row.waitFor({state: 'attached'});
-    var select = row.locator('select'),
-        current = await select.inputValue();
-    if (current !== value) {
-        await select.selectOption({force: true, label: value});
-    }
-    // Regeneration is synchronous for the small demo mesh, but textures and
-    // instanced decoration still need a few frames before the shot is stable.
-    await page.waitForTimeout(3500);
-}
-
-/**
- * Set a dat.GUI numeric controller by its property name.
- *
- * @param {import('playwright').Page} page
- *   Page containing the terrain demo.
- * @param {string} property
- *   dat.GUI property name.
- * @param {number} value
- *   Numeric value to enter.
- */
-async function setGuiNumber(page, property, value) {
-    // Match the controller's property-name span exactly. Using a text filter
-    // can select a hidden ancestor or a similarly named controller such as
-    // `Height` versus `maxHeight` while dat.GUI is rebuilding a folder.
-    await page.waitForFunction((property) => Array.from(document.querySelectorAll('.dg .cr')).some((row) => {
-        var name = row.querySelector('.property-name');
-        return name && name.textContent.trim() === property && row.querySelector('input');
-    }), property, {timeout: 30000});
-    await page.evaluate(({property, value}) => {
-        var row = Array.from(document.querySelectorAll('.dg .cr')).find((candidate) => {
-                var name = candidate.querySelector('.property-name');
-                return name && name.textContent.trim() === property;
-            }),
-            input = row && row.querySelector('input'),
-            setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set;
-        setter.call(input, String(value));
-        input.dispatchEvent(new Event('change', {bubbles: true}));
-        input.dispatchEvent(new Event('blur'));
-    }, {property, value});
-    await page.waitForTimeout(3500);
-}
-
-/**
  * Open or close a dat.GUI folder by checking one of its child controllers.
  *
  * @param {import('playwright').Page} page
@@ -280,45 +221,6 @@ async function setGuiFolder(page, folderName, childLabel, open) {
         // title is a local, non-destructive control; dispatch it directly.
         await title.evaluate((element) => element.click());
         await page.waitForTimeout(250);
-    }
-}
-
-/**
- * Set the radial, downward edge treatment used by both README compositions.
- * This leaves the terrain interior visible and keeps the generated boundary
- * out of the camera crops.
- *
- * @param {import('playwright').Page} page
- *   Page containing the terrain demo.
- * @param {boolean} beach
- *   Whether to retain a radial shoreline for the beach composition.
- * @param {number} [edgeDistance]
- *   Distance from the terrain edge at which the radial transition begins.
- * @return {Promise<void>}
- *   Resolves after the demo has regenerated the terrain.
- */
-async function configureInteriorTerrain(page, beach, edgeDistance) {
-    // Configure the terrain before the final capture-only grass assertion.
-    // The demo starts with grass enabled, so no nested-folder toggle is needed
-    // during the asynchronous heightmap/edge setup.
-    await setGuiFolder(page, 'Heightmap', 'heightmap', true);
-    await selectGuiValue(page, 'heightmap', 'PerlinDiamond');
-    await setGuiFolder(page, 'Decoration', 'scattering', true);
-    if (beach) {
-        await setGuiFolder(page, 'Edges', 'edgeType', true);
-        // Set the numeric radius while the Edges folder is stable. Changing
-        // the select controllers regenerates the terrain and dat.GUI may
-        // briefly detach its collapsed child rows.
-        await setGuiNumber(page, 'edgeDistance', typeof edgeDistance === 'number' ? edgeDistance : 64);
-        await selectGuiValue(page, 'edgeType', 'Radial');
-        await setGuiFolder(page, 'Edges', 'edgeDirection', true);
-        await selectGuiValue(page, 'edgeDirection', 'Down');
-    }
-    else {
-        // Keep the full PerlinDiamond terrain for the material-layer shot;
-        // radial edge falloff is only needed for the beach composition.
-        await setGuiFolder(page, 'Edges', 'edgeType', true);
-        await selectGuiValue(page, 'edgeDirection', 'Normal');
     }
 }
 
@@ -412,7 +314,7 @@ async function setFlightMode(page, enabled) {
  * Capture the analytics/configuration view for README screenshot 1.
  *
  * The analytics drawer and decoration controls remain visible. The URL's
- * `analytics` start places the camera close to the ground and aims it at the
+ * `readme-screenshot-options` start places the camera close to the ground and aims it at the
  * interior shoreline without exposing the generated terrain edge.
  *
  * @param {import('playwright').Page} page
@@ -421,7 +323,6 @@ async function setFlightMode(page, enabled) {
  *   Output JPEG path.
  */
 async function captureAnalyticsShot(page, path) {
-    await configureInteriorTerrain(page, true);
     await setGuiFolder(page, 'Decoration', 'scattering', true);
     await setGuiFolder(page, 'Edges', 'edgeType', false);
     await setFlightMode(page, true);
@@ -446,22 +347,19 @@ async function captureAnalyticsShot(page, path) {
  * The capture uses the historical 722x542 README dimensions. Capture-only
  * styling removes the heightmap, analytics link, dat.GUI, and bottom code
  * controls while retaining all four blended material bands and the grass
- * meshes. The URL's `layers` start keeps the camera close to the ground and
+ * meshes. The URL's `readme-screenshot-beach` start keeps the camera close to the ground and
  * aims at the island shoreline without showing the generated terrain edge.
  *
  * @param {import('playwright').Page} page
  *   Page containing the terrain demo.
  * @param {string} url
- *   URL containing the seed and `layers` camera start.
+ *   URL containing the seed, camera start, and dat.GUI settings.
  * @param {string} path
  *   Output JPEG path.
- * @param {number} [edgeDistance]
- *   Distance from the terrain edge at which the radial transition begins.
  */
-async function captureMaterialShot(page, url, path, edgeDistance) {
+async function captureMaterialShot(page, url, path) {
     await page.goto(url, {waitUntil: 'commit', timeout: 120000});
     await waitForDemo(page);
-    await configureInteriorTerrain(page, true, edgeDistance);
     await hideDemoHudForCapture(page);
     await page.waitForTimeout(500);
     await pauseDemoForCapture(page);
@@ -499,17 +397,34 @@ async function main() {
         });
         var context = await browser.newContext({viewport: options.layersOnly ? materialViewport : analyticsViewport});
         var page = await context.newPage();
+        var analyticsSettings = {
+                heightmap: 'PerlinDiamond',
+                texture: 'Blended',
+                scattering: 'PerlinAltitude',
+                edgeType: 'Radial',
+                edgeDirection: 'Down',
+                edgeCurve: 'EaseInOut',
+                edgeDistance: 64,
+            },
+            beachSettings = {
+                heightmap: 'PerlinDiamond',
+                texture: 'Blended',
+                scattering: 'PerlinAltitude',
+                edgeType: 'Radial',
+                edgeDirection: 'Down',
+                edgeCurve: 'EaseInOut',
+                edgeDistance: options.layersEdgeDistance,
+            };
         if (!options.layersOnly) {
-            await page.goto(createCaptureURL(demoURL, options.seed, 'analytics', 'island'), {waitUntil: 'domcontentloaded', timeout: 60000});
+            await page.goto(createCaptureURL(demoURL, options.seed, 'readme-screenshot-options', analyticsSettings), {waitUntil: 'domcontentloaded', timeout: 60000});
             await waitForDemo(page);
             await captureAnalyticsShot(page, screenshot1);
             await page.setViewportSize(materialViewport);
         }
         await captureMaterialShot(
             page,
-            createCaptureURL(demoURL, options.layersSeed, 'layers', options.layersInfluence),
-            screenshot2,
-            options.layersEdgeDistance
+            createCaptureURL(demoURL, options.layersSeed, 'readme-screenshot-beach', beachSettings),
+            screenshot2
         );
         if (!options.layersOnly) console.log('Wrote ' + screenshot1);
         console.log('Wrote ' + screenshot2);

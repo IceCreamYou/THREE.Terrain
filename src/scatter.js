@@ -33,6 +33,7 @@ function setScatterTransform(mesh, vertex1, vertex2, vertex3, faceNormal, up, op
             mesh.rotation.z *= ratio;
         }
     }
+    // Align the source mesh's Y-up axis with the terrain's Z-up axis.
     mesh.rotation.x += 90 / 180 * Math.PI;
     if (options.randomRotationAxis === 'z') {
         mesh.rotateZ(random() * 2 * Math.PI);
@@ -184,8 +185,9 @@ function createRandomScatterGeometry(geometry, options) {
  *   - `sizeVariance`: The percent by which instances of the mesh can be scaled
  *     up or down when placed on the terrain.
  *   - `randomRotationAxis`: Selects the local axis used for the random heading
- *     applied after the scatterer's legacy +90deg X correction. The default
- *     `'y'` is correct for ordinary Y-up meshes: after the correction, local Y
+ *     applied after ScatterMeshes aligns a Y-up source mesh with the
+ *     terrain's Z-up axis. The default `'y'` is correct for ordinary Y-up
+ *     meshes: local Y
  *     maps to the terrain's Z-up axis, so the random rotation changes heading
  *     without tilting the mesh. `'z'` rotates around a different local axis
  *     and is only appropriate for a prototype deliberately authored for that

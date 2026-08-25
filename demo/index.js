@@ -1,7 +1,8 @@
 import * as THREE from 'three';
 import { FirstPersonControls } from 'three/examples/jsm/controls/FirstPersonControls.js';
 import { GUI } from 'dat.gui';
-import Terrain, { TerrainNS, createGrass, generateBlendedMaterial, grassMaterialWeight, grassPatchNoise, updateGrass, updateGrassLOD } from '../src/index.js';
+import Terrain, { TerrainNS, createGrass, generateBlendedMaterial, grassMeshWeight, grassClusterWeight, updateGrass, updateGrassLOD } from '../src/index.js';
+import { createRandomSeed, createSeededRandom } from '../src/random.js';
 import { Tree } from '../vendor/eztree/build/eztree.module.js';
 
 var nativeRandom = Math.random,
@@ -23,7 +24,7 @@ var cameraStarts = {
       target: [0, 0, 0],
     },
   },
-  analytics: {
+  'readme-screenshot-options': {
     main: {
       position: [420, 120, 420],
       target: [0, 25, 0],
@@ -33,22 +34,22 @@ var cameraStarts = {
       target: [0, 25, 0],
     },
   },
-  layers: {
+  'readme-screenshot-beach': {
     main: {
-      position: [187, -55, -301],
-      target: [205, -60, -260],
+      position: [301, -13, -154],
+      target: [260, -18, -210],
     },
     fps: {
-      position: [187, -55, -301],
-      target: [205, -60, -260],
+      position: [301, -13, -154],
+      target: [260, -18, -210],
     },
   },
 };
 
-var demoStart = normalizeDemoStart(demoURL.searchParams.get('start'));
-var demoInfluence = normalizeDemoInfluence(demoURL.searchParams.get('influence'));
+var demoStart = normalizeDemoStart(demoURL.searchParams.get('start')),
+    demoInfluence = demoURL.searchParams.get('influence') === 'island' ? 'island' : null;
 
-if (demoSeed === null) demoSeed = createDemoSeed(nativeRandom);
+if (demoSeed === null) demoSeed = createRandomSeed(nativeRandom);
 resetDemoRandomness('terrain');
 window.terrainDemoSeed = demoSeed;
 window.terrainDemoStart = demoStart;
@@ -67,49 +68,6 @@ function parseDemoSeed(value) {
   if (!value || !/^(?:0x[0-9a-f]+|\d+)$/i.test(value)) return null;
   var seed = Number(value);
   return Number.isSafeInteger(seed) ? seed >>> 0 : null;
-}
-
-/**
- * Create a new seed for an ordinary, unparameterized demo visit.
- *
- * Cryptographic browser randomness keeps normal visits varied. The fallback
- * supports older browsers without `crypto.getRandomValues`.
- *
- * @param {Function} fallbackRandom
- *   Native random function used only when browser crypto is unavailable.
- * @return {number}
- *   An unsigned 32-bit seed.
- */
-function createDemoSeed(fallbackRandom) {
-  if (window.crypto && typeof window.crypto.getRandomValues === 'function') {
-    var value = new Uint32Array(1);
-    window.crypto.getRandomValues(value);
-    return value[0];
-  }
-  return Math.floor(fallbackRandom() * 4294967296) >>> 0;
-}
-
-/**
- * Create the seeded random stream used by the demo's terrain and decoration.
- *
- * This small xorshift generator is self-contained. Its unsigned 32-bit state
- * keeps every call portable and makes a URL seed reproduce terrain, scatter
- * placement, and tint choices without changing the global random source.
- *
- * @param {number} seed
- *   Unsigned 32-bit initial state.
- * @return {Function}
- *   A Math.random-compatible function.
- */
-function createSeededRandom(seed) {
-  var state = seed >>> 0;
-  if (!state) state = 0x6d2b79f5;
-  return function() {
-    state ^= state << 13;
-    state ^= state >>> 17;
-    state ^= state << 5;
-    return (state >>> 0) / 4294967296;
-  };
 }
 
 /**
@@ -133,38 +91,69 @@ function resetDemoRandomness(phase) {
 /**
  * Normalize the optional camera start name from the demo URL.
  *
- * `screenshot1` and `screenshot2` are accepted as readable aliases for the
- * two published compositions; `analytics` and `layers` are the canonical
- * names used by the capture script.
- *
  * @param {string|null} value
  *   Requested URL start name.
  * @return {string}
- *   One of `default`, `analytics`, or `layers`.
+ *   One of `default`, `readme-screenshot-options`, or
+ *   `readme-screenshot-beach`.
  */
 function normalizeDemoStart(value) {
-  var aliases = {
-    screenshot1: 'analytics',
-    screenshot2: 'layers',
-  };
-  value = aliases[value] || value || 'default';
+  value = value || 'default';
   return cameraStarts[value] ? value : 'default';
 }
 
 /**
- * Normalize the optional terrain influence requested by the demo URL.
+ * Parse a boolean dat.GUI value supplied through the URL.
  *
- * The island mode is applied after the selected heightmap. This lets a
- * capture keep `PerlinDiamond` visible in the Heightmap panel while adding a
- * broad, beach-forming hill to that procedural terrain.
+ * `true`/`false` are readable in hand-authored URLs, while `1`/`0` keep the
+ * values compact for generated capture URLs. Invalid values return null so a
+ * malformed query does not overwrite the GUI default.
  *
- * @param {string|null} value
- *   URL value supplied by the user.
- * @return {string|null}
- *   `island` when the hill/island influence is requested, otherwise null.
+ * @param {string} value
+ *   URL query value.
+ * @return {boolean|null}
+ *   Parsed boolean or null when the value is not recognized.
  */
-function normalizeDemoInfluence(value) {
-  return value === 'island' ? 'island' : null;
+function parseURLBoolean(value) {
+  if (value === 'true' || value === '1') return true;
+  if (value === 'false' || value === '0') return false;
+  return null;
+}
+
+/**
+ * Apply dat.GUI settings supplied through the URL.
+ *
+ * URL keys match the enumerable settings properties directly. The optional
+ * `influence=island` spelling is retained as a compatibility shorthand, but
+ * it now selects the same radial/downward edge controls a user would choose
+ * in dat.GUI; it does not install a second hidden heightmap.
+ *
+ * @param {Object} settings
+ *   Settings instance created by the demo's dat.GUI setup.
+ */
+function applyURLSettings(settings) {
+  for (var property in settings) {
+    if (!settings.hasOwnProperty(property) || typeof settings[property] === 'function') continue;
+    var value = demoURL.searchParams.get(property);
+    if (value === null) continue;
+    if (typeof settings[property] === 'boolean') {
+      var booleanValue = parseURLBoolean(value);
+      if (booleanValue !== null) settings[property] = booleanValue;
+    }
+    else if (typeof settings[property] === 'number') {
+      var numberValue = Number(value);
+      if (Number.isFinite(numberValue)) settings[property] = numberValue;
+    }
+    else {
+      settings[property] = value;
+    }
+  }
+  if (demoInfluence === 'island') {
+    if (!demoURL.searchParams.has('edgeType')) settings.edgeType = 'Radial';
+    if (!demoURL.searchParams.has('edgeDirection')) settings.edgeDirection = 'Down';
+    if (!demoURL.searchParams.has('edgeCurve')) settings.edgeCurve = 'EaseInOut';
+    if (!demoURL.searchParams.has('edgeDistance')) settings.edgeDistance = 320;
+  }
 }
 
 /**
@@ -189,31 +178,6 @@ function applyCameraPose(targetCamera, pose) {
   targetCamera.position.fromArray(pose.position);
   if (pose.rotation) targetCamera.rotation.fromArray(pose.rotation);
   else if (pose.target) targetCamera.lookAt(new THREE.Vector3().fromArray(pose.target));
-}
-
-/**
- * Add a broad island hill to the selected procedural terrain.
- *
- * HillIsland adds many overlapping, center-biased hills rather than replacing
- * the base heightmap with one cone. It runs before Terrain's normalization and
- * clamp pass, so a reduced height range keeps the hills subordinate to
- * PerlinDiamond instead of allowing repeated additive overlaps to exceed the
- * terrain's configured maximum.
- *
- * @param {Float32Array} vertices
- *   Terrain height values before THREE.Terrain normalizes them.
- * @param {Object} options
- *   Terrain dimensions and height range.
- */
-function perlinDiamondIsland(vertices, options) {
-  TerrainNS.PerlinDiamond(vertices, options);
-  var hillOptions = {};
-  for (var option in options) {
-    if (options.hasOwnProperty(option)) hillOptions[option] = options[option];
-  }
-  hillOptions.maxHeight = options.maxHeight * 0.3;
-  hillOptions.minHeight = options.minHeight * 0.3;
-  TerrainNS.HillIsland(vertices, hillOptions, TerrainNS.Influences.Hill);
 }
 
 /**
@@ -412,7 +376,7 @@ function setupDatGui() {
     this.edgeType = 'Box';
     this.edgeDistance = 480;
     this.edgeCurve = 'EaseInOut';
-    this['width:length ratio'] = 1.0;
+    this.widthLengthRatio = 1.0;
     this['Flight mode'] = useFPS;
     this['Light color'] = '#' + skyLight.color.getHexString();
     this.grassEnabled = true;
@@ -458,9 +422,6 @@ function setupDatGui() {
           s = parseInt(that.segments, 10),
           h = that.heightmap === 'heightmap.png',
           heightmap = h ? heightmapImage : (that.heightmap === 'influences' ? customInfluences : TerrainNS[that.heightmap]);
-      if (demoInfluence === 'island' && that.heightmap === 'PerlinDiamond') {
-        heightmap = perlinDiamondIsland;
-      }
       var o = {
         after: that.after,
         easing: TerrainNS[that.easing], // Use TerrainNS
@@ -472,9 +433,9 @@ function setupDatGui() {
         stretch: true,
         turbulent: that.turbulent,
         xSize: that.size,
-        ySize: Math.round(that.size * that['width:length ratio']),
+        ySize: Math.round(that.size * that.widthLengthRatio),
         xSegments: s,
-        ySegments: Math.round(s * that['width:length ratio']),
+        ySegments: Math.round(s * that.widthLengthRatio),
         random: random,
       };
       scene.remove(terrainScene);
@@ -544,7 +505,7 @@ function setupDatGui() {
           randomness;
       var o = {
         xSegments: s,
-        ySegments: Math.round(s * that['width:length ratio']),
+        ySegments: Math.round(s * that.widthLengthRatio),
         random: random,
       };
       if (that.scattering === 'Linear') {
@@ -586,16 +547,16 @@ function setupDatGui() {
           scene: decoScene,
           mesh: getTreeMesh(treePresets[treeMeshIndex]),
           w: s,
-          h: Math.round(s * that['width:length ratio']),
+          h: Math.round(s * that.widthLengthRatio),
           randomDistribution: useWoodlandDistribution,
           randomDistributionMinDistance: 60,
           sampleCount: Math.round(s * s * 0.03),
-          // Use the same elevation-and-slope mask as the grass material. The
-          // filter is separate from `spread` so each scattering mode keeps
-          // its density and noise pattern while barren faces are rejected.
+          // Keep trees inside the strict fully-grass mask. The filter is
+          // separate from `spread` so each scattering mode keeps its density
+          // and noise pattern while transition bands remain barren.
           filter: function(v, faceNormal) {
             var slope = faceNormal ? faceNormal.angleTo(terrainUp) : Math.PI;
-            return grassMaterialWeight(v.z, slope) > 0;
+            return grassMeshWeight(v.z, slope) > 0;
           },
           spread: useWoodlandDistribution ? function(v) {
             return v.z > -100 && v.z < 100 && random() < Math.min(1, that.spread / 60);
@@ -616,7 +577,7 @@ function setupDatGui() {
       grassMaxDistance = that.grassLodDistance;
       if (that.grassEnabled && that.texture === 'Blended' && blend) {
         grassScene = TerrainNS.ScatterGrass(geo, {
-          h: Math.round(s * that['width:length ratio']),
+          h: Math.round(s * that.widthLengthRatio),
           instanced: true,
           maxSlope: that.grassMaxSlope,
           maxTilt: 0,
@@ -624,9 +585,9 @@ function setupDatGui() {
           nonUniformSizeVariance: true,
           randomDistribution: true,
           randomDistributionMinDistance: Math.max(0.55, 2.8 - that.grassPositionJitter * 0.7),
-          // Grass is authored Y-up. After ScatterMeshes' legacy +90 degree X
-          // correction, rotate around local Y to vary heading without tilting
-          // the tuft onto a horizontal axis.
+          // Grass is authored Y-up. ScatterMeshes aligns that axis with the
+          // terrain's Z-up axis, so local-Y rotation varies heading without
+          // tilting the tuft onto a horizontal axis.
           randomRotationAxis: 'y',
           sampleCount: Math.round(s * s * 26 * that.grassDensity),
           // Random distribution already samples inside each face; expose
@@ -638,17 +599,15 @@ function setupDatGui() {
             max: that.grassTintHigh,
           },
           spread: function(v, k, faceNormal) {
-            // Match both the grass altitude layer and the later stone slope
-            // layer. Altitude-only placement would leave blades on steep
-            // faces where the material shader has already hidden the grass.
+            // Stay inside the fully grass-covered interval. This deliberately
+            // rejects both altitude transition bands and the stone slope blend.
             var slope = faceNormal ? faceNormal.angleTo(terrainUp) : Math.PI,
-                coverage = grassMaterialWeight(v.z, slope);
+                coverage = grassMeshWeight(v.z, slope);
             if (coverage <= 0) return false;
-            // Keep the altitude band, but break it into irregular 2D patches
-            // so grass does not follow continuous contour lines or read as a
-            // green carpet.
-            var patch = grassPatchNoise(v.x, v.y);
-            coverage *= 0.95 + patch * 0.05;
+            // Broad value-noise clusters make grass gather into natural
+            // stands. The small residual probability keeps their boundaries
+            // soft instead of producing obvious stamped circles.
+            coverage *= grassClusterWeight(v.x, v.y);
             return random() < Math.max(0, Math.min(1, coverage));
           },
           random: random,
@@ -664,6 +623,7 @@ function setupDatGui() {
   }
   var gui = new GUI(); // Use imported GUI
   var settings = new Settings();
+  applyURLSettings(settings);
   var heightmapFolder = gui.addFolder('Heightmap');
   heightmapFolder.add(settings, 'heightmap', ['Brownian', 'Cosine', 'CosineLayers', 'DiamondSquare', 'Fault', 'heightmap.png', 'Hill', 'HillIsland', 'influences', 'Particles', 'Perlin', 'PerlinDiamond', 'PerlinLayers', 'Simplex', 'SimplexLayers', 'Value', 'Weierstrass', 'Worley']).onFinishChange(settings.Regenerate);
   heightmapFolder.add(settings, 'easing', ['Linear', 'EaseIn', 'EaseInWeak', 'EaseOut', 'EaseInOut', 'InEaseOut']).onFinishChange(settings.Regenerate);
@@ -706,7 +666,7 @@ function setupDatGui() {
   var sizeFolder = gui.addFolder('Size');
   sizeFolder.add(settings, 'size', 1024, 3072).step(256).onFinishChange(settings.Regenerate);
   sizeFolder.add(settings, 'maxHeight', 2, 300).step(2).onFinishChange(settings.Regenerate);
-  sizeFolder.add(settings, 'width:length ratio', 0.2, 2).step(0.05).onFinishChange(settings.Regenerate);
+  sizeFolder.add(settings, 'widthLengthRatio', 0.2, 2).step(0.05).name('width:length ratio').onFinishChange(settings.Regenerate);
   var edgesFolder = gui.addFolder('Edges');
   edgesFolder.add(settings, 'edgeType', ['Box', 'Radial']).onFinishChange(settings.Regenerate);
   edgesFolder.add(settings, 'edgeDirection', ['Normal', 'Up', 'Down']).onFinishChange(settings.Regenerate);
