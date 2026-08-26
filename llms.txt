@@ -1,0 +1,97 @@
+# THREE.Terrain
+
+> Procedural terrain generation, heightmap processing, material blending, analysis, scattering, and dense grass for Three.js.
+
+THREE.Terrain is an ES-module library for Three.js r160 and later. The default
+export creates a terrain scene. The `TerrainNS` namespace contains the
+generators and utilities. The package also keeps the `THREE.Terrain` global
+namespace for older applications.
+
+## Start here
+
+- [README.md](README.md): install instructions and short examples.
+- [SKILL.md](SKILL.md): task-oriented guidance for coding agents.
+- [src/index.js](src/index.js): package entry point and named exports.
+- [src/core.js](src/core.js): terrain construction, normalization, and array helpers.
+- [src/generators.js](src/generators.js): procedural heightmap generators.
+- [src/filters.js](src/filters.js): heightmap filters and edge shaping.
+- [src/materials.js](src/materials.js): elevation and GLSL texture blending.
+- [src/scatter.js](src/scatter.js): mesh placement and instancing.
+- [src/grass.js](src/grass.js): procedural grass, masks, wind, and grass LOD.
+- [demo/landscape.js](demo/landscape.js): the library-focused part of the demo.
+
+## Main imports
+
+```js
+import Terrain, {
+  TerrainNS,
+  createGrass,
+  createGrassTexture,
+  createRandomSeed,
+  createSeededRandom,
+  generateBlendedMaterial,
+  grassMeshWeight,
+  scatterGrass,
+  updateGrass,
+  updateGrassLOD,
+} from 'three.terrain.js';
+```
+
+## Core model
+
+`Terrain(options)` returns an `Object3D` rotated from the XY construction plane
+into a Z-up scene. Its first child is the highest-detail terrain mesh. Heightmap
+functions receive a numeric array of vertex Z values and mutate it in place.
+Use `options.random` for a local random-number source.
+
+The main pipeline is:
+
+1. Create a terrain with a generator or image heightmap.
+2. Use `after`, filters, or influences to shape the height array.
+3. Apply a material, often with `generateBlendedMaterial`.
+4. Scatter trees, props, or grass over the highest-detail geometry.
+5. Update grass wind and LOD in the render loop.
+
+## Public feature groups
+
+- Generators: `Cosine`, `CosineLayers`, `DiamondSquare`, `Fault`, `Hill`,
+  `HillIsland`, `Particles`, `Perlin`, `PerlinDiamond`, `PerlinLayers`,
+  `Simplex`, `SimplexLayers`, `Value`, `Weierstrass`, `Worley`, `Brownian`,
+  `Curve`, and `MultiPass`.
+- Filters: `Clamp`, `Edges`, `RadialEdges`, `Smooth`, `SmoothMedian`,
+  `SmoothConservative`, `Step`, `Turbulence`, `Gaussian`, and
+  `GaussianBoxBlur`.
+- Influences: `Influence` and the shapes in `TerrainNS.Influences`:
+  `Mesa`, `Hole`, `Hill`, `Valley`, `Dome`, `Flat`, and `Volcano`.
+- Materials: `generateBlendedMaterial` supports four-level elevation bands or
+  custom GLSL expressions using `vPosition` and `slope`.
+- Decoration: `ScatterMeshes` supports filtering, random distribution,
+  minimum-distance groups, scale ranges, tint ranges, and `THREE.InstancedMesh`.
+- Grass: `createGrass`, `createGrassTexture`, `scatterGrass`, `updateGrass`,
+  `updateGrassLOD`, and deterministic grass coverage helpers.
+- Data: `fromHeightmap`, `toHeightmap`, `heightmapArray`, and 1D/2D array
+  conversion helpers.
+- Analysis: `Analyze`, percentiles, percent ranks, face normals, fitted-plane
+  metrics, modes, buckets, histograms, and means.
+- Reproducibility: `createRandomSeed` chooses a seed and `createSeededRandom`
+  creates a deterministic stream. Pass a separate stream to each operation.
+
+## Important behavior
+
+- Terrain and scatter coordinates use Z as up.
+- Pass `terrainScene.children[0].geometry` to scatter functions.
+- A numeric `spread` is a probability. A function `spread` is a face predicate.
+- `instanced: true` creates one `InstancedMesh` only for a single mesh prototype.
+  Groups use the clone path.
+- `updateGrassLOD` reduces the active instance count, so culled instances are
+  not processed by the GPU. It still checks source positions on refresh.
+- `generateBlendedMaterial` uses the first texture as the base. Later textures
+  are layered in array order.
+
+## Demo and build
+
+- Demo: <https://icecreamyou.github.io/THREE.Terrain/>
+- Build bundles: `npm run build`
+- Local demo: `npm install && npm start`
+- Static-hosting vendor step: `npm run vendor`
+

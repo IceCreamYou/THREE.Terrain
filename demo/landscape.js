@@ -12,6 +12,7 @@ import { createSeededRandom } from '../src/random.js';
 import { Tree } from '../vendor/eztree/build/eztree.module.js';
 
 var DEMO_DECORATION_SEED = 0x9e3779b9,
+    TREE_MINIMUM_DISTANCE = 36,
     TERRAIN_UP = new THREE.Vector3(0, 0, 1);
 
 /**
@@ -282,16 +283,18 @@ export function createLandscape(options) {
      * Rebuild the procedural grass prototype from the current settings.
      */
     function rebuildGrassMesh() {
+        var grassHeight = Math.max(settings.grassHeightMin, settings.grassHeightMax),
+            grassWidth = Math.max(settings.grassWidthMin, settings.grassWidthMax);
         grassMesh = createGrass({
             alphaTest: settings.grassAlphaTest,
             bladeCount: 24,
             color: 0xffffff,
             emissive: 0x1f3215,
             emissiveIntensity: 0.08,
-            height: settings.grassHeight,
+            height: grassHeight,
             minimumLight: settings.grassMinimumLight,
             name: 'Dense Grass Patch',
-            width: settings.grassWidth,
+            width: grassWidth,
             windSpeed: settings.grassWindSpeed,
             windStrength: settings.grassWindStrength,
         });
@@ -341,7 +344,13 @@ export function createLandscape(options) {
         var geometry = terrainScene.children[0].geometry;
         if (decoScene) terrainScene.remove(decoScene);
         var useWoodlandDistribution = settings.scattering === 'PerlinAltitude',
-            treePresets = ['Oak Medium', 'Ash Medium', 'Aspen Medium'];
+            treePresets = ['Oak Medium', 'Ash Medium', 'Aspen Medium'],
+            treeSampleMultiplier = Math.max(1, settings.spread / 60),
+            treeSampleCount = Math.max(1, Math.round(segments * segments * 0.03 * treeSampleMultiplier)),
+            // Keep trunks and central crowns from sharing a patch of ground,
+            // while allowing neighboring trees to form a woodland instead of
+            // spacing the whole grove at the width of the largest canopy.
+            treePlacementGroup = {minimumDistance: TREE_MINIMUM_DISTANCE};
         if (settings.bushPreset !== 'None') treePresets.push(settings.bushPreset);
         decoScene = new THREE.Object3D();
         for (var treeMeshIndex = 0; treeMeshIndex < treePresets.length; treeMeshIndex++) {
@@ -351,8 +360,10 @@ export function createLandscape(options) {
                 w: segments,
                 h: Math.round(segments * settings.widthLengthRatio),
                 randomDistribution: useWoodlandDistribution,
-                randomDistributionMinDistance: 60,
-                sampleCount: Math.round(segments * segments * 0.03),
+                randomDistributionMinDistance: TREE_MINIMUM_DISTANCE,
+                minimumDistance: TREE_MINIMUM_DISTANCE,
+                minimumDistanceGroup: treePlacementGroup,
+                sampleCount: treeSampleCount,
                 filter: function(vertex, faceNormal) {
                     var slope = faceNormal ? faceNormal.angleTo(TERRAIN_UP) : Math.PI;
                     return grassMeshWeight(vertex.z, slope) > 0;
@@ -374,6 +385,12 @@ export function createLandscape(options) {
         if (grassScene) terrainScene.remove(grassScene);
         grassScene = null;
         if (settings.grassEnabled && settings.texture === 'Blended' && blend) {
+            var grassHeightMin = Math.min(settings.grassHeightMin, settings.grassHeightMax),
+                grassHeightMax = Math.max(settings.grassHeightMin, settings.grassHeightMax),
+                grassWidthMin = Math.min(settings.grassWidthMin, settings.grassWidthMax),
+                grassWidthMax = Math.max(settings.grassWidthMin, settings.grassWidthMax),
+                widthMinimumScale = grassWidthMin / Math.max(0.001, grassWidthMax),
+                heightMinimumScale = grassHeightMin / Math.max(0.001, grassHeightMax);
             grassScene = TerrainNS.ScatterGrass(geometry, {
                 h: Math.round(segments * settings.widthLengthRatio),
                 instanced: true,
@@ -386,7 +403,13 @@ export function createLandscape(options) {
                 randomRotationAxis: 'y',
                 sampleCount: Math.round(segments * segments * 26 * settings.grassDensity),
                 positionJitter: 0,
-                sizeVariance: 0.14,
+                sizeRange: {
+                    easing: TerrainNS[settings.grassSizeEasing] || TerrainNS.Linear,
+                    x: [widthMinimumScale, 1],
+                    y: [heightMinimumScale, 1],
+                    z: [widthMinimumScale, 1],
+                },
+                sizeVariance: 0,
                 tintRange: {
                     min: settings.grassTintLow,
                     max: settings.grassTintHigh,

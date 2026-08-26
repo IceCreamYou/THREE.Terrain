@@ -4,7 +4,7 @@ import { createAnalyticsController } from './analytics.js';
 import { createCameraController, normalizeCameraStart } from './camera.js';
 import { createLandscape } from './landscape.js';
 import { applyURLSettings, createSettings, parseDemoSeed, createSettingsPanel } from './settings.js';
-import { bindFocusHandling, bindKeyboardControls, bindResizeHandling } from './ui.js';
+import { bindFocusHandling, bindKeyboardControls, bindResizeHandling, createFPSCounter } from './ui.js';
 import { createWorld } from './world.js';
 
 var INV_MAX_FPS = 1 / 100;
@@ -39,6 +39,7 @@ export function initializeDemo() {
         analytics = createAnalyticsController(),
         heightmapImage = new Image(),
         heightmapCanvas = document.getElementById('heightmap'),
+        fpsCounter = createFPSCounter(document.getElementById('fps')),
         settings = createSettings({
             flightMode: false,
             lightColor: '#' + world.skyLight.color.getHexString(),
@@ -81,6 +82,7 @@ export function initializeDemo() {
     function draw() {
         landscape.update(clock.elapsedTime, camera.getActiveCamera());
         renderer.render(scene, camera.getActiveCamera());
+        fpsCounter.update();
     }
 
     /**

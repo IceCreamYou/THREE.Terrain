@@ -28,9 +28,9 @@ const screenshotTimeout = 300_000;
 function parseArguments(argv) {
     var options = {
         headed: false,
-        layersEdgeDistance: 320,
+        layersEdgeDistance: 256,
         layersOnly: false,
-        layersSeed: 777777,
+        layersSeed: 123456,
         layersSeedProvided: false,
         outputDir: resolve(projectRoot, 'demo/img'),
         port: 4173,
@@ -103,9 +103,9 @@ Options:
   --port PORT        Vite port when --url is not supplied (default: 4173).
   --output-dir DIR   Directory for screenshot1.jpg and screenshot2.jpg.
   --seed NUMBER      Seed the analytics beach terrain; defaults to 271828.
-  --layers-seed NUM  Seed the HUD-free beach/material terrain; defaults to 777777.
+  --layers-seed NUM  Seed the HUD-free beach/material terrain; defaults to 123456.
   --layers-edge-distance NUM
-                     Width of the HUD-free radial beach transition; defaults to 320.
+                     Width of the HUD-free radial beach transition; defaults to 256.
   --layers-only      Capture only screenshot2 while iterating beach compositions.
   --headed           Show the Playwright Chromium window while capturing.
   --help             Show this help.
@@ -262,6 +262,34 @@ async function forceAnalyticsVisible(page) {
 }
 
 /**
+ * Wait for the demo's FPS readout to reach 60, or hide it for this capture.
+ *
+ * The high-resolution screenshot environment may use a software WebGL
+ * renderer that cannot sustain 60 FPS with the densest grass settings. In
+ * that case the capture remains useful, but does not publish a misleading
+ * low FPS label. This function changes only the capture page.
+ *
+ * @param {import('playwright').Page} page
+ *   Page containing the terrain demo.
+ * @return {Promise<boolean>}
+ *   True when the readout reached 60 FPS; false when it was hidden.
+ */
+async function waitForFPSOrHide(page) {
+    var reachedTarget = await page.waitForFunction(() => {
+        var element = document.getElementById('fps'),
+            value = element && parseFloat(element.textContent.replace(/[^0-9.]/g, ''));
+        return Number.isFinite(value) && value >= 60;
+    }, undefined, {timeout: 10000}).then(() => true).catch(() => false);
+    if (!reachedTarget) {
+        await page.evaluate(() => {
+            var element = document.getElementById('fps');
+            if (element) element.style.display = 'none';
+        });
+    }
+    return reachedTarget;
+}
+
+/**
  * Allow the requested frame and UI transitions to settle before capture.
  *
  * The demo's focus handlers intentionally stop its animation loop when the
@@ -287,7 +315,7 @@ async function pauseDemoForCapture(page) {
  */
 async function hideDemoHudForCapture(page) {
     await page.evaluate(() => {
-        document.querySelectorAll('#heightmap, #show-analytics, #analytics, #code, #fpscontrols, .dg')
+        document.querySelectorAll('#heightmap, #show-analytics, #analytics, #fps, #code, #fpscontrols, .dg')
             .forEach((element) => { element.style.display = 'none'; });
     });
 }
@@ -326,6 +354,7 @@ async function captureAnalyticsShot(page, path) {
     await setGuiFolder(page, 'Decoration', 'scattering', true);
     await setGuiFolder(page, 'Edges', 'edgeType', false);
     await setFlightMode(page, true);
+    await waitForFPSOrHide(page);
 
     // Open this last: camera/control interactions can change focus while the
     // terrain is settling, so the published frame must verify the final state.
@@ -360,6 +389,7 @@ async function captureAnalyticsShot(page, path) {
 async function captureMaterialShot(page, url, path) {
     await page.goto(url, {waitUntil: 'commit', timeout: 120000});
     await waitForDemo(page);
+    await waitForFPSOrHide(page);
     await hideDemoHudForCapture(page);
     await page.waitForTimeout(500);
     await pauseDemoForCapture(page);
@@ -405,6 +435,14 @@ async function main() {
                 edgeDirection: 'Down',
                 edgeCurve: 'EaseInOut',
                 edgeDistance: 64,
+                grassDensity: 1.75,
+                grassHeightMin: 10,
+                grassHeightMax: 18,
+                grassWidthMin: 7,
+                grassWidthMax: 12,
+                grassSizeEasing: 'EaseOut',
+                grassWindSpeed: 2.6,
+                grassWindStrength: 10,
             },
             beachSettings = {
                 heightmap: 'PerlinDiamond',
@@ -414,6 +452,12 @@ async function main() {
                 edgeDirection: 'Down',
                 edgeCurve: 'EaseInOut',
                 edgeDistance: options.layersEdgeDistance,
+                grassDensity: 1.5,
+                grassHeightMin: 6,
+                grassHeightMax: 12,
+                grassWidthMin: 4,
+                grassWidthMax: 8,
+                grassSizeEasing: 'EaseInOut',
             };
         if (!options.layersOnly) {
             await page.goto(createCaptureURL(demoURL, options.seed, 'readme-screenshot-options', analyticsSettings), {waitUntil: 'domcontentloaded', timeout: 60000});

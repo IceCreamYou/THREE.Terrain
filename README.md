@@ -11,6 +11,10 @@ Install with npm (`npm install three.terrain.js`) and import as an ES module.
 You also need a compatible version of [three.js](https://www.npmjs.com/package/three)
 (r160 or later) in your project.
 
+This library includes a
+[`SKILL.md` file](https://github.com/IceCreamYou/THREE.Terrain/blob/gh-pages/SKILL.md)
+to help AI agents use it. Or you can do it yourself:
+
 ```javascript
 import * as THREE from 'three';
 import Terrain, { TerrainNS, createGrass, createSeededRandom, generateBlendedMaterial, grassMeshWeight, updateGrass, updateGrassLOD } from 'three.terrain.js';
@@ -223,5 +227,5 @@ devDependencies.
 
 ## Screenshots
 
-![Terrain analytics, decoration controls, grass meshes, and a beach shoreline](https://raw.githubusercontent.com/IceCreamYou/THREE.Terrain/gh-pages/demo/img/screenshot1.jpg)
+![Terrain analytics, decoration controls, and high-density wind-swept grass](https://raw.githubusercontent.com/IceCreamYou/THREE.Terrain/gh-pages/demo/img/screenshot1.jpg)
 ![HUD-free beach terrain showing grass meshes and blended material layers](https://raw.githubusercontent.com/IceCreamYou/THREE.Terrain/gh-pages/demo/img/screenshot2.jpg)

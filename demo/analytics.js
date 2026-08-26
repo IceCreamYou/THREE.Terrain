@@ -141,20 +141,22 @@ export function createAnalyticsController() {
         slopeGraph = document.getElementById('slope-graph'),
         analyticsValues = document.getElementsByClassName('value'),
         close = document.querySelector('#analytics .close'),
-        show = document.querySelector('#show-analytics');
+        show = document.querySelector('#show-analytics'),
+        panel = document.getElementById('analytics');
 
     if (close) {
         close.addEventListener('click', function(event) {
             event.preventDefault();
-            document.getElementById('analytics').classList.remove('visible');
+            panel.classList.remove('visible');
             show.classList.add('visible');
+            show.style.display = '';
         }, {passive: false});
     }
     if (show) {
         show.addEventListener('click', function(event) {
             event.preventDefault();
             show.classList.remove('visible');
-            var panel = document.getElementById('analytics');
+            show.style.display = 'none';
             panel.scrollTop = 0;
             panel.classList.add('visible');
         }, {passive: false});

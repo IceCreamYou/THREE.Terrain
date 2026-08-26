@@ -47,3 +47,36 @@ export function bindResizeHandling(options) {
         options.draw();
     }, {passive: true});
 }
+
+/**
+ * Create a compact frame-rate display for the demo.
+ *
+ * The counter averages frames over a half-second window. This avoids making
+ * the label flicker while still showing changes caused by terrain density,
+ * decoration, or camera movement quickly enough to be useful during demos.
+ *
+ * @param {HTMLElement|null} element
+ *   Element whose text should contain the current frame rate.
+ * @return {Object}
+ *   Object with an `update` method to call once per rendered frame.
+ */
+export function createFPSCounter(element) {
+    var frameCount = 0,
+        lastTime = performance.now();
+    return {
+        /**
+         * Update the displayed average when the current sample window ends.
+         */
+        update: function() {
+            if (!element) return;
+            frameCount++;
+            var now = performance.now(),
+                elapsed = now - lastTime;
+            if (elapsed < 500) return;
+            var fps = frameCount * 1000 / elapsed;
+            element.textContent = 'FPS: ' + (fps < 10 ? fps.toFixed(1) : Math.round(fps));
+            frameCount = 0;
+            lastTime = now;
+        },
+    };
+}

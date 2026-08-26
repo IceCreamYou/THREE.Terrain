@@ -94,16 +94,19 @@ export function createSettings(options) {
         'Flight mode': !!options.flightMode,
         'Light color': options.lightColor,
         grassEnabled: true,
-        grassDensity: 0.75,
-        grassHeight: 7,
-        grassWidth: 5,
+        grassDensity: 1.0,
+        grassHeightMin: 5,
+        grassHeightMax: 9,
+        grassWidthMin: 4,
+        grassWidthMax: 7,
+        grassSizeEasing: 'EaseInOut',
         grassAlphaTest: 0.65,
         grassMinimumLight: 0.58,
         grassLodDistance: 1200,
         grassMaxSlope: 0.7853981633974483,
         grassPositionJitter: 2.8,
-        grassWindSpeed: 1.15,
-        grassWindStrength: 3.5,
+        grassWindSpeed: 1.8,
+        grassWindStrength: 5.5,
         grassTintLow: '#496b34',
         grassTintHigh: '#78934a',
         spread: 32,
@@ -156,8 +159,11 @@ export function createSettingsPanel(options) {
     var grassFolder = decorationFolder.addFolder('Grass');
     grassFolder.add(settings, 'grassEnabled').name('Enabled').onChange(settings['Scatter meshes']);
     grassFolder.add(settings, 'grassDensity', 0, 2).step(0.01).name('Density').onFinishChange(settings['Scatter meshes']);
-    grassFolder.add(settings, 'grassHeight', 4, 24).step(1).name('Height').onFinishChange(settings['Rebuild grass']);
-    grassFolder.add(settings, 'grassWidth', 4, 32).step(1).name('Width').onFinishChange(settings['Rebuild grass']);
+    grassFolder.add(settings, 'grassHeightMin', 2, 32).step(1).name('Height min').onFinishChange(settings['Rebuild grass']);
+    grassFolder.add(settings, 'grassHeightMax', 2, 32).step(1).name('Height max').onFinishChange(settings['Rebuild grass']);
+    grassFolder.add(settings, 'grassWidthMin', 2, 32).step(1).name('Width min').onFinishChange(settings['Rebuild grass']);
+    grassFolder.add(settings, 'grassWidthMax', 2, 32).step(1).name('Width max').onFinishChange(settings['Rebuild grass']);
+    grassFolder.add(settings, 'grassSizeEasing', ['Linear', 'EaseIn', 'EaseInWeak', 'EaseOut', 'EaseInOut', 'InEaseOut', 'EaseInStrong']).name('Size easing').onFinishChange(settings['Scatter meshes']);
     grassFolder.add(settings, 'grassAlphaTest', 0.1, 0.95).step(0.01).name('Alpha test').onFinishChange(settings['Rebuild grass']);
     grassFolder.add(settings, 'grassMinimumLight', 0, 2).step(0.01).name('Min light').onFinishChange(settings['Rebuild grass']);
     grassFolder.add(settings, 'grassLodDistance', 0, 2000).step(50).name('LOD distance');

@@ -41,6 +41,21 @@ function setScatterTransform(mesh, vertex1, vertex2, vertex3, faceNormal, up, op
     else {
         mesh.rotateY(random() * 2 * Math.PI);
     }
+    if (options.sizeRange) {
+        var sizeRange = options.sizeRange,
+            sizeT = random();
+        if (typeof sizeRange.easing === 'function') sizeT = sizeRange.easing(sizeT);
+        sizeT = Math.max(0, Math.min(1, sizeT));
+        if (Array.isArray(sizeRange.x) && sizeRange.x.length > 1) {
+            mesh.scale.x *= sizeRange.x[0] + (sizeRange.x[1] - sizeRange.x[0]) * sizeT;
+        }
+        if (Array.isArray(sizeRange.y) && sizeRange.y.length > 1) {
+            mesh.scale.y *= sizeRange.y[0] + (sizeRange.y[1] - sizeRange.y[0]) * sizeT;
+        }
+        if (Array.isArray(sizeRange.z) && sizeRange.z.length > 1) {
+            mesh.scale.z *= sizeRange.z[0] + (sizeRange.z[1] - sizeRange.z[0]) * sizeT;
+        }
+    }
     if (options.sizeVariance) {
         var variance = random() * options.sizeVariance * 2 - options.sizeVariance;
         if (options.nonUniformSizeVariance) {
@@ -56,6 +71,49 @@ function setScatterTransform(mesh, vertex1, vertex2, vertex3, faceNormal, up, op
     mesh.updateMatrix();
 }
 
+/**
+ * Create state for minimum-distance checks shared by sequential scatter calls.
+ *
+ * @param {Object} options
+ *   Scatter options containing a minimum distance and optional shared group.
+ * @return {Object|null}
+ *   Placement state, or null when no shared minimum distance is requested.
+ */
+function createMinimumDistanceState(options) {
+    var distance = typeof options.minimumDistance === 'number' ? Math.max(0, options.minimumDistance) : 0,
+        group = options.minimumDistanceGroup;
+    if (!group || distance <= 0) return null;
+    if (typeof group.minimumDistance !== 'number') group.minimumDistance = distance;
+    if (!Array.isArray(group.positions)) group.positions = [];
+    distance = group.minimumDistance;
+    return {
+        distanceSquared: distance * distance,
+        positions: group.positions,
+    };
+}
+
+/**
+ * Reserve a horizontal placement in a shared minimum-distance group.
+ *
+ * @param {THREE.Vector3} position
+ *   Candidate terrain position.
+ * @param {Object|null} state
+ *   Shared placement state.
+ * @return {boolean}
+ *   True when the candidate is far enough from existing placements.
+ */
+function reserveMinimumDistance(position, state) {
+    if (!state) return true;
+    for (var index = 0; index < state.positions.length; index++) {
+        var existing = state.positions[index],
+            dx = existing.x - position.x,
+            dy = existing.y - position.y;
+        if (dx * dx + dy * dy < state.distanceSquared) return false;
+    }
+    state.positions.push({x: position.x, y: position.y});
+    return true;
+}
+
 function createRandomScatterGeometry(geometry, options) {
     var random = getRandom(options);
     geometry.computeBoundingBox();
@@ -65,18 +123,38 @@ function createRandomScatterGeometry(geometry, options) {
         sampleCount = Math.max(1, Math.floor(options.sampleCount || faceCount)),
         bounds = geometry.boundingBox,
         horizontalArea = bounds ? Math.max(1, (bounds.max.x - bounds.min.x) * (bounds.max.y - bounds.min.y)) : 1,
-        minimumDistance = typeof options.randomDistributionMinDistance === 'number' ?
-            Math.max(0, options.randomDistributionMinDistance) :
-            Math.sqrt(horizontalArea / sampleCount) * 0.34,
-        minimumDistanceSquared = minimumDistance * minimumDistance,
-        cellSize = Math.max(1, minimumDistance),
-        occupied = {},
+        distributionGroup = options.minimumDistanceGroup,
+        minimumDistance = typeof options.minimumDistance === 'number' && options.minimumDistance > 0 ?
+            options.minimumDistance :
+            typeof options.randomDistributionMinDistance === 'number' ?
+                Math.max(0, options.randomDistributionMinDistance) :
+                Math.sqrt(horizontalArea / sampleCount) * 0.34,
+        minimumDistanceSquared,
+        cellSize,
+        occupied,
         sampledPositions = [],
         vertex1 = new THREE.Vector3(),
         vertex2 = new THREE.Vector3(),
         vertex3 = new THREE.Vector3(),
         faceNormal = new THREE.Vector3(),
         sample = new THREE.Vector3();
+    if (distributionGroup) {
+        if (typeof distributionGroup.minimumDistance !== 'number') {
+            distributionGroup.minimumDistance = minimumDistance;
+        }
+        minimumDistance = distributionGroup.minimumDistance;
+        if (typeof distributionGroup.cellSize !== 'number') {
+            distributionGroup.cellSize = Math.max(1, minimumDistance);
+        }
+        if (!distributionGroup.occupied) distributionGroup.occupied = {};
+        occupied = distributionGroup.occupied;
+        cellSize = distributionGroup.cellSize;
+    }
+    else {
+        cellSize = Math.max(1, minimumDistance);
+        occupied = {};
+    }
+    minimumDistanceSquared = minimumDistance * minimumDistance;
     for (var sampleIndex = 0; sampleIndex < sampleCount; sampleIndex++) {
         var faceIndex = Math.floor(random() * faceCount),
             offset = faceIndex * 9;
@@ -184,6 +262,11 @@ function createRandomScatterGeometry(geometry, options) {
  *     and rotation of the meshes will be wrong.
  *   - `sizeVariance`: The percent by which instances of the mesh can be scaled
  *     up or down when placed on the terrain.
+ *   - `sizeRange`: Optional per-axis scale ranges in the form
+ *     `{x: [min, max], y: [min, max], z: [min, max], easing}`. The easing
+ *     function receives the random value used for the placement and maps it
+ *     to the range. This is useful for varying the size of instanced grass
+ *     while keeping the prototype at its maximum dimensions.
  *   - `randomRotationAxis`: Selects the local axis used for the random heading
  *     applied after ScatterMeshes aligns a Y-up source mesh with the
  *     terrain's Z-up axis. The default `'y'` is correct for ordinary Y-up
@@ -201,6 +284,11 @@ function createRandomScatterGeometry(geometry, options) {
  *   - `sampleCount`: Number of random distribution candidates to try.
  *   - `randomDistributionMinDistance`: Minimum horizontal separation between
  *     random distribution points. Defaults to a density-based spacing.
+ *   - `minimumDistance`: Minimum horizontal separation between accepted
+ *     placements in all distribution modes. Defaults to 0.
+ *   - `minimumDistanceGroup`: Optional shared state object. Reuse the same
+ *     object across ScatterMeshes calls to prevent different mesh types from
+ *     occupying the same area.
  *   - `instanced`: If true and `mesh` is a single `THREE.Mesh`, place all
  *     instances in one `THREE.InstancedMesh`. Object3D groups fall back to
  *     individual clones.
@@ -249,6 +337,9 @@ TerrainNS.ScatterMeshes = function(geometry, options) {
         randomRotationAxis: 'y',
         positionJitter: 0,
         instancesPerFace: 1,
+        sizeRange: null,
+        minimumDistance: 0,
+        minimumDistanceGroup: null,
         w: 0,
         h: 0,
         instanced: false,
@@ -282,6 +373,7 @@ TerrainNS.ScatterMeshes = function(geometry, options) {
         vertex3 = new THREE.Vector3(),
         faceNormal = new THREE.Vector3(),
         instancesPerFace = Math.max(1, Math.floor(options.instancesPerFace)),
+        minimumDistanceState = options.randomDistribution ? null : createMinimumDistanceState(options),
         up = options.mesh.up.clone().applyAxisAngle(new THREE.Vector3(1, 0, 0), 0.5*Math.PI);
     if (options.instanced && !useInstancing) {
         console.warn('THREE.Terrain.ScatterMeshes can only instance a single THREE.Mesh; falling back to clones');
@@ -328,6 +420,8 @@ TerrainNS.ScatterMeshes = function(geometry, options) {
                 continue;
             }
             for (var placement = 0; placement < instancesPerFace; placement++) {
+                var placementPosition = vertex1.clone().add(vertex2).add(vertex3).divideScalar(3);
+                if (!reserveMinimumDistance(placementPosition, minimumDistanceState)) continue;
                 if (useInstancing) {
                     instanceTransform.position.copy(options.mesh.position);
                     instanceTransform.quaternion.copy(options.mesh.quaternion);

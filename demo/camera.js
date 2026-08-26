@@ -14,22 +14,22 @@ var cameraStarts = {
     },
     'readme-screenshot-options': {
         main: {
-            position: [420, 120, 420],
+            position: [360, 120, 360],
             target: [0, 25, 0],
         },
         fps: {
-            position: [420, 120, 420],
+            position: [360, 120, 360],
             target: [0, 25, 0],
         },
     },
     'readme-screenshot-beach': {
         main: {
-            position: [301, -13, -154],
-            target: [260, -18, -210],
+            position: [300, -15, -205],
+            target: [180, -15, -255],
         },
         fps: {
-            position: [301, -13, -154],
-            target: [260, -18, -210],
+            position: [300, -15, -205],
+            target: [180, -15, -255],
         },
     },
 };

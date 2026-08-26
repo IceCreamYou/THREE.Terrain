@@ -37,7 +37,8 @@ h3 {
   text-decoration: none;
 }
 #code,
-#fpscontrols {
+#fpscontrols,
+#fps {
   background-color: rgba(16, 16, 16, 0.75);
   border: 1px solid #AAAAAA;
   border-bottom-width: 0;
@@ -63,6 +64,15 @@ h3 {
 #show-analytics:not(.visible) {
   pointer-events: none;
 }
+#fps {
+  box-sizing: border-box;
+  bottom: 48px;
+  height: 31px;
+  left: 20px;
+  opacity: 1;
+  text-align: center;
+  width: 130px;
+}
 #code {
   left: 20px;
   opacity: 1;
@@ -87,7 +97,7 @@ h3 {
 #analytics {
   background-color: rgba(16, 16, 16, 0.75);
   border: 1px solid #AAAAAA;
-  bottom: 68px;
+  bottom: 97px;
   color: #AAAAAA;
   font-family: Arial, sans-serif;
   font-size: 18px;
