@@ -22,6 +22,7 @@
     "scripts": {
         "start": "vite",
         "build": "vite build",
+        "release": "node scripts/release.mjs",
         "preview": "vite preview",
         "screenshots": "node scripts/capture-readme-screenshots.mjs",
         "vendor": "node scripts/vendor-deps.mjs && node scripts/build-eztree.mjs",
@@ -33,7 +34,7 @@
     },
     "repository": {
         "type": "git",
-        "url": "git://github.com/IceCreamYou/THREE.Terrain.git"
+        "url": "git+https://github.com/IceCreamYou/THREE.Terrain.git"
     },
     "keywords": [
         "THREE",

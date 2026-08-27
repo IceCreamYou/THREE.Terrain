@@ -1,0 +1,115 @@
+name: Publish npm package
+
+on:
+  release:
+    types: [published]
+
+concurrency:
+  group: npm-publish
+  cancel-in-progress: false
+
+# No permissions are inherited by default. The publish job uses OIDC and only
+# reads repository contents.
+permissions: {}
+
+jobs:
+  verify:
+    name: Verify release contents
+    if: ${{ github.repository == 'IceCreamYou/THREE.Terrain' && github.event.release.prerelease == false }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - name: Check out release tag
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.release.tag_name }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24.x
+          package-manager-cache: false
+
+      - name: Derive release version from tag
+        id: release_version
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          set -euo pipefail
+          release_version="$(node - <<'NODE'
+          const tag = process.env.RELEASE_TAG ?? '';
+          const version = tag.startsWith('v') ? tag.slice(1) : tag;
+          const stableSemver = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/;
+          if (!stableSemver.test(version)) {
+            console.error(`Release tag is not a stable semantic version: ${JSON.stringify(tag)}`);
+            process.exit(1);
+          }
+          console.log(version);
+          NODE
+          )"
+          echo "version=$release_version" >> "$GITHUB_OUTPUT"
+
+      - name: Verify package version
+        env:
+          RELEASE_VERSION: ${{ steps.release_version.outputs.version }}
+        run: |
+          set -euo pipefail
+          package_version="$(node -p "require('./package.json').version")"
+          if [ "$package_version" != "$RELEASE_VERSION" ]; then
+            echo "::error::package.json has version $package_version, but the release tag has version $RELEASE_VERSION."
+            exit 1
+          fi
+
+      # This repository does not track package-lock.json. Keep this install
+      # script-free and do not grant this job any publish credential.
+      - name: Install build dependencies
+        run: npm install --ignore-scripts --no-audit --no-fund --package-lock=false
+
+      - name: Rebuild and verify committed dist
+        run: |
+          set -euo pipefail
+          npm run build
+          if ! git diff --quiet -- dist/; then
+            echo "::error::dist/ changed when rebuilt. Commit the generated dist/ before creating the release."
+            git diff --stat -- dist/
+            exit 1
+          fi
+
+  publish:
+    name: Publish package
+    needs: verify
+    if: ${{ github.repository == 'IceCreamYou/THREE.Terrain' && github.event.release.prerelease == false }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: npm-release
+      url: https://www.npmjs.com/package/three.terrain.js
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Check out release tag
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.release.tag_name }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24.x
+          registry-url: https://registry.npmjs.org
+          package-manager-cache: false
+
+      - name: Preview package contents
+        run: npm pack --dry-run --ignore-scripts
+
+      # Trusted Publishing uses this job's OIDC token and adds npm provenance
+      # automatically. Do not replace it with an npm token secret.
+      - name: Publish through npm Trusted Publishing
+        run: npm publish --ignore-scripts
