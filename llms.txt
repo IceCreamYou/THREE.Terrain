@@ -92,6 +92,6 @@ The main pipeline is:
 
 - Demo: <https://icecreamyou.github.io/THREE.Terrain/>
 - Build bundles: `npm run build`
+- Regression suite: `npm test`
 - Local demo: `npm install && npm start`
 - Static-hosting vendor step: `npm run vendor`
-

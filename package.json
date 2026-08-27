@@ -22,6 +22,7 @@
     "scripts": {
         "start": "vite",
         "build": "vite build",
+        "test": "node --test",
         "release": "node scripts/release.mjs",
         "preview": "vite preview",
         "screenshots": "node scripts/capture-readme-screenshots.mjs",

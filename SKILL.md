@@ -434,7 +434,7 @@ grass.
 
 If you are editing/contributing to the THREE.Terrain library, use this order:
 
-1. Run focused tests or a small Node import check when the change is library
+1. Run `npm test` or a focused Node import check when the change is library
    code.
 2. Run `npm run build` to verify the ES module and UMD/CommonJS bundles.
 3. Run `npm start` and inspect the demo for visual or browser-only changes.

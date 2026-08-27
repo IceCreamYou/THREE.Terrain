@@ -206,6 +206,17 @@ To rebuild the library bundles in `dist/`:
 npm run build
 ```
 
+To run the regression suite:
+
+```bash
+npm test
+```
+
+The suite uses Node's built-in test runner and the existing Playwright
+dependency. It covers seeded terrain construction, normalization callbacks,
+analysis, blended materials, instanced grass, and browser-only heightmap
+conversion.
+
 There is also a [statistics simulation](statistics/) that compares procedural
 generation methods. Run it with `npm start` and open `/statistics/`, or see
 [statistics/README.md](statistics/README.md).
