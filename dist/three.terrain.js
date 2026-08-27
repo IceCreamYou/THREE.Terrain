@@ -467,7 +467,7 @@ function m(e) {
 function h(e) {
 	var t = typeof e == "function" ? e : Math.random, n = typeof globalThis < "u" ? globalThis.crypto : null;
 	if (n && typeof n.getRandomValues == "function") {
-		var r = new Uint32Array(1);
+		var r = /* @__PURE__ */ new Uint32Array(1);
 		return n.getRandomValues(r), r[0];
 	}
 	return Math.floor(t() * 4294967296) >>> 0;
@@ -571,9 +571,7 @@ t.MultiPass = function(e, t, n) {
 				case 6:
 					n--, r++;
 					break;
-				case 7:
-					n--, r--;
-					break;
+				case 7: n--, r--;
 			}
 			var l = r * i + n;
 			if (t[l] !== void 0) {
@@ -672,7 +670,7 @@ t.MultiPass = function(e, t, n) {
 				for (c = 0; c <= u; c += d) {
 					var m = c * l + s;
 					if (a[m] = o() * i, !(f < 0 && p < 0)) {
-						for (var h = a[m], g = a[c * l + (s - d)] || h, _ = a[(c - d) * l + s] || h, v = a[(c - d) * l + (s - d)] || h, y = f; y < s; y++) for (var b = p; b < c; b++) if (!(y === f && b === p)) {
+						for (var h = a[m], g = a[c * l + (s - d)] || h, _ = a[(c - d) * l + s] || h, v = a[(c - d) * l + (s - d)] || h, y = f; y < s; y++) for (var b = p; b < c; b++) if (y !== f || b !== p) {
 							var x = b * l + y;
 							if (!(x < 0)) {
 								var S = (y - f) / d, C = (b - p) / d, w = S * _ + (1 - S) * v;
@@ -1163,16 +1161,18 @@ t.ScatterMeshes = function(n, r) {
 		} else T = r.spread(g, w / 9, y, w);
 		if (T && typeof r.filter == "function" && !r.filter(g, y, w / 9, w) && (T = !1), T) {
 			if (y.angleTo(S) > r.maxSlope) continue;
-			for (var D = 0; D < b; D++) if (U(g.clone().add(_).add(v).divideScalar(3), x)) if (s) {
-				u.position.copy(r.mesh.position), u.quaternion.copy(r.mesh.quaternion), u.scale.copy(r.mesh.scale), V(u, g, _, v, y, S, r);
-				var O = {
-					matrix: u.matrix.clone(),
-					position: u.position.clone()
-				};
-				c && (O.tint = new e.Color().lerpColors(c.min, c.max, o())), l.push(O);
-			} else {
-				var k = r.mesh.clone();
-				V(k, g, _, v, y, S, r), r.scene.add(k);
+			for (var D = 0; D < b; D++) if (U(g.clone().add(_).add(v).divideScalar(3), x)) {
+				if (s) {
+					u.position.copy(r.mesh.position), u.quaternion.copy(r.mesh.quaternion), u.scale.copy(r.mesh.scale), V(u, g, _, v, y, S, r);
+					var O = {
+						matrix: u.matrix.clone(),
+						position: u.position.clone()
+					};
+					c && (O.tint = new e.Color().lerpColors(c.min, c.max, o())), l.push(O);
+				} else {
+					var k = r.mesh.clone();
+					V(k, g, _, v, y, S, r), r.scene.add(k);
+				}
 			}
 		}
 	}
@@ -1237,7 +1237,7 @@ t.ScatterMeshes = function(n, r) {
 		});
 		try {
 			for (var R = r.xSegments + 1, z = r.ySegments + 1, B = 0; B < R; B++) for (var V = 0; V < z; V++) {
-				for (var H = -Infinity, U = Infinity, W = i.attributes.position.array[(V * R + B) * 3 + 2], Y = 0, X = 0, Z = -1; Z <= 1; Z++) for (var Q = -1; Q <= 1; Q++) if (B + Q >= 0 && V + Z >= 0 && B + Q < R && V + Z < z && !(Z === 0 && Q === 0)) {
+				for (var H = -Infinity, U = Infinity, W = i.attributes.position.array[(V * R + B) * 3 + 2], Y = 0, X = 0, Z = -1; Z <= 1; Z++) for (var Q = -1; Q <= 1; Q++) if (B + Q >= 0 && V + Z >= 0 && B + Q < R && V + Z < z && (Z !== 0 || Q !== 0)) {
 					var $ = i.attributes.position.array[((V + Z) * R + B + Q) * 3 + 2];
 					Y += $, X++, $ > H && (H = $), $ < U && (U = $);
 				}
@@ -1407,7 +1407,9 @@ function J(t, n) {
 	r.index && (r = r.toNonIndexed());
 	for (var i = r.attributes.position.array, a = i.length / 9, o = Array(a), s = new e.Vector3(), c = new e.Vector3(), l = new e.Vector3(), u = 0; u < a; u++) {
 		var d = u * 9;
-		s.set(i[d], i[d + 1], i[d + 2]), c.set(i[d + 3], i[d + 4], i[d + 5]), l.set(i[d + 6], i[d + 7], i[d + 8]), o[u] = new e.Vector3().crossVectors(new e.Vector3().subVectors(c, s), new e.Vector3().subVectors(l, s)).normalize();
+		s.set(i[d], i[d + 1], i[d + 2]), c.set(i[d + 3], i[d + 4], i[d + 5]), l.set(i[d + 6], i[d + 7], i[d + 8]);
+		var f = new e.Vector3().crossVectors(new e.Vector3().subVectors(c, s), new e.Vector3().subVectors(l, s)).normalize();
+		o[u] = f;
 	}
 	return o;
 }

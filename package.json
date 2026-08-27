@@ -54,7 +54,7 @@
     "devDependencies": {
         "dat.gui": "^0.7.9",
         "playwright": "^1.62.1",
-        "three": "^0.184.0",
-        "vite": "^8.0.14"
+        "three": "0.185.1",
+        "vite": "8.2.2"
     }
 }

@@ -3,6 +3,12 @@ name: Publish npm package
 on:
   release:
     types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing published stable release tag to publish
+        required: true
+        type: string
 
 concurrency:
   group: npm-publish
@@ -12,10 +18,13 @@ concurrency:
 # reads repository contents.
 permissions: {}
 
+env:
+  RELEASE_TAG: ${{ github.event_name == 'release' && github.event.release.tag_name || inputs.tag }}
+
 jobs:
   verify:
     name: Verify release contents
-    if: ${{ github.repository == 'IceCreamYou/THREE.Terrain' && github.event.release.prerelease == false }}
+    if: ${{ github.repository == 'IceCreamYou/THREE.Terrain' && (github.event_name == 'workflow_dispatch' || github.event.release.prerelease == false) }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -24,7 +33,7 @@ jobs:
       - name: Check out release tag
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ github.event.release.tag_name }}
+          ref: ${{ env.RELEASE_TAG }}
           fetch-depth: 1
           persist-credentials: false
 
@@ -36,8 +45,6 @@ jobs:
 
       - name: Derive release version from tag
         id: release_version
-        env:
-          RELEASE_TAG: ${{ github.event.release.tag_name }}
         run: |
           set -euo pipefail
           release_version="$(node - <<'NODE'
@@ -53,6 +60,21 @@ jobs:
           )"
           echo "version=$release_version" >> "$GITHUB_OUTPUT"
 
+      - name: Verify existing GitHub Release
+        if: ${{ github.event_name == 'workflow_dispatch' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          release_json="$(gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --json isDraft,isPrerelease)"
+          RELEASE_JSON="$release_json" node - <<'NODE'
+          const release = JSON.parse(process.env.RELEASE_JSON);
+          if (release.isDraft || release.isPrerelease) {
+            console.error('The selected release must be published and stable.');
+            process.exit(1);
+          }
+          NODE
+
       - name: Verify package version
         env:
           RELEASE_VERSION: ${{ steps.release_version.outputs.version }}
@@ -64,10 +86,22 @@ jobs:
             exit 1
           fi
 
-      # This repository does not track package-lock.json. Keep this install
-      # script-free and do not grant this job any publish credential.
+      # This repository does not track package-lock.json. Install the declared
+      # Vite version exactly so the generated bundles are reproducible.
       - name: Install build dependencies
-        run: npm install --ignore-scripts --no-audit --no-fund --package-lock=false
+        run: |
+          set -euo pipefail
+          vite_version="$(node - <<'NODE'
+          const spec = require('./package.json').devDependencies?.vite ?? '';
+          const match = spec.match(/^(?:[~^=])?(\d+\.\d+\.\d+)$/);
+          if (!match) {
+            console.error(`Unsupported Vite version specification: ${JSON.stringify(spec)}`);
+            process.exit(1);
+          }
+          console.log(match[1]);
+          NODE
+          )"
+          npm install --ignore-scripts --no-audit --no-fund --package-lock=false --no-save "vite@$vite_version"
 
       - name: Rebuild and verify committed dist
         run: |
@@ -82,7 +116,7 @@ jobs:
   publish:
     name: Publish package
     needs: verify
-    if: ${{ github.repository == 'IceCreamYou/THREE.Terrain' && github.event.release.prerelease == false }}
+    if: ${{ github.repository == 'IceCreamYou/THREE.Terrain' && (github.event_name == 'workflow_dispatch' || github.event.release.prerelease == false) }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     environment:
@@ -95,7 +129,7 @@ jobs:
       - name: Check out release tag
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ github.event.release.tag_name }}
+          ref: ${{ env.RELEASE_TAG }}
           fetch-depth: 1
           persist-credentials: false
 

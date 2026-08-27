@@ -1,13 +1,6 @@
 name: Check generated bundles
 
 on:
-  pull_request:
-    paths:
-      - package.json
-      - src/**
-      - dist/**
-      - vite.config.js
-      - .github/workflows/check-dist.yml
   push:
     paths:
       - package.json
@@ -29,8 +22,41 @@ jobs:
       - name: Check out source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          fetch-depth: 1
+          fetch-depth: 0
           persist-credentials: false
+
+      - name: Check whether a dist rebuild is needed
+        id: changes
+        env:
+          BASE_SHA: ${{ github.event.before }}
+        run: |
+          set -euo pipefail
+
+          # A new branch has no previous commit to compare. Run the check.
+          if [ "$BASE_SHA" = "0000000000000000000000000000000000000000" ] || ! git cat-file -e "$BASE_SHA^{commit}" 2>/dev/null; then
+            echo "skip_dist=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          changed_files="$(git diff --name-only "$BASE_SHA" HEAD)"
+          if [ "$changed_files" != "package.json" ]; then
+            echo "skip_dist=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          BASE_SHA="$BASE_SHA" node - <<'NODE'
+          const { execFileSync } = require('node:child_process');
+          const { appendFileSync, readFileSync } = require('node:fs');
+
+          const base = JSON.parse(execFileSync('git', ['show', `${process.env.BASE_SHA}:package.json`], { encoding: 'utf8' }));
+          const current = JSON.parse(readFileSync('package.json', 'utf8'));
+          delete base.version;
+          delete current.version;
+
+          const skipDist = JSON.stringify(base) === JSON.stringify(current);
+          console.log(skipDist ? 'Only package.json version changed; skipping dist check.' : 'Build-related package.json changes detected.');
+          appendFileSync(process.env.GITHUB_OUTPUT, `skip_dist=${skipDist}\n`);
+          NODE
 
       - name: Set up Node.js
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
@@ -38,12 +64,26 @@ jobs:
           node-version: 24.x
           package-manager-cache: false
 
-      # This repository does not track package-lock.json. Keep this install
-      # script-free and do not grant this job any publish credential.
+      # This repository does not track package-lock.json. Install the declared
+      # Vite version exactly so the generated bundles are reproducible.
       - name: Install build dependencies
-        run: npm install --ignore-scripts --no-audit --no-fund --package-lock=false
+        if: steps.changes.outputs.skip_dist != 'true'
+        run: |
+          set -euo pipefail
+          vite_version="$(node - <<'NODE'
+          const spec = require('./package.json').devDependencies?.vite ?? '';
+          const match = spec.match(/^(?:[~^=])?(\d+\.\d+\.\d+)$/);
+          if (!match) {
+            console.error(`Unsupported Vite version specification: ${JSON.stringify(spec)}`);
+            process.exit(1);
+          }
+          console.log(match[1]);
+          NODE
+          )"
+          npm install --ignore-scripts --no-audit --no-fund --package-lock=false --no-save "vite@$vite_version"
 
       - name: Rebuild and compare dist
+        if: steps.changes.outputs.skip_dist != 'true'
         run: |
           set -euo pipefail
           npm run build
