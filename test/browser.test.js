@@ -92,3 +92,55 @@ test('browser heightmap import and export preserve a generated terrain surface',
     assert.deepEqual(pageErrors, []);
 });
 
+test('demo loads the library and creates its terrain heightmap', async () => {
+    const page = await browser.newPage();
+    const consoleErrors = [];
+    const pageErrors = [];
+    const requestErrors = [];
+    page.on('console', (message) => {
+        if (message.type() === 'error') consoleErrors.push(message.text());
+    });
+    page.on('pageerror', (error) => pageErrors.push(error.message));
+    page.on('requestfailed', (request) => {
+        const failure = request.failure();
+        requestErrors.push(`${request.url()}: ${failure ? failure.errorText : 'request failed'}`);
+    });
+
+    let response;
+    let result;
+    try {
+        response = await page.goto(`${serverUrl}/?seed=12345&decorationSeed=67890`, {
+            waitUntil: 'domcontentloaded',
+            timeout: 30000,
+        });
+        await page.waitForFunction(() =>
+            Boolean(
+                window.THREE &&
+                window.THREE.Terrain &&
+                typeof window.terrainDemoSeed === 'number' &&
+                document.querySelector('#heightmap') &&
+                document.querySelector('#heightmap').width > 0 &&
+                document.querySelector('#heightmap').height > 0
+            ), null, {timeout: 30000}
+        );
+        result = await page.evaluate(() => ({
+            hasTerrainNamespace: Boolean(window.THREE && window.THREE.Terrain),
+            seed: window.terrainDemoSeed,
+            heightmapSize: [
+                document.querySelector('#heightmap').width,
+                document.querySelector('#heightmap').height,
+            ],
+        }));
+    }
+    finally {
+        await page.close();
+    }
+
+    assert.equal(response.status(), 200);
+    assert.equal(result.hasTerrainNamespace, true);
+    assert.equal(result.seed, 12345);
+    assert.ok(result.heightmapSize[0] > 1 && result.heightmapSize[1] > 1);
+    assert.deepEqual(consoleErrors, []);
+    assert.deepEqual(pageErrors, []);
+    assert.deepEqual(requestErrors, []);
+});

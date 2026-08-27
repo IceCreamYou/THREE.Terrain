@@ -39,6 +39,18 @@ function buildTerrain(seed, overrides = {}) {
     return {options, scene, mesh, heights};
 }
 
+function getInstancePositions(scene) {
+    const instances = scene.children[0];
+    if (!instances || !instances.isInstancedMesh) return [];
+    const matrix = new THREE.Matrix4();
+    const positions = [];
+    for (let index = 0; index < instances.count; index++) {
+        instances.getMatrixAt(index, matrix);
+        positions.push(new THREE.Vector3().setFromMatrixPosition(matrix));
+    }
+    return positions;
+}
+
 test('seeded terrain construction is repeatable and stays within its requested range', () => {
     const first = buildTerrain(12345);
     const second = buildTerrain(12345);
@@ -55,6 +67,14 @@ test('seeded terrain construction is repeatable and stays within its requested r
     assert.notDeepEqual(first.heights, differentSeed.heights);
     assert.ok(first.heights.every((height) => height >= first.options.minHeight && height <= first.options.maxHeight));
     assert.ok(Math.min(...first.heights) < Math.max(...first.heights));
+});
+
+test('PerlinDiamond and Simplex produce different surfaces for the same seed', () => {
+    const perlinDiamond = buildTerrain(5150, {heightmap: TerrainNS.PerlinDiamond});
+    const simplex = buildTerrain(5150, {heightmap: TerrainNS.Simplex});
+
+    assert.equal(perlinDiamond.heights.length, simplex.heights.length);
+    assert.ok(perlinDiamond.heights.some((height, index) => height !== simplex.heights[index]));
 });
 
 test('constructor callbacks can shape generated terrain before geometry updates', () => {
@@ -123,6 +143,32 @@ test('generated terrain produces complete analysis metrics', () => {
     assert.equal(typeof analysis.slope.percentRank(analysis.slope.median), 'number');
 });
 
+test('heightmapArray survives 1D and 2D height-array conversion', () => {
+    const options = {
+        xSegments: 4,
+        ySegments: 3,
+        minHeight: 0,
+        maxHeight: 1,
+        frequency: 2.5,
+        stretch: true,
+        random: createSeededRandom(6006),
+    };
+    const heights = Float32Array.from(TerrainNS.heightmapArray(TerrainNS.PerlinDiamond, options));
+    const positions = new Float32Array(heights.length * 3);
+    const restoredHeights = new Float32Array(heights.length);
+
+    TerrainNS.fromArray1D(positions, heights);
+    const grid = TerrainNS.toArray2D(heights, options);
+    TerrainNS.fromArray2D(restoredHeights, grid);
+
+    assert.equal(heights.length, (options.xSegments + 1) * (options.ySegments + 1));
+    assert.equal(grid.length, options.xSegments + 1);
+    assert.equal(grid[0].length, options.ySegments + 1);
+    assert.ok(heights.every((height) => Number.isFinite(height) && height >= 0 && height <= 1));
+    assert.deepEqual(Array.from(TerrainNS.toArray1D(positions)), Array.from(heights));
+    assert.deepEqual(Array.from(restoredHeights), Array.from(heights));
+});
+
 test('blended materials expose every texture layer through the compiled shader', () => {
     const textures = [new THREE.Texture(), new THREE.Texture(), new THREE.Texture()];
     textures[1].repeat.set(2, 3);
@@ -147,6 +193,112 @@ test('blended materials expose every texture layer through the compiled shader',
     assert.match(shader.fragmentShader, /texture_1/);
     assert.match(shader.fragmentShader, /slope > 0\.3/);
     assert.deepEqual(Object.keys(shader.uniforms).sort(), ['texture_0', 'texture_1', 'texture_2']);
+});
+
+test('random scatter applies filters and shares minimum distance across calls', () => {
+    const terrain = buildTerrain(7070, {
+        heightmap: TerrainNS.Cosine,
+        xSegments: 6,
+        ySegments: 6,
+        xSize: 120,
+        ySize: 120,
+    });
+    const prototype = new THREE.Mesh(
+        new THREE.CylinderGeometry(1, 1, 4, 5),
+        new THREE.MeshBasicMaterial()
+    );
+    const placementGroup = {};
+    const scatter = (seed) => TerrainNS.ScatterMeshes(terrain.mesh.geometry, {
+        mesh: prototype,
+        scene: new THREE.Object3D(),
+        spread: () => true,
+        filter: (vertex) => vertex.x < -20,
+        randomDistribution: true,
+        sampleCount: 80,
+        randomDistributionMinDistance: 18,
+        minimumDistanceGroup: placementGroup,
+        instanced: true,
+        maxSlope: Math.PI,
+        sizeVariance: 0,
+        random: createSeededRandom(seed),
+    });
+    const first = scatter(7071);
+    const firstPositions = getInstancePositions(first);
+    const second = scatter(7071);
+
+    assert.ok(firstPositions.length > 0);
+    assert.ok(firstPositions.every((position) => position.x < -19));
+    for (let firstIndex = 0; firstIndex < firstPositions.length; firstIndex++) {
+        for (let secondIndex = firstIndex + 1; secondIndex < firstPositions.length; secondIndex++) {
+            assert.ok(firstPositions[firstIndex].distanceTo(firstPositions[secondIndex]) >= 18);
+        }
+    }
+    assert.equal(second.children.length, 0);
+});
+
+test('non-instanced group scattering inherits terrain rotation and respects tilt and slope limits', () => {
+    const terrain = buildTerrain(8080, {
+        heightmap(values, options) {
+            const columns = options.xSegments + 1;
+            for (let row = 0; row <= options.ySegments; row++) {
+                for (let column = 0; column <= options.xSegments; column++) {
+                    values[row * columns + column] = column;
+                }
+            }
+        },
+        xSegments: 2,
+        ySegments: 2,
+        xSize: 20,
+        ySize: 20,
+        minHeight: 0,
+        maxHeight: 4,
+        stretch: false,
+    });
+    const source = terrain.mesh.geometry.toNonIndexed();
+    const sourcePositions = source.attributes.position.array;
+    const vertex1 = new THREE.Vector3().fromArray(sourcePositions, 0);
+    const vertex2 = new THREE.Vector3().fromArray(sourcePositions, 3);
+    const vertex3 = new THREE.Vector3().fromArray(sourcePositions, 6);
+    const expectedLocalPosition = vertex1.clone().add(vertex2).add(vertex3).divideScalar(3);
+    const expectedLocalNormal = new THREE.Vector3();
+    THREE.Triangle.getNormal(vertex1, vertex2, vertex3, expectedLocalNormal);
+    const prototype = new THREE.Group();
+    prototype.add(new THREE.Mesh(new THREE.BoxGeometry(2, 4, 2), new THREE.MeshBasicMaterial()));
+
+    const scattered = TerrainNS.ScatterMeshes(terrain.mesh.geometry, {
+        scene: terrain.scene,
+        mesh: prototype,
+        spread: (vertex, faceIndex) => faceIndex === 0,
+        maxSlope: Math.PI,
+        maxTilt: 0,
+        sizeVariance: 0,
+        random: () => 0,
+    });
+    const clone = scattered.children[1];
+
+    terrain.scene.updateMatrixWorld(true);
+    const expectedWorldPosition = expectedLocalPosition.clone().applyMatrix4(terrain.scene.matrixWorld);
+    const actualWorldPosition = clone.getWorldPosition(new THREE.Vector3());
+    const actualWorldUp = new THREE.Vector3(0, 1, 0)
+        .applyQuaternion(clone.getWorldQuaternion(new THREE.Quaternion()))
+        .normalize();
+    const rejected = TerrainNS.ScatterMeshes(terrain.mesh.geometry, {
+        scene: new THREE.Object3D(),
+        mesh: prototype,
+        spread: (vertex, faceIndex) => faceIndex === 0,
+        maxSlope: 0.05,
+        maxTilt: 0,
+        sizeVariance: 0,
+        random: () => 0,
+    });
+
+    assert.equal(scattered, terrain.scene);
+    assert.equal(scattered.children.length, 2);
+    assert.equal(clone.isGroup, true);
+    assert.ok(actualWorldPosition.distanceTo(expectedWorldPosition) < 1e-5);
+    assert.ok(actualWorldUp.distanceTo(new THREE.Vector3(0, 1, 0)) < 1e-5);
+    assert.ok(expectedLocalNormal.angleTo(new THREE.Vector3(0, 0, 1)) > 0.05);
+    assert.equal(rejected.children.length, 0);
 });
 
 test('grass scattering creates instanced coverage and responds to wind and camera distance', () => {
