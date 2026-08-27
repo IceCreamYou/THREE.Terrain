@@ -64,14 +64,85 @@ h3 {
 #show-analytics:not(.visible) {
   pointer-events: none;
 }
+#fpscontrols {
+  box-sizing: border-box;
+  font-size: 13px;
+  height: auto;
+  line-height: 18px;
+  max-width: calc(100vw - 40px);
+  padding: 5px 9px;
+  pointer-events: none;
+  white-space: nowrap;
+}
+#fpscontrols .fpscontrols-prompt {
+  color: #EEEEEE;
+  font-weight: bold;
+}
+#fpscontrols .fpscontrols-keys {
+  margin-left: 8px;
+}
+#fpscontrols.locked .fpscontrols-prompt {
+  color: #9DD98A;
+}
+.dg .pointer-lock-blocked {
+  opacity: 0.55;
+}
+.flight-mode-tooltip {
+  background-color: rgba(16, 16, 16, 0.95);
+  border: 1px solid #AAAAAA;
+  box-sizing: border-box;
+  color: #EEEEEE;
+  font: 11px 'Lucida Grande', sans-serif;
+  line-height: 16px;
+  max-width: 260px;
+  opacity: 0;
+  padding: 7px 9px;
+  pointer-events: none;
+  position: fixed;
+  visibility: hidden;
+  z-index: 4;
+}
+.flight-mode-tooltip:before,
+.flight-mode-tooltip:after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+}
+.flight-mode-tooltip:before {
+  border-bottom: 8px solid transparent;
+  border-left: 8px solid #AAAAAA;
+  border-top: 8px solid transparent;
+  right: -8px;
+}
+.flight-mode-tooltip:after {
+  border-bottom: 7px solid transparent;
+  border-left: 7px solid rgba(16, 16, 16, 0.95);
+  border-top: 7px solid transparent;
+  right: -7px;
+}
+body:has([aria-describedby="flight-mode-tooltip"]:hover) .flight-mode-tooltip.visible {
+  opacity: 1;
+  visibility: visible;
+}
+body.pointer-locked #heightmap,
+body.pointer-locked #show-analytics,
+body.pointer-locked #analytics,
+body.pointer-locked .dg {
+  display: none !important;
+}
 #fps {
+  border-bottom-width: 1px;
   box-sizing: border-box;
   bottom: 48px;
-  height: 31px;
+  font-size: 13px;
+  height: auto;
   left: 20px;
+  line-height: 18px;
   opacity: 1;
   text-align: center;
-  width: 130px;
+  width: max-content;
+  font-variant-numeric: tabular-nums;
 }
 #code {
   left: 20px;

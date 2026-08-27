@@ -8,7 +8,7 @@ import Terrain, {
     updateGrass,
     updateGrassLOD,
 } from '../src/index.js';
-import { createSeededRandom } from '../src/random.js';
+import { createRandomSeed, createSeededRandom } from '../src/random.js';
 import { Tree } from '../vendor/eztree/build/eztree.module.js';
 
 var DEMO_DECORATION_SEED = 0x9e3779b9,
@@ -23,7 +23,8 @@ var DEMO_DECORATION_SEED = 0x9e3779b9,
  * controls and presentation code pass their state through `options`.
  *
  * @param {Object} options
- *   Scene, renderer, settings, seed, world, analytics, and heightmap canvas.
+ *   Scene, renderer, settings, terrain seed, optional decoration seed, world,
+ *   analytics, and heightmap canvas.
  * @return {Object}
  *   Landscape operations and accessors used by the browser entry point.
  */
@@ -36,6 +37,8 @@ export function createLandscape(options) {
         heightmapImage = options.heightmapImage,
         heightmapCanvas = options.heightmapCanvas,
         demoSeed = options.seed >>> 0,
+        decorationSeed = typeof options.decorationSeed === 'number' ? options.decorationSeed >>> 0 :
+            (demoSeed + DEMO_DECORATION_SEED) >>> 0,
         demoStatic = !!options.demoStatic,
         terrainScene = null,
         decoScene = null,
@@ -61,11 +64,37 @@ export function createLandscape(options) {
      *   The phase-specific random source.
      */
     function resetRandomness(phase) {
-        var offset = phase === 'decoration' ? DEMO_DECORATION_SEED : 0,
-            random = createSeededRandom((demoSeed + offset) >>> 0);
+        var seed = phase === 'decoration' ? decorationSeed : demoSeed,
+            random = createSeededRandom(seed);
         if (phase === 'decoration') decorationRandom = random;
         else terrainRandom = random;
         return random;
+    }
+
+    /**
+     * Set the seed used by terrain generation.
+     *
+     * @param {number} seed
+     *   Unsigned terrain seed.
+     */
+    function setTerrainSeed(seed) {
+        demoSeed = seed >>> 0;
+    }
+
+    /**
+     * Set the seed used by tree, bush, and grass scattering.
+     *
+     * Clearing the tree cache is important because eztree uses its seed when
+     * generating branch and leaf geometry, not only when choosing placement
+     * positions. Grass uses the same stream for placement and per-instance
+     * tint choices.
+     *
+     * @param {number} seed
+     *   Unsigned decoration seed.
+     */
+    function setDecorationSeed(seed) {
+        decorationSeed = seed >>> 0;
+        treeMeshCache = {};
     }
 
     /**
@@ -82,7 +111,7 @@ export function createLandscape(options) {
             hash ^= preset.charCodeAt(index);
             hash = Math.imul(hash, 16777619);
         }
-        return (demoSeed ^ hash) >>> 0;
+        return (decorationSeed ^ hash) >>> 0;
     }
 
     /**
@@ -275,8 +304,9 @@ export function createLandscape(options) {
      *   Cached generated prototype.
      */
     function getTreeMesh(preset) {
-        if (!treeMeshCache[preset]) treeMeshCache[preset] = buildTree(getTreeSeed(preset), preset);
-        return treeMeshCache[preset];
+        var cacheKey = decorationSeed + ':' + preset;
+        if (!treeMeshCache[cacheKey]) treeMeshCache[cacheKey] = buildTree(getTreeSeed(preset), preset);
+        return treeMeshCache[cacheKey];
     }
 
     /**
@@ -344,14 +374,13 @@ export function createLandscape(options) {
         var geometry = terrainScene.children[0].geometry;
         if (decoScene) terrainScene.remove(decoScene);
         var useWoodlandDistribution = settings.scattering === 'PerlinAltitude',
-            treePresets = ['Oak Medium', 'Ash Medium', 'Aspen Medium'],
+            treePresets = ['Oak Medium', 'Ash Medium', 'Aspen Medium', 'Bush 1', 'Bush 2', 'Bush 3'],
             treeSampleMultiplier = Math.max(1, settings.spread / 60),
             treeSampleCount = Math.max(1, Math.round(segments * segments * 0.03 * treeSampleMultiplier)),
             // Keep trunks and central crowns from sharing a patch of ground,
             // while allowing neighboring trees to form a woodland instead of
             // spacing the whole grove at the width of the largest canopy.
             treePlacementGroup = {minimumDistance: TREE_MINIMUM_DISTANCE};
-        if (settings.bushPreset !== 'None') treePresets.push(settings.bushPreset);
         decoScene = new THREE.Object3D();
         for (var treeMeshIndex = 0; treeMeshIndex < treePresets.length; treeMeshIndex++) {
             TerrainNS.ScatterMeshes(geometry, {
@@ -469,6 +498,34 @@ export function createLandscape(options) {
     }
 
     /**
+     * Generate the terrain with a newly chosen terrain seed.
+     *
+     * The decoration seed remains unchanged, so this action changes the
+     * landscape shape without also consuming a new tree/grass/bush stream.
+     *
+     * @return {THREE.Object3D|null}
+     *   Current terrain scene.
+     */
+    function regenerateNewSeed() {
+        setTerrainSeed(createRandomSeed());
+        return regenerate();
+    }
+
+    /**
+     * Scatter all decorations with a newly chosen decoration seed.
+     *
+     * The terrain seed remains unchanged, so this action changes the
+     * tree/grass/bush arrangement without changing the generated terrain.
+     *
+     * @return {THREE.Object3D|null}
+     *   Current terrain scene.
+     */
+    function scatterMeshesNewSeed() {
+        setDecorationSeed(createRandomSeed());
+        return scatterMeshes();
+    }
+
+    /**
      * Update the demo heightmap canvas from the current terrain geometry.
      */
     function updateHeightmap() {
@@ -485,11 +542,20 @@ export function createLandscape(options) {
      *   Elapsed time in seconds.
      * @param {THREE.Camera} activeCamera
      *   Camera used for the current frame.
+     * @param {boolean} rotateTerrain
+     *   Whether the presentation rotation should continue while updating.
      */
-    function update(elapsedTime, activeCamera) {
+    function update(elapsedTime, activeCamera, rotateTerrain) {
         updateGrass(grassMesh, elapsedTime);
         updateGrassLOD(grassScene, activeCamera, settings.grassLodDistance);
-        if (terrainScene && !demoStatic) terrainScene.rotation.z = Date.now() * 0.00001;
+        if (terrainScene && !demoStatic && rotateTerrain !== false) {
+            // Terrain() converts its local XY/Z-up plane to the demo's
+            // world XZ/Y-up coordinates with a -90deg X rotation. Leave the
+            // current orientation untouched in Flight mode; resetting the
+            // orbit angle there would move the landscape under a camera whose
+            // world-space pose has not changed.
+            terrainScene.rotation.z = Date.now() * 0.00001;
+        }
     }
 
     /**
@@ -550,11 +616,16 @@ export function createLandscape(options) {
             scatterMeshes();
         },
         regenerate: regenerate,
+        regenerateNewSeed: regenerateNewSeed,
         scatterMeshes: scatterMeshes,
+        scatterMeshesNewSeed: scatterMeshesNewSeed,
         updateHeightmap: updateHeightmap,
         update: update,
         getLastOptions: function() { return lastOptions; },
         getTerrainScene: function() { return terrainScene; },
         getTerrainMesh: function() { return terrainScene && terrainScene.children[0]; },
+        getSeeds: function() {
+            return {terrain: demoSeed, decoration: decorationSeed};
+        },
     };
 }

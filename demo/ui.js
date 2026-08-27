@@ -5,33 +5,54 @@
  *   Animation callbacks and first-person controls.
  */
 export function bindFocusHandling(options) {
-    var blurred = false;
-    window.addEventListener('focus', function() {
-        if (blurred) {
-            blurred = false;
-            options.startAnimating();
-            options.controls.enabled = true;
-        }
-    }, {passive: true});
-    window.addEventListener('blur', function() {
+    var unfocused = false;
+
+    /**
+     * Pause rendering and release transient input state.
+     */
+    function pause() {
+        if (unfocused) return;
+        unfocused = true;
         options.stopAnimating();
-        blurred = true;
         options.controls.enabled = false;
+        if (options.controls.clearKeys) options.controls.clearKeys();
+        if (options.controls.updateOverlay) options.controls.updateOverlay();
+    }
+
+    /**
+     * Resume rendering after the page becomes the focused visible document.
+     */
+    function resume() {
+        if (!unfocused || document.hidden) return;
+        unfocused = false;
+        options.startAnimating();
+        options.controls.enabled = true;
+        if (options.controls.updateOverlay) options.controls.updateOverlay();
+    }
+
+    window.addEventListener('focus', resume, {passive: true});
+    window.addEventListener('blur', pause, {passive: true});
+    document.addEventListener('visibilitychange', function() {
+        if (document.hidden) pause();
+        else if (document.hasFocus()) resume();
     }, {passive: true});
 }
 
 /**
- * Bind the first-person freeze shortcut.
+ * Bind keyboard movement for pointer-lock flight controls.
  *
  * @param {Object} options
- *   Camera controller state.
+ *   Camera controller state and flight-mode predicate.
  */
 export function bindKeyboardControls(options) {
+    document.addEventListener('keydown', function(event) {
+        if (!options.isFlightMode() || !options.controls.handleKeyDown) return;
+        if (options.controls.handleKeyDown(event)) event.preventDefault();
+    }, {passive: false});
     document.addEventListener('keyup', function(event) {
-        if (event.key === 'q' && options.isFlightMode()) {
-            options.controls.enabled = !options.controls.enabled;
-        }
-    }, {passive: true});
+        if (!options.isFlightMode() || !options.controls.handleKeyUp) return;
+        if (options.controls.handleKeyUp(event)) event.preventDefault();
+    }, {passive: false});
 }
 
 /**
@@ -51,9 +72,10 @@ export function bindResizeHandling(options) {
 /**
  * Create a compact frame-rate display for the demo.
  *
- * The counter averages frames over a half-second window. This avoids making
- * the label flicker while still showing changes caused by terrain density,
- * decoration, or camera movement quickly enough to be useful during demos.
+ * The counter samples complete one-second intervals and applies the same
+ * exponentially weighted smoothing as MainLoop.js. This keeps the label from
+ * flickering while still reflecting changes caused by terrain density,
+ * decoration, or camera movement.
  *
  * @param {HTMLElement|null} element
  *   Element whose text should contain the current frame rate.
@@ -61,22 +83,34 @@ export function bindResizeHandling(options) {
  *   Object with an `update` method to call once per rendered frame.
  */
 export function createFPSCounter(element) {
-    var frameCount = 0,
-        lastTime = performance.now();
+    var framesThisSecond = 0,
+        lastFpsUpdate = performance.now(),
+        fps = 0;
     return {
         /**
-         * Update the displayed average when the current sample window ends.
+         * Reset the sample window before rendering resumes.
          */
-        update: function() {
+        reset: function() {
+            framesThisSecond = 0;
+            lastFpsUpdate = performance.now();
+        },
+
+        /**
+         * Update the displayed FPS using the MainLoop.js smoothing formula.
+         *
+         * @param {number|undefined} frameTime
+         *   Browser animation timestamp, or the current performance time when
+         *   called outside requestAnimationFrame.
+         */
+        update: function(frameTime) {
             if (!element) return;
-            frameCount++;
-            var now = performance.now(),
-                elapsed = now - lastTime;
-            if (elapsed < 500) return;
-            var fps = frameCount * 1000 / elapsed;
+            var now = typeof frameTime === 'number' ? frameTime : performance.now();
+            framesThisSecond++;
+            if (now - lastFpsUpdate < 1000) return;
+            fps = 0.25 * (framesThisSecond / Math.floor((now - lastFpsUpdate) / 1000)) + 0.75 * fps;
             element.textContent = 'FPS: ' + (fps < 10 ? fps.toFixed(1) : Math.round(fps));
-            frameCount = 0;
-            lastTime = now;
+            framesThisSecond = 0;
+            lastFpsUpdate = now;
         },
     };
 }

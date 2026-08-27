@@ -28,9 +28,9 @@ const screenshotTimeout = 300_000;
 function parseArguments(argv) {
     var options = {
         headed: false,
-        layersEdgeDistance: 256,
+        layersEdgeDistance: 288,
         layersOnly: false,
-        layersSeed: 123456,
+        layersSeed: 390472148,
         layersSeedProvided: false,
         outputDir: resolve(projectRoot, 'demo/img'),
         port: 4173,
@@ -103,9 +103,9 @@ Options:
   --port PORT        Vite port when --url is not supplied (default: 4173).
   --output-dir DIR   Directory for screenshot1.jpg and screenshot2.jpg.
   --seed NUMBER      Seed the analytics beach terrain; defaults to 271828.
-  --layers-seed NUM  Seed the HUD-free beach/material terrain; defaults to 123456.
+  --layers-seed NUM  Seed the HUD-free beach/material terrain; defaults to 390472148.
   --layers-edge-distance NUM
-                     Width of the HUD-free radial beach transition; defaults to 256.
+                     Width of the HUD-free radial beach transition; defaults to 288.
   --layers-only      Capture only screenshot2 while iterating beach compositions.
   --headed           Show the Playwright Chromium window while capturing.
   --help             Show this help.
@@ -150,17 +150,20 @@ async function startDemoServer(port) {
  *   Demo URL to extend.
  * @param {number} seed
  *   Unsigned 32-bit random seed.
- * @param {string} start
- *   Demo camera start name.
+ * @param {string|null} start
+ *   Optional demo camera start name. A camera state can replace this value.
  * @param {Object} settings
  *   Dat.GUI settings to encode as URL query parameters.
+ * @param {Object|null} cameraState
+ *   Optional `position` and `rotation` arrays for an exact camera pose.
  * @return {string}
  *   URL containing the requested parameters.
  */
-function createCaptureURL(baseURL, seed, start, settings) {
+function createCaptureURL(baseURL, seed, start, settings, cameraState) {
     var url = new URL(baseURL);
     url.searchParams.set('seed', String(seed >>> 0));
-    url.searchParams.set('start', start);
+    if (start) url.searchParams.set('start', start);
+    else url.searchParams.delete('start');
     // Freeze the demo's optional terrain rotation so repeated captures with
     // the same seed and camera remain pixel-stable while ordinary visits keep
     // their normal animated presentation.
@@ -170,6 +173,10 @@ function createCaptureURL(baseURL, seed, start, settings) {
         if (settings.hasOwnProperty(setting)) {
             url.searchParams.set(setting, String(settings[setting]));
         }
+    }
+    if (cameraState) {
+        url.searchParams.set('cameraPosition', cameraState.position.join(','));
+        url.searchParams.set('cameraRotation', cameraState.rotation.join(','));
     }
     return url.toString();
 }
@@ -277,7 +284,8 @@ async function forceAnalyticsVisible(page) {
 async function waitForFPSOrHide(page) {
     var reachedTarget = await page.waitForFunction(() => {
         var element = document.getElementById('fps'),
-            value = element && parseFloat(element.textContent.replace(/[^0-9.]/g, ''));
+            match = element && element.textContent.match(/FPS:\s*([0-9.]+)/),
+            value = match ? Number(match[1]) : NaN;
         return Number.isFinite(value) && value >= 60;
     }, undefined, {timeout: 10000}).then(() => true).catch(() => false);
     if (!reachedTarget) {
@@ -336,6 +344,15 @@ async function setFlightMode(page, enabled) {
     await checkbox.waitFor({state: 'attached'});
     await checkbox.setChecked(enabled, {force: true});
     await page.waitForTimeout(1300);
+    // Enabling Flight mode is intentionally a pointer-lock gesture in the
+    // demo. Release it again for the analytics capture so its HUD can remain
+    // visible; the material capture starts from its URL without a gesture.
+    if (enabled) {
+        await page.evaluate(() => {
+            if (document.pointerLockElement && document.exitPointerLock) document.exitPointerLock();
+        });
+        await page.waitForTimeout(100);
+    }
 }
 
 /**
@@ -445,19 +462,41 @@ async function main() {
                 grassWindStrength: 10,
             },
             beachSettings = {
+                easing: 'Linear',
                 heightmap: 'PerlinDiamond',
+                smoothing: 'None',
+                maxHeight: 122,
+                segments: 127,
+                steps: 1,
+                turbulent: false,
+                size: 1280,
+                sky: true,
                 texture: 'Blended',
-                scattering: 'PerlinAltitude',
-                edgeType: 'Radial',
                 edgeDirection: 'Down',
-                edgeCurve: 'EaseInOut',
+                edgeType: 'Radial',
                 edgeDistance: options.layersEdgeDistance,
-                grassDensity: 1.5,
-                grassHeightMin: 6,
-                grassHeightMax: 12,
+                edgeCurve: 'EaseIn',
+                widthLengthRatio: 1,
+                'Flight mode': true,
+                'Light color': '#ffe8d6',
+                grassEnabled: true,
+                grassDensity: 1,
+                grassHeightMin: 5,
+                grassHeightMax: 9,
                 grassWidthMin: 4,
-                grassWidthMax: 8,
+                grassWidthMax: 7,
                 grassSizeEasing: 'EaseInOut',
+                grassAlphaTest: 0.65,
+                grassMinimumLight: 0.58,
+                grassLodDistance: 1200,
+                grassMaxSlope: 0.7853981633974483,
+                grassPositionJitter: 2.8,
+                grassWindSpeed: 1.8,
+                grassWindStrength: 5.5,
+                grassTintLow: '#496b34',
+                grassTintHigh: '#78934a',
+                spread: 32,
+                scattering: 'PerlinAltitude',
             };
         if (!options.layersOnly) {
             await page.goto(createCaptureURL(demoURL, options.seed, 'readme-screenshot-options', analyticsSettings), {waitUntil: 'domcontentloaded', timeout: 60000});
@@ -467,7 +506,10 @@ async function main() {
         }
         await captureMaterialShot(
             page,
-            createCaptureURL(demoURL, options.layersSeed, 'readme-screenshot-beach', beachSettings),
+            createCaptureURL(demoURL, options.layersSeed, null, beachSettings, {
+                position: [450.143176, -3, -391.198119],
+                rotation: [-0.050671, 7.988653, 0],
+            }),
             screenshot2
         );
         if (!options.layersOnly) console.log('Wrote ' + screenshot1);
