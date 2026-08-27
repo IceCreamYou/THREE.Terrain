@@ -114,6 +114,56 @@ function reserveMinimumDistance(position, state) {
     return true;
 }
 
+/**
+ * Check whether a position is within a shared scatter group's exclusion radius.
+ *
+ * Sequential scatter stores accepted positions in `group.positions`, while
+ * random-distribution scatter stores them in cell-keyed arrays under
+ * `group.occupied`. This utility supports both representations.
+ *
+ * @param {THREE.Vector3} position
+ *   Candidate terrain position. Only its horizontal `x` and `y` values are
+ *   used.
+ * @param {Object|null} group
+ *   Shared scatter state containing accepted positions.
+ * @param {number} distance
+ *   Horizontal exclusion distance.
+ * @return {boolean}
+ *   True when an accepted position is strictly closer than `distance`.
+ */
+function isNearScatterGroup(position, group, distance) {
+    if (!group) return false;
+    var distanceSquared = distance * distance,
+        existingPositions = group.positions;
+    if (Array.isArray(existingPositions)) {
+        for (var positionIndex = 0; positionIndex < existingPositions.length; positionIndex++) {
+            var positionDeltaX = existingPositions[positionIndex].x - position.x,
+                positionDeltaY = existingPositions[positionIndex].y - position.y;
+            if (positionDeltaX * positionDeltaX + positionDeltaY * positionDeltaY < distanceSquared) return true;
+        }
+    }
+    if (!group.occupied) return false;
+    var cellSize = Math.max(0.001, group.cellSize || group.minimumDistance || distance),
+        cellX = Math.floor(position.x / cellSize),
+        cellY = Math.floor(position.y / cellSize),
+        cellRadius = Math.ceil(distance / cellSize) + 1,
+        occupied = group.occupied;
+    for (var neighborX = cellX - cellRadius; neighborX <= cellX + cellRadius; neighborX++) {
+        for (var neighborY = cellY - cellRadius; neighborY <= cellY + cellRadius; neighborY++) {
+            var nearby = occupied[neighborX + ':' + neighborY];
+            if (!nearby) continue;
+            for (var nearbyIndex = 0; nearbyIndex < nearby.length; nearbyIndex++) {
+                var dx = nearby[nearbyIndex].x - position.x,
+                    dy = nearby[nearbyIndex].y - position.y;
+                if (dx * dx + dy * dy < distanceSquared) return true;
+            }
+        }
+    }
+    return false;
+}
+
+TerrainNS.isNearScatterGroup = isNearScatterGroup;
+
 function createRandomScatterGeometry(geometry, options) {
     var random = getRandom(options);
     geometry.computeBoundingBox();
@@ -547,3 +597,5 @@ TerrainNS.ScatterHelper = function(method, options, skip, threshold) {
         return heightmap;
     };
 };
+
+export { isNearScatterGroup };

@@ -15,6 +15,8 @@ const {
     createSeededRandom,
     createGrass,
     generateBlendedMaterial,
+    getTerrainHeight,
+    isNearScatterGroup,
     scatterGrass,
     updateGrass,
     updateGrassLOD,
@@ -167,6 +169,36 @@ test('heightmapArray survives 1D and 2D height-array conversion', () => {
     assert.ok(heights.every((height) => Number.isFinite(height) && height >= 0 && height <= 1));
     assert.deepEqual(Array.from(TerrainNS.toArray1D(positions)), Array.from(heights));
     assert.deepEqual(Array.from(restoredHeights), Array.from(heights));
+});
+
+test('terrain height and scatter-group utilities are reusable library helpers', () => {
+    const geometry = new THREE.PlaneGeometry(10, 10, 1, 1);
+    const positions = geometry.attributes.position.array;
+    [0, 10, 20, 40].forEach((height, index) => {
+        positions[index * 3 + 2] = height;
+    });
+    const options = {xSegments: 1, ySegments: 1, xSize: 10, ySize: 10};
+
+    assert.equal(getTerrainHeight(geometry, options, -5, 5), 0);
+    assert.equal(TerrainNS.getTerrainHeight(geometry, options, 5, 5), 10);
+    assert.ok(Math.abs(getTerrainHeight(geometry, options, -2.5, 0) - 12.5) < 1e-6);
+    assert.ok(Math.abs(getTerrainHeight(geometry, options, 2.5, 0) - 20) < 1e-6);
+    assert.equal(getTerrainHeight(geometry, options, 100, 100), 10);
+    assert.equal(getTerrainHeight(null, options, 0, 0), 0);
+
+    const sequentialGroup = {positions: [{x: 10, y: 20}]};
+    const randomGroup = {
+        cellSize: 10,
+        occupied: {'1:2': [{x: 10, y: 20}]},
+    };
+    const near = new THREE.Vector3(17, 20, 999);
+    const onBoundary = new THREE.Vector3(18, 20, -999);
+
+    assert.equal(isNearScatterGroup(near, sequentialGroup, 8), true);
+    assert.equal(isNearScatterGroup(onBoundary, sequentialGroup, 8), false);
+    assert.equal(TerrainNS.isNearScatterGroup(near, randomGroup, 8), true);
+    assert.equal(TerrainNS.isNearScatterGroup(onBoundary, randomGroup, 8), false);
+    assert.equal(isNearScatterGroup(near, null, 8), false);
 });
 
 test('blended materials expose every texture layer through the compiled shader', () => {

@@ -3,6 +3,7 @@ import { createRandomSeed } from '../src/random.js';
 import { createAnalyticsController } from './analytics.js';
 import { createCameraController, normalizeCameraStart, parseCameraState } from './camera.js';
 import { createLandscape } from './landscape.js';
+import { createSculptController } from './sculpt.js';
 import { applyURLSettings, createSettings, parseDemoSeed, createSettingsPanel, syncURLSettings } from './settings.js';
 import { bindFocusHandling, bindKeyboardControls, bindResizeHandling, createFPSCounter } from './ui.js';
 import { createWorld } from './world.js';
@@ -115,11 +116,23 @@ export function initializeDemo() {
         settings: settings,
         world: world,
     });
+    var sculpt = createSculptController({
+        camera: camera,
+        canvas: renderer.domElement,
+        landscape: landscape,
+        scene: scene,
+        settings: settings,
+        onGestureEnd: function() {
+            landscape.scatterMeshes();
+            if (landscape.updateAnalytics) landscape.updateAnalytics();
+        },
+    });
     var settingsPanel = createSettingsPanel({
         camera: camera,
         influence: demoInfluence,
         landscape: landscape,
         settings: settings,
+        sculpt: sculpt,
         url: demoURL,
         world: world,
     });
@@ -134,6 +147,10 @@ export function initializeDemo() {
         if (settingsPanel.gui && settingsPanel.gui.updateDisplay) settingsPanel.gui.updateDisplay();
     };
     world.skyLight.color.set(settings['Light color']);
+    if (settings.sculptMode) {
+        settings['Flight mode'] = false;
+        if (settingsPanel.gui && settingsPanel.gui.updateDisplay) settingsPanel.gui.updateDisplay();
+    }
     camera.setFlightMode(settings['Flight mode'], false);
     landscape.regenerate();
     syncDemoURL(landscape, camera, settings);
@@ -141,8 +158,9 @@ export function initializeDemo() {
     /**
      * Draw the current library landscape.
      */
-    function draw(frameTime) {
-        landscape.update(clock.elapsedTime, camera.getActiveCamera(), !camera.isFlightMode());
+    function draw(frameTime, delta) {
+        sculpt.update(delta || 0);
+        landscape.update(clock.elapsedTime, camera.getActiveCamera(), !camera.isFlightMode() && !sculpt.isEnabled());
         renderer.render(scene, camera.getActiveCamera());
         fpsCounter.update(frameTime);
     }
@@ -161,8 +179,9 @@ export function initializeDemo() {
             return;
         }
         animationFrame = null;
-        draw(frameTime);
-        frameDelta += clock.getDelta();
+        var delta = clock.getDelta();
+        draw(frameTime, delta);
+        frameDelta += delta;
         while (frameDelta >= INV_MAX_FPS) {
             camera.update(INV_MAX_FPS);
             frameDelta -= INV_MAX_FPS;
@@ -215,7 +234,7 @@ export function initializeDemo() {
     });
     bindKeyboardControls({
         controls: camera.controls,
-        isFlightMode: camera.isFlightMode,
+        isNavigationMode: camera.isNavigationMode,
     });
     bindResizeHandling({
         camera: camera,
@@ -227,6 +246,7 @@ export function initializeDemo() {
         camera: camera,
         landscape: landscape,
         renderer: renderer,
+        sculpt: sculpt,
         scene: scene,
         settings: settingsPanel.settings,
         world: world,

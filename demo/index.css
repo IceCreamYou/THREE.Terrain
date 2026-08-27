@@ -19,6 +19,10 @@ canvas {
   margin: 0 auto;
   user-select: none;
 }
+body.sculpt-mode canvas {
+  cursor: crosshair;
+  touch-action: none;
+}
 h2 {
   font-size: 27px;
   font-weight: bolder;
@@ -80,6 +84,34 @@ h3 {
 }
 #fpscontrols .fpscontrols-keys {
   margin-left: 8px;
+}
+#sculptcontrols {
+  background: rgba(16, 16, 16, 0.78);
+  border: 1px solid rgba(255, 214, 74, 0.78);
+  bottom: 20px;
+  box-sizing: border-box;
+  color: #f2f0dc;
+  font: 12px/18px Arial, sans-serif;
+  left: 50%;
+  letter-spacing: 0.03em;
+  opacity: 0;
+  padding: 6px 11px;
+  pointer-events: none;
+  position: absolute;
+  text-align: center;
+  transform: translateX(-50%);
+  transition: opacity 0.2s;
+  white-space: nowrap;
+  z-index: 3;
+}
+#sculptcontrols.visible {
+  opacity: 1;
+}
+#sculptcontrols .sculptcontrols-mode {
+  color: #ffd64a;
+  font-weight: bold;
+  letter-spacing: 0.12em;
+  margin-right: 9px;
 }
 #fpscontrols.locked .fpscontrols-prompt {
   color: #9DD98A;

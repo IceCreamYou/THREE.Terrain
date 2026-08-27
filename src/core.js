@@ -327,6 +327,75 @@ TerrainNS.fromArray1D = function(vertices, src) {
 };
 
 /**
+ * Return an interpolated terrain elevation in local XY coordinates.
+ *
+ * PlaneGeometry stores its rows from positive local Y to negative local Y.
+ * This sampler follows that layout and uses the same two triangles as the
+ * grid diagonal instead of smoothing across it.
+ *
+ * @param {THREE.BufferGeometry} geometry
+ *   A regular PlaneGeometry-style terrain grid.
+ * @param {Object} options
+ *   A map containing `xSegments`, `ySegments`, `xSize`, and `ySize`.
+ * @param {number} x
+ *   Local terrain X coordinate.
+ * @param {number} y
+ *   Local terrain Y coordinate.
+ *
+ * @return {number}
+ *   Interpolated local terrain elevation, or 0 for invalid input.
+ */
+function getTerrainHeight(geometry, options, x, y) {
+    if (!geometry || !geometry.attributes || !geometry.attributes.position ||
+        !options || typeof x !== 'number' || typeof y !== 'number' ||
+        !isFinite(x) || !isFinite(y)) return 0;
+
+    var position = geometry.attributes.position,
+        positions = position.array,
+        xSegments = options.xSegments,
+        ySegments = options.ySegments,
+        xSize = options.xSize,
+        ySize = options.ySize;
+    if (!positions || position.itemSize !== 3 ||
+        typeof position.count !== 'number' ||
+        typeof xSegments !== 'number' || !isFinite(xSegments) ||
+        xSegments < 1 || Math.floor(xSegments) !== xSegments ||
+        typeof ySegments !== 'number' || !isFinite(ySegments) ||
+        ySegments < 1 || Math.floor(ySegments) !== ySegments ||
+        typeof xSize !== 'number' || !isFinite(xSize) || xSize <= 0 ||
+        typeof ySize !== 'number' || !isFinite(ySize) || ySize <= 0) return 0;
+
+    var columns = xSegments + 1,
+        vertexCount = columns * (ySegments + 1),
+        halfX = xSize * 0.5,
+        halfY = ySize * 0.5;
+    if (position.count < vertexCount || positions.length < vertexCount * 3) return 0;
+
+    var clampedX = Math.max(-halfX, Math.min(halfX, x)),
+        clampedY = Math.max(-halfY, Math.min(halfY, y)),
+        normalizedX = (clampedX + halfX) / xSize * xSegments,
+        normalizedY = (halfY - clampedY) / ySize * ySegments,
+        x0 = Math.min(xSegments, Math.floor(normalizedX)),
+        y0 = Math.min(ySegments, Math.floor(normalizedY)),
+        x1 = Math.min(xSegments, x0 + 1),
+        y1 = Math.min(ySegments, y0 + 1),
+        xWeight = normalizedX - x0,
+        yWeight = normalizedY - y0,
+        h00 = positions[(y0 * columns + x0) * 3 + 2],
+        h10 = positions[(y0 * columns + x1) * 3 + 2],
+        h01 = positions[(y1 * columns + x0) * 3 + 2],
+        h11 = positions[(y1 * columns + x1) * 3 + 2];
+    if (!isFinite(h00) || !isFinite(h10) || !isFinite(h01) || !isFinite(h11)) return 0;
+
+    if (xWeight + yWeight <= 1) {
+        return h00 + (h10 - h00) * xWeight + (h01 - h00) * yWeight;
+    }
+    return h01 * (1 - xWeight) + h11 * (xWeight + yWeight - 1) + h10 * (1 - yWeight);
+}
+
+TerrainNS.getTerrainHeight = getTerrainHeight;
+
+/**
  * Generate a 1D array containing random heightmap data.
  *
  * This is like {@link THREE.Terrain.toHeightmap} except that instead of
@@ -398,4 +467,4 @@ TerrainNS.Terrain = Terrain;
 
 // Export for ES modules
 export default Terrain;
-export { TerrainNS, ceilPowerOfTwo };
+export { TerrainNS, ceilPowerOfTwo, getTerrainHeight };

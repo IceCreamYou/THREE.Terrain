@@ -47,6 +47,8 @@ var flightMovementKeys = {
     KeyR: true,
     KeyS: true,
     KeyW: true,
+    KeyX: true,
+    KeyZ: true,
     Space: true,
 };
 
@@ -128,12 +130,13 @@ export function applyCameraPose(camera, pose) {
 }
 
 /**
- * Create pointer-lock flight controls for a camera.
+ * Create keyboard and pointer-lock flight controls for a camera.
  *
  * Pointer lock supplies relative mouse movement without requiring a drag.
  * Movement is intentionally kept in the horizontal plane so looking up or
  * down does not accidentally make forward flight climb or descend. Q/E turn
- * around the vertical axis and C/Space provide explicit vertical movement.
+ * around the vertical axis, Z/X tilt the camera, and C/Space provide explicit
+ * vertical movement.
  *
  * @param {THREE.Camera} camera
  *   Camera controlled by the flight input.
@@ -184,12 +187,14 @@ function createFlightControls(camera, domElement) {
     var controls = {
         enabled: false,
         flightMode: false,
+        sculptMode: false,
         lookSpeed: 0.0025,
         movementSpeed: 100,
         onFlightModeChange: null,
         onPointerLockAvailabilityChange: null,
         onPointerLockExit: null,
         turnSpeed: 1.8,
+        tiltSpeed: 1.2,
 
         /**
          * Update the compact flight-help overlay and its pointer-lock state.
@@ -258,26 +263,27 @@ function createFlightControls(camera, domElement) {
         },
 
         /**
-         * Record a pressed flight key.
+         * Record a pressed navigation key.
          *
          * @param {KeyboardEvent} event
          *   Keyboard event from the document.
          * @return {boolean}
-         *   True when the event belongs to flight controls.
+         *   True when the event belongs to navigation controls.
          */
         handleKeyDown: function(event) {
-            if (!controls.enabled || !controls.flightMode || !flightMovementKeys[event.code]) return false;
+            if (!controls.enabled || (!controls.flightMode && !controls.sculptMode) ||
+                !flightMovementKeys[event.code]) return false;
             keys[event.code] = true;
             return true;
         },
 
         /**
-         * Release a flight key.
+         * Release a navigation key.
          *
          * @param {KeyboardEvent} event
          *   Keyboard event from the document.
          * @return {boolean}
-         *   True when the event belongs to flight controls.
+         *   True when the event belongs to navigation controls.
          */
         handleKeyUp: function(event) {
             if (!flightMovementKeys[event.code]) return false;
@@ -327,13 +333,25 @@ function createFlightControls(camera, domElement) {
         },
 
         /**
-         * Advance flight movement for one simulation step.
+         * Enable keyboard navigation for sculpt mode without enabling mouse
+         * look or requesting pointer lock.
+         *
+         * @param {boolean} value
+         *   Whether sculpt navigation should be active.
+         */
+        setSculptMode: function(value) {
+            controls.sculptMode = !!value;
+            controls.clearKeys();
+        },
+
+        /**
+         * Advance keyboard navigation for one simulation step.
          *
          * @param {number} delta
          *   Elapsed seconds since the previous step.
          */
         update: function(delta) {
-            if (!controls.enabled) return;
+            if (!controls.enabled || (!controls.flightMode && !controls.sculptMode)) return;
             var distance = controls.movementSpeed * delta;
             forward.set(0, 0, -1).applyQuaternion(camera.quaternion);
             forward.y = 0;
@@ -349,6 +367,9 @@ function createFlightControls(camera, domElement) {
             if (keys.Space || keys.KeyR) camera.position.y += distance;
             if (keys.KeyQ) camera.rotation.y += controls.turnSpeed * delta;
             if (keys.KeyE) camera.rotation.y -= controls.turnSpeed * delta;
+            if (keys.KeyZ) camera.rotation.x += controls.tiltSpeed * delta;
+            if (keys.KeyX) camera.rotation.x -= controls.tiltSpeed * delta;
+            camera.rotation.x = Math.max(-pitchLimit, Math.min(pitchLimit, camera.rotation.x));
         },
     };
 
@@ -359,7 +380,7 @@ function createFlightControls(camera, domElement) {
      *   Pointer-lock mouse event.
      */
     function onMouseMove(event) {
-        if (!controls.enabled || !pointerLocked) return;
+        if (!controls.enabled || !controls.flightMode || !pointerLocked) return;
         camera.rotation.y -= event.movementX * controls.lookSpeed;
         camera.rotation.x -= event.movementY * controls.lookSpeed;
         camera.rotation.x = Math.max(-pitchLimit, Math.min(pitchLimit, camera.rotation.x));
@@ -483,6 +504,7 @@ export function createCameraController(options) {
         controls.clearKeys();
         controls.flightMode = useFPS;
         if (useFPS) {
+            controls.sculptMode = false;
             if (!flightModeInitialized) applyCameraPose(fpsCamera, fpsPose);
             else if (!wasFlightMode) copyCameraPose(camera, fpsCamera);
             controls.enabled = true;
@@ -490,12 +512,27 @@ export function createCameraController(options) {
         }
         else {
             if (wasFlightMode) copyCameraPose(fpsCamera, camera);
-            controls.enabled = false;
+            controls.enabled = controls.sculptMode;
             controls.unlock();
         }
         flightModeInitialized = true;
         controls.updateOverlay();
         if (controls.onFlightModeChange) controls.onFlightModeChange(useFPS);
+    }
+
+    /**
+     * Change to the keyboard-navigation camera for sculpt mode without
+     * changing Flight mode or requesting pointer lock.
+     *
+     * @param {boolean} enabled
+     *   Whether sculpt navigation should use the flight camera pose.
+     */
+    function setSculptMode(enabled) {
+        var next = !!enabled;
+        if (next === controls.sculptMode) return;
+        if (next && !useFPS) copyCameraPose(camera, fpsCamera);
+        controls.setSculptMode(next);
+        if (!next && !useFPS) copyCameraPose(fpsCamera, camera);
     }
 
     controls.onPointerLockExit = function() {
@@ -515,7 +552,7 @@ export function createCameraController(options) {
     }
 
     /**
-     * Update pointer-lock flight controls for one animation step.
+     * Update keyboard and pointer-lock controls for one animation step.
      *
      * @param {number} delta
      *   Elapsed seconds since the previous simulation step.
@@ -531,7 +568,7 @@ export function createCameraController(options) {
      *   Active camera position, Euler rotation, and Euler order.
      */
     function getActiveState() {
-        var activeCamera = useFPS ? fpsCamera : camera;
+        var activeCamera = useFPS || controls.sculptMode ? fpsCamera : camera;
         return {
             position: activeCamera.position.toArray(),
             rotation: activeCamera.rotation.toArray().slice(0, 3),
@@ -543,10 +580,12 @@ export function createCameraController(options) {
         camera: camera,
         fpsCamera: fpsCamera,
         controls: controls,
-        getActiveCamera: function() { return useFPS ? fpsCamera : camera; },
+        getActiveCamera: function() { return useFPS || controls.sculptMode ? fpsCamera : camera; },
         getActiveState: getActiveState,
         isFlightMode: function() { return useFPS; },
+        isNavigationMode: function() { return useFPS || controls.sculptMode; },
         resize: resize,
+        setSculptMode: setSculptMode,
         setFlightMode: setFlightMode,
         update: update,
     };

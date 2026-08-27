@@ -103,7 +103,7 @@ export function createSettings(options) {
         heightmap: 'PerlinDiamond',
         smoothing: 'None',
         maxHeight: 200,
-        segments: 63,
+        segments: 95,
         steps: 1,
         turbulent: false,
         size: 1024,
@@ -134,6 +134,11 @@ export function createSettings(options) {
         grassTintHigh: '#78934a',
         spread: 32,
         scattering: 'PerlinAltitude',
+        sculptMode: false,
+        sculptBrushRadius: 120,
+        sculptHardness: 53,
+        sculptFeathering: 'EaseInOut',
+        sculptStrength: 48,
     };
 }
 
@@ -150,6 +155,7 @@ export function createSettingsPanel(options) {
         landscape = options.landscape,
         camera = options.camera,
         world = options.world,
+        sculpt = options.sculpt,
         regenerate = landscape.regenerate,
         scatterMeshes = landscape.scatterMeshes;
     applyURLSettings(settings, options.url, options.influence);
@@ -166,10 +172,21 @@ export function createSettingsPanel(options) {
         landscape.scatterMeshes();
         landscape.updateHeightmap();
     });
-    heightmapFolder.add(settings, 'segments', 7, 127).step(1).onFinishChange(regenerate);
+    heightmapFolder.add(settings, 'segments', 7, 191).step(1).onFinishChange(regenerate);
     heightmapFolder.add(settings, 'steps', 1, 8).step(1).onFinishChange(regenerate);
     heightmapFolder.add(settings, 'turbulent').onFinishChange(regenerate);
     heightmapFolder.open();
+
+    var sculptFolder = gui.addFolder('Sculpt'),
+        sculptModeController = sculptFolder.add(settings, 'sculptMode').name('Enabled');
+    sculptModeController.onChange(function(value) {
+        if (value && camera.isFlightMode()) camera.setFlightMode(false, false);
+        if (sculpt) sculpt.setEnabled(value);
+    });
+    sculptFolder.add(settings, 'sculptBrushRadius', 8, 256).step(4).name('Brush radius');
+    sculptFolder.add(settings, 'sculptHardness', 0, 100).step(1).name('Hardness %');
+    sculptFolder.add(settings, 'sculptFeathering', ['Linear', 'EaseIn', 'EaseInWeak', 'EaseOut', 'EaseInOut', 'InEaseOut', 'EaseInStrong']).name('Feathering');
+    sculptFolder.add(settings, 'sculptStrength', 0, 200).step(1).name('Strength / sec');
 
     var decorationFolder = gui.addFolder('Decoration');
     decorationFolder.add(settings, 'texture', ['Blended', 'Grayscale', 'Wireframe']).onFinishChange(regenerate);
@@ -214,7 +231,12 @@ export function createSettingsPanel(options) {
         // The pointer-lock request is made by the input's click listener
         // below. The dat.GUI change callback runs too late for reliable
         // re-entry after the user releases pointer lock with Escape.
+        if (value && sculpt && sculpt.isEnabled()) {
+            settings.sculptMode = false;
+            sculpt.setEnabled(false);
+        }
         camera.setFlightMode(value, false);
+        if (gui.updateDisplay) gui.updateDisplay();
     });
     var flightModeInput = flightModeController.domElement.querySelector('input');
     var flightModeRow = flightModeController.domElement.closest ?

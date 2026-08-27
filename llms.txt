@@ -30,7 +30,9 @@ import Terrain, {
   createRandomSeed,
   createSeededRandom,
   generateBlendedMaterial,
+  getTerrainHeight,
   grassMeshWeight,
+  isNearScatterGroup,
   scatterGrass,
   updateGrass,
   updateGrassLOD,
@@ -67,10 +69,12 @@ The main pipeline is:
   custom GLSL expressions using `vPosition` and `slope`.
 - Decoration: `ScatterMeshes` supports filtering, random distribution,
   minimum-distance groups, scale ranges, tint ranges, and `THREE.InstancedMesh`.
+  `isNearScatterGroup` checks a candidate against either shared placement
+  representation.
 - Grass: `createGrass`, `createGrassTexture`, `scatterGrass`, `updateGrass`,
   `updateGrassLOD`, and deterministic grass coverage helpers.
-- Data: `fromHeightmap`, `toHeightmap`, `heightmapArray`, and 1D/2D array
-  conversion helpers.
+- Data: `fromHeightmap`, `toHeightmap`, `heightmapArray`, `getTerrainHeight`,
+  and 1D/2D array conversion helpers.
 - Analysis: `Analyze`, percentiles, percent ranks, face normals, fitted-plane
   metrics, modes, buckets, histograms, and means.
 - Reproducibility: `createRandomSeed` chooses a seed and `createSeededRandom`

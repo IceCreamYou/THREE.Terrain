@@ -8,19 +8,28 @@ import Terrain, {
     updateGrass,
     updateGrassLOD,
 } from '../src/index.js';
+import { getTerrainHeight as sampleTerrainHeight } from '../src/core.js';
+import { isNearScatterGroup } from '../src/scatter.js';
 import { createRandomSeed, createSeededRandom } from '../src/random.js';
+import { createFlowerMesh } from './flowers.js';
 import { Tree } from '../vendor/eztree/build/eztree.module.js';
 
 var DEMO_DECORATION_SEED = 0x9e3779b9,
     TREE_MINIMUM_DISTANCE = 36,
+    FLOWER_TREE_MINIMUM_DISTANCE = 24,
+    FLOWER_MINIMUM_DISTANCE = 8,
+    FLOWER_SAMPLE_MULTIPLIER = 1.2,
+    FLOWER_COVERAGE = 0.22,
+    FLOWER_HEIGHT_FRACTION = 0.72,
     TERRAIN_UP = new THREE.Vector3(0, 0, 1);
 
 /**
  * Create the part of the demo that exercises the terrain library.
  *
  * This module owns terrain generation, material blending, smoothing, terrain
- * influences, tree scattering, grass scattering, wind, and grass LOD. Browser
- * controls and presentation code pass their state through `options`.
+ * influences, tree and flower scattering, grass scattering, wind, and grass
+ * LOD. Browser controls and presentation code pass their state through
+ * `options`.
  *
  * @param {Object} options
  *   Scene, renderer, settings, terrain seed, optional decoration seed, world,
@@ -44,6 +53,7 @@ export function createLandscape(options) {
         decoScene = null,
         grassScene = null,
         grassMesh = null,
+        flowerMeshes = null,
         lastOptions = null,
         terrainRandom,
         decorationRandom,
@@ -82,12 +92,12 @@ export function createLandscape(options) {
     }
 
     /**
-     * Set the seed used by tree, bush, and grass scattering.
+     * Set the seed used by tree, bush, flower, and grass scattering.
      *
      * Clearing the tree cache is important because eztree uses its seed when
      * generating branch and leaf geometry, not only when choosing placement
-     * positions. Grass uses the same stream for placement and per-instance
-     * tint choices.
+     * positions. Grass and flowers use the same stream for placement and
+     * per-instance variation choices.
      *
      * @param {number} seed
      *   Unsigned decoration seed.
@@ -331,7 +341,7 @@ export function createLandscape(options) {
     }
 
     /**
-     * Scatter trees and grass across the current terrain mesh.
+     * Scatter trees, flowers, and grass across the current terrain mesh.
      */
     function scatterMeshes() {
         if (!terrainScene || !terrainScene.children[0]) return;
@@ -409,11 +419,63 @@ export function createLandscape(options) {
                 sizeVariance: 0.22,
             });
         }
+
+        // Flowers use a denser, independent spacing grid so the two types can
+        // be more common than trees. The filter still reads the accepted tree
+        // positions above and rejects any candidate inside the tree clearance.
+        if (settings.grassEnabled && settings.grassDensity > 0 && settings.texture === 'Blended' && blend) {
+            var flowerPlacementGroup = {minimumDistance: FLOWER_MINIMUM_DISTANCE},
+                flowerSampleCount = Math.max(1, Math.round(
+                    segments * segments * FLOWER_SAMPLE_MULTIPLIER
+                )),
+                averageGrassHeight = Math.max(0.5, (
+                    Number(settings.grassHeightMin) + Number(settings.grassHeightMax)
+                ) * 0.5),
+                flowerFilter = function(vertex, faceNormal) {
+                    var slope = faceNormal ? faceNormal.angleTo(TERRAIN_UP) : Math.PI;
+                    return grassMeshWeight(vertex.z, slope) > 0 &&
+                        !isNearScatterGroup(vertex, treePlacementGroup, FLOWER_TREE_MINIMUM_DISTANCE);
+                },
+                flowerSpread = function(vertex, faceIndex, faceNormal) {
+                    var slope = faceNormal ? faceNormal.angleTo(TERRAIN_UP) : Math.PI,
+                        coverage = grassMeshWeight(vertex.z, slope);
+                    if (coverage <= 0) return false;
+                    coverage *= grassClusterWeight(vertex.x, vertex.y);
+                    return random() < coverage * FLOWER_COVERAGE;
+                },
+                flowerTypes = [flowerMeshes.buttercup, flowerMeshes.aster];
+            for (var flowerIndex = 0; flowerIndex < flowerTypes.length; flowerIndex++) {
+                var flowerMesh = flowerTypes[flowerIndex],
+                    flowerScale = averageGrassHeight * FLOWER_HEIGHT_FRACTION /
+                        Math.max(0.001, flowerMesh.userData.flowerHeight);
+                flowerMesh.scale.setScalar(flowerScale);
+                TerrainNS.ScatterMeshes(geometry, {
+                    scene: decoScene,
+                    mesh: flowerMesh,
+                    w: segments,
+                    h: Math.round(segments * settings.widthLengthRatio),
+                    filter: flowerFilter,
+                    instanced: true,
+                    maxSlope: settings.grassMaxSlope,
+                    maxTilt: 0,
+                    minimumDistance: FLOWER_MINIMUM_DISTANCE,
+                    minimumDistanceGroup: flowerPlacementGroup,
+                    random: random,
+                    randomDistribution: true,
+                    randomDistributionMinDistance: FLOWER_MINIMUM_DISTANCE,
+                    randomRotationAxis: 'y',
+                    sampleCount: flowerSampleCount,
+                    nonUniformSizeVariance: true,
+                    sizeVariance: 0.12,
+                    spread: flowerSpread,
+                });
+            }
+        }
         terrainScene.add(decoScene);
 
         if (grassScene) terrainScene.remove(grassScene);
         grassScene = null;
-        if (settings.grassEnabled && settings.texture === 'Blended' && blend) {
+        if (settings.grassEnabled && settings.grassDensity > 0 && settings.texture === 'Blended' && blend) {
             var grassHeightMin = Math.min(settings.grassHeightMin, settings.grassHeightMax),
                 grassHeightMax = Math.max(settings.grassHeightMin, settings.grassHeightMax),
                 grassWidthMin = Math.min(settings.grassWidthMin, settings.grassWidthMax),
@@ -536,6 +598,107 @@ export function createLandscape(options) {
     }
 
     /**
+     * Return an interpolated terrain elevation in local XY coordinates.
+     *
+     * @param {number} x
+     *   Local terrain X coordinate.
+     * @param {number} y
+     *   Local terrain Y coordinate.
+     * @return {number}
+     *   Interpolated local terrain elevation.
+     */
+    function getTerrainHeight(x, y) {
+        if (!terrainScene || !terrainScene.children[0] || !lastOptions) return 0;
+        return sampleTerrainHeight(
+            terrainScene.children[0].geometry,
+            lastOptions,
+            x,
+            y
+        );
+    }
+
+    /**
+     * Perturb terrain vertices under a sculpt brush.
+     *
+     * @param {THREE.Vector3} center
+     *   Brush center in terrain-local coordinates.
+     * @param {number} brushRadius
+     *   Brush radius in terrain units.
+     * @param {number} hardnessRadius
+     *   Inner radius receiving full strength.
+     * @param {Function|string} feathering
+     *   Easing function or TerrainNS easing name for the outer falloff.
+     * @param {number} amount
+     *   Signed height change at full hardness for this frame.
+     * @return {boolean}
+     *   True when at least one vertex changed.
+     */
+    function sculpt(center, brushRadius, hardnessRadius, feathering, amount) {
+        if (!terrainScene || !terrainScene.children[0] || !lastOptions || !amount) return false;
+        var options = lastOptions,
+            mesh = terrainScene.children[0],
+            geometry = mesh.geometry,
+            positionAttribute = geometry.attributes.position,
+            positions = positionAttribute.array,
+            xSegments = options.xSegments,
+            ySegments = options.ySegments,
+            columns = xSegments + 1,
+            radius = Math.max(0, Number(brushRadius) || 0),
+            hardness = Math.max(0, Math.min(radius, Number(hardnessRadius) || 0)),
+            radiusSquared = radius * radius,
+            xStep = options.xSize / xSegments,
+            yStep = options.ySize / ySegments,
+            halfX = options.xSize * 0.5,
+            halfY = options.ySize * 0.5,
+            centerX = Math.max(-halfX, Math.min(halfX, center.x)),
+            centerY = Math.max(-halfY, Math.min(halfY, center.y)),
+            minX = Math.max(0, Math.floor((centerX - radius + halfX) / xStep)),
+            maxX = Math.min(xSegments, Math.ceil((centerX + radius + halfX) / xStep)),
+            minY = Math.max(0, Math.floor((halfY - centerY - radius) / yStep)),
+            maxY = Math.min(ySegments, Math.ceil((halfY - centerY + radius) / yStep)),
+            easing = typeof feathering === 'function' ? feathering : TerrainNS[feathering] || TerrainNS.Linear,
+            changed = false;
+        if (!radius) return false;
+
+        for (var xIndex = minX; xIndex <= maxX; xIndex++) {
+            var x = -halfX + xIndex * xStep,
+                xDistance = x - centerX;
+            for (var yIndex = minY; yIndex <= maxY; yIndex++) {
+                var y = halfY - yIndex * yStep,
+                    distanceSquared = xDistance * xDistance + (y - centerY) * (y - centerY);
+                if (distanceSquared > radiusSquared) continue;
+                var distance = Math.sqrt(distanceSquared),
+                    falloff = 1;
+                if (distance > hardness) {
+                    falloff = easing((radius - distance) / Math.max(0.0001, radius - hardness));
+                    falloff = Math.max(0, Math.min(1, falloff));
+                }
+                var offset = (yIndex * columns + xIndex) * 3 + 2,
+                    current = positions[offset],
+                    next = Math.max(options.minHeight, Math.min(options.maxHeight, current + amount * falloff));
+                if (next === current) continue;
+                positions[offset] = next;
+                changed = true;
+            }
+        }
+        if (!changed) return false;
+        positionAttribute.needsUpdate = true;
+        geometry.computeBoundingSphere();
+        geometry.computeVertexNormals();
+        updateHeightmap();
+        return true;
+    }
+
+    /**
+     * Refresh the analytics panel from the current terrain geometry.
+     */
+    function updateAnalytics() {
+        if (analytics && terrainScene && terrainScene.children[0] && lastOptions) {
+            analytics.update(terrainScene.children[0], lastOptions);
+        }
+    }
+
+    /**
      * Update library-owned animated decoration for one rendered frame.
      *
      * @param {number} elapsedTime
@@ -607,6 +770,10 @@ export function createLandscape(options) {
     }
 
     rebuildGrassMesh();
+    flowerMeshes = {
+        buttercup: createFlowerMesh('buttercup'),
+        aster: createFlowerMesh('aster'),
+    };
     loadMaterials();
 
     return {
@@ -620,10 +787,13 @@ export function createLandscape(options) {
         scatterMeshes: scatterMeshes,
         scatterMeshesNewSeed: scatterMeshesNewSeed,
         updateHeightmap: updateHeightmap,
+        updateAnalytics: updateAnalytics,
         update: update,
         getLastOptions: function() { return lastOptions; },
+        getTerrainHeight: getTerrainHeight,
         getTerrainScene: function() { return terrainScene; },
         getTerrainMesh: function() { return terrainScene && terrainScene.children[0]; },
+        sculpt: sculpt,
         getSeeds: function() {
             return {terrain: demoSeed, decoration: decorationSeed};
         },

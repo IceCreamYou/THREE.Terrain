@@ -39,18 +39,20 @@ export function bindFocusHandling(options) {
 }
 
 /**
- * Bind keyboard movement for pointer-lock flight controls.
+ * Bind keyboard movement for flight and sculpt navigation controls.
  *
  * @param {Object} options
- *   Camera controller state and flight-mode predicate.
+ *   Camera controller state and navigation-mode predicate.
  */
 export function bindKeyboardControls(options) {
+    var isNavigationMode = typeof options.isNavigationMode === 'function' ?
+        options.isNavigationMode : options.isFlightMode;
     document.addEventListener('keydown', function(event) {
-        if (!options.isFlightMode() || !options.controls.handleKeyDown) return;
+        if (typeof isNavigationMode !== 'function' || !isNavigationMode() || !options.controls.handleKeyDown) return;
         if (options.controls.handleKeyDown(event)) event.preventDefault();
     }, {passive: false});
     document.addEventListener('keyup', function(event) {
-        if (!options.isFlightMode() || !options.controls.handleKeyUp) return;
+        if (typeof isNavigationMode !== 'function' || !isNavigationMode() || !options.controls.handleKeyUp) return;
         if (options.controls.handleKeyUp(event)) event.preventDefault();
     }, {passive: false});
 }
